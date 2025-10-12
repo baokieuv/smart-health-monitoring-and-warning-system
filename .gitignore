@@ -1,0 +1,9 @@
+# ESP-IDF build files
+build/
+sdkconfig
+*.bin
+*.elf
+*.map
+*.pyc
+*.log
+__pycache__/
