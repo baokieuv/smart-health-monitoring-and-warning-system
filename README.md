@@ -68,18 +68,19 @@ Vì vậy, cần xây dựng một **hệ thống giám sát sức khỏe thông
 #### Cài đặt môi trường
 - Cài đặt **ESP-IDF**: [Hướng dẫn cài đặt ESP-IDF chính thức](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/)
 - Cài đặt **Python 3.8+**
-- Tạo tài khoản **ThingsBoard** và tạo **Device**
+- Tạo tài khoản **ThingsBoard** và tạo **Device**: [Hướng dẫn sử dụng ThingsBoard](https://docs.google.com/document/d/1lUEHkdseESF9-TEnLqJxWDx3g02dIIZYxRGIfbPn5dw/edit?usp=sharing)
 - Lấy **Access Token** của thiết bị
 
 #### Clone dự án
 
 ```bash
 git clone https://github.com/baokieuv/smart-health-monitoring-and-warning-system
+cd esp32
 ```
 
 #### Cấu hình thông số WiFi và MQTT
 
-Mở file main.c và chỉnh sửa các thông số sau:
+Mở file [main.c](https://github.com/baokieuv/smart-health-monitoring-and-warning-system/blob/main/esp32/main/main.c) và chỉnh sửa các thông số sau:
 ```c
 #define WIFI_SSID       "Ten WiFi"
 #define WIFI_PASS       "Mat khau WiFi"
