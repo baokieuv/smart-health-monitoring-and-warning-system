@@ -33,8 +33,8 @@ static int s_retry_num = 0;
 static esp_mqtt_client_handle_t client = NULL;
 static httpd_handle_t http_server = NULL;
 
-extern const uint8_t html_start[] asm("_binary_start_html_start");
-extern const uint8_t html_end[] asm("_binary_start_html_end");
+extern const uint8_t index_html_start[] asm("_binary_index_html_start");
+extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 
 void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
@@ -84,7 +84,7 @@ bool load_wifi_config(char *ssid, char *pass, char *cccd) {
 
 esp_err_t send_handler(httpd_req_t* req){
     ESP_ERROR_CHECK(httpd_resp_set_type(req, "text/html"));
-    ESP_ERROR_CHECK(httpd_resp_send(req, (char*)html_start, html_end - html_start));
+    ESP_ERROR_CHECK(httpd_resp_send(req, (char*)index_html_start, index_html_end - index_html_start));
     return ESP_OK;
 }
 

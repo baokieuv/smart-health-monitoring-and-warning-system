@@ -7,4 +7,4 @@ cmake_minimum_required(VERSION 3.16)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(iot_project)
 
-target_add_binary_data(${CMAKE_PROJECT_NAME}.elf "main/start.html" TEXT)
+target_add_binary_data(${CMAKE_PROJECT_NAME}.elf "main/index.html" TEXT)
