@@ -100,10 +100,18 @@ esp_err_t receive_handler(httpd_req_t* req){
     }
 
     const cJSON *cccd = cJSON_GetObjectItem(root, "cccd");
-    const cJSON *ssid  = cJSON_GetObjectItem(root, "ssid");
-    const cJSON *pass  = cJSON_GetObjectItem(root, "password");
+    const cJSON *ssid = cJSON_GetObjectItem(root, "ssid");
+    const cJSON *pass = cJSON_GetObjectItem(root, "pass");
+
+    if (!cccd || !ssid || !pass || !cJSON_IsString(cccd) || !cJSON_IsString(ssid) || !cJSON_IsString(pass)) {
+        ESP_LOGE(TAG, "Invalid JSON: missing or wrong type field(s)");
+        cJSON_Delete(root);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
 
     ESP_LOGI(TAG, "CCCD: %s, SSID: %s, PASS: %s", cccd->valuestring, ssid->valuestring, pass->valuestring);
+
     save_wifi_config(ssid->valuestring, pass->valuestring, cccd->valuestring);
     cJSON_Delete(root);
 
