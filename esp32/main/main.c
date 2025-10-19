@@ -10,6 +10,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_http_server.h"
+#include "onewire_bus.h"
+#include "ds18b20.h"
 #include "cJSON.h"
 
 #define TAG                 "IOT"
@@ -28,10 +30,13 @@
 #define NVS_KEY_PASS    "password"
 #define NVS_KEY_CCCD    "cccd"
 
+#define DS18B20_PIN     GPIO_NUM_18
+
 static EventGroupHandle_t event_group;
 static int s_retry_num = 0;
 static esp_mqtt_client_handle_t client = NULL;
 static httpd_handle_t http_server = NULL;
+static float temperature = 0.0f;
 
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_index_html_end");
@@ -68,6 +73,32 @@ void save_wifi_config(const char *ssid, const char *pass, const char *cccd) {
     ESP_LOGI(TAG, "WiFi config saved to NVS");
 }
 
+void read_temperature(void* param){
+    onewire_bus_handle_t bus = NULL;
+    onewire_bus_config_t bus_cfg = {
+        .bus_gpio_num = DS18B20_PIN,
+        .flags = {
+            .en_pull_up = true,
+        }
+    };
+    onewire_bus_rmt_config_t rmt_cfg = {
+        .max_rx_bytes = 10,
+    };
+    ESP_ERROR_CHECK(onewire_new_bus_rmt(&bus_cfg, &rmt_cfg, &bus));
+    ESP_LOGI(TAG, "1-Wire bus installed on GPIO%d", DS18B20_PIN);
+
+    ds18b20_device_handle_t ds18b20;
+    ds18b20_config_t ds_cfg = {};
+    ESP_ERROR_CHECK(ds18b20_new_device_from_bus(bus, &ds_cfg, &ds18b20));
+
+    while(1){
+        ESP_ERROR_CHECK(ds18b20_trigger_temperature_conversion(ds18b20));
+        ESP_ERROR_CHECK(ds18b20_get_temperature(ds18b20, &temperature));
+        ESP_LOGI(TAG, "temperature read from DS18B20: %.2fC", temperature);
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    }
+
+}
 
 bool load_wifi_config(char *ssid, char *pass, char *cccd) {
     nvs_handle_t nvs;
@@ -270,8 +301,8 @@ void mqtt_send_task(void *param){
         EventBits_t bits = xEventGroupGetBits(event_group);
         if (bits & MQTT_CONNECTED_BIT) {
             snprintf(payload, sizeof(payload),
-                "{\"cccd\":\"%s\",\"heartRate\":70.5,\"O2\":97,\"temperature\":37.1,\"alarm\":\"normal\"}",
-                cccd);
+                "{\"cccd\":\"%s\",\"heartRate\":70.5,\"O2\":97,\"temperature\":%f,\"alarm\":\"normal\"}",
+                cccd, temperature);
             esp_mqtt_client_publish(client, TELEMETRY_TOPIC, payload, 0, 1, 0);
             ESP_LOGI(TAG, "Telemetry sent: %s", payload);
         }
@@ -296,6 +327,7 @@ void app_main(void){
     event_group = xEventGroupCreate();
 
     char ssid[32] = {0}, pass[64] = {0}, cccd[16] = {0};
+
     if (load_wifi_config(ssid, pass, cccd)) {
         ESP_LOGI(TAG, "Loaded WiFi config: SSID=%s", ssid);
         bool ok = wifi_init_sta(ssid, pass);
@@ -313,4 +345,5 @@ void app_main(void){
         ESP_LOGW(TAG, "No WiFi config -> Starting AP mode");
         start_ap_mode();
     }
+    xTaskCreate(read_temperature, "read temp", 4086, NULL, 5, NULL);
 }

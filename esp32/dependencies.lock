@@ -10,9 +10,16 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 9.3.0
+  onewire_bus:
+    dependencies: []
+    source:
+      path: D:\Embedded\ESP\esp\v5.3\esp-idf\components\onewire_bus
+      type: local
+    version: 1.0.4
 direct_dependencies:
+- espressif/onewire_bus
 - idf
 - lvgl/lvgl
-manifest_hash: 8f9a68b47a44666eee86c342b2a5a48f278566be71f932349de0a87dd52e67fd
+manifest_hash: 32f9dd202c264ed9a0dd571fd4acfaaf27c565e5c9250b2d44a40347cc5a411a
 target: esp32
 version: 2.0.0
