@@ -1,0 +1,10 @@
+.master-shell{display:flex;flex-direction:column;min-height:100%}
+.body{display:flex;flex:1;min-height:0}
+.sidebar{width:220px;background:var(--primary);color:#fff;display:flex;flex-direction:column}
+.sidebar nav{display:flex;flex-direction:column;padding:8px}
+.sidebar .sidebar-item{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;padding:10px 12px;border-radius:8px;font-weight:600}
+.sidebar .sidebar-item:hover{background:rgba(255,255,255,.12)}
+.sidebar .icon{width:22px;text-align:center}
+
+.content{flex:1;display:flex;flex-direction:column;min-width:0}
+.page-wrap{padding:18px}

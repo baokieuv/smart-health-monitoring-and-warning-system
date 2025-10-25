@@ -1,0 +1,5 @@
+.topbar{height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--primary-700);border-bottom:1px solid rgba(0,0,0,.2);color:#fff}
+.topbar .brand{font-weight:800;color:#fff;font-size:30px}
+.topbar .search{flex:1;max-width:none;border:1px solid rgba(0,0,0,.2);padding:8px 10px;border-radius:20px;background:#fff;color:var(--text)}
+.topbar .actions{display:flex;align-items:center}
+.topbar .actions .material-symbols-outlined{color:#fff}
