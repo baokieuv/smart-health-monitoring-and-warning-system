@@ -1,0 +1,89 @@
+.profile-page {
+  h2 {
+    margin-bottom: 2rem;
+    color: #333;
+  }
+
+  .patient-info {
+    display: grid;
+    gap: 2rem;
+
+    .info-section,
+    .vitals-section,
+    .history-section {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+
+      h3 {
+        margin-bottom: 1rem;
+        color: #667eea;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 0.5rem;
+      }
+
+      p {
+        margin: 0.5rem 0;
+        
+        strong {
+          color: #666;
+          margin-right: 0.5rem;
+        }
+      }
+    }
+
+    .vital-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+
+      .vital-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        text-align: center;
+
+        .icon {
+          font-size: 2rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .value {
+          font-size: 2rem;
+          font-weight: bold;
+          margin: 0.5rem 0;
+        }
+
+        .label {
+          font-size: 0.9rem;
+          opacity: 0.9;
+        }
+      }
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+
+      th, td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+
+      th {
+        background: #f5f5f5;
+        color: #666;
+        font-weight: 600;
+      }
+
+      tbody tr:hover {
+        background: #f9f9f9;
+      }
+    }
+  }
+}
