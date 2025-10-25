@@ -10,5 +10,9 @@
     "IDF_TARGET": "esp32"
   },
   "idf.portWin": "COM4",
-  "idf.flashType": "UART"
+  "idf.flashType": "UART",
+  "files.associations": {
+    "max30102_api.h": "c",
+    "algorithm.h": "c"
+  }
 }

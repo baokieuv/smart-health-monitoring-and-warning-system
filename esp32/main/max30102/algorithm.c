@@ -34,6 +34,7 @@ void remove_dc_part(int32_t *ir_buffer, int32_t *red_buffer, uint64_t *ir_mean, 
 		red_buffer[i] = red_buffer[i] - *red_mean;
 		ir_buffer[i] = ir_buffer[i] - *ir_mean;
 	}
+	
 }
 
 
@@ -122,12 +123,14 @@ double spo2_measurement(int32_t *ir_data, int32_t *red_data, uint64_t ir_mean, u
 
 
 	Z = (red_rms/red_mean) / (ir_rms/ir_mean);
-	printf("red_rms %f\n", red_rms);
-	printf("ir_rms %f\n", ir_rms);
-	printf("Z %f\n", Z);
+	// printf("red_rms %f\n", red_rms);
+	// printf("ir_rms %f\n", ir_rms);
+	// printf("Z %f\n", Z);
 
-	SpO2 = (49.7*Z);
-	//SpO2 = (-45.06*Z + 30.354)*Z + 94.845;
+	//SpO2 = (49.7*Z);
+	SpO2 = (-45.06*Z + 30.354)*Z + 94.845;
+	if (SpO2 > 100.0) SpO2 = 100.0;
+	if (SpO2 < 70.0) SpO2 = 70.0;
 	return SpO2;
 }
 
@@ -138,7 +141,7 @@ int calculate_heart_rate(int32_t *ir_data, double *r0, double *auto_correlationa
 	double resultado = 333;
 	double auto_coorelation_0 = auto_correlation_function(ir_data, 0);
 	*r0 = auto_coorelation_0;
-	printf("R0 %f\n", *r0);
+	// printf("R0 %f\n", *r0);
 	double biggest_value = 0;
 	int biggest_value_index = 0;
 	double division;

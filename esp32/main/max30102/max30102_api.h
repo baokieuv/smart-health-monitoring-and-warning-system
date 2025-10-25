@@ -2,6 +2,7 @@
 #define MAX30102_H
 
 #include "esp_err.h"
+#include "esp_log.h"
 
 #define REG_INTR_STATUS_1 0x00
 #define REG_INTR_STATUS_2 0x01
@@ -146,7 +147,7 @@ typedef struct{
 
 
 void max30102_init(max_config *configuration);
-void write_max30102_reg(uint8_t command, uint8_t reg);
+esp_err_t write_max30102_reg(uint8_t command, uint8_t reg);
 //void read_max30102_fifo(uint32_t *red_data, uint32_t *ir_data);
 void read_max30102_fifo(int32_t *red_data, int32_t *ir_data);
 float get_max30102_temp();
