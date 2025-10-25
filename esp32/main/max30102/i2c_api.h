@@ -12,13 +12,9 @@
 #define ACK_VAL 0x0
 #define NACK_VAL 0x1
 
-#define SDA_PIN 21
-#define SCL_PIN 22
-
-
-esp_err_t i2c_init(void);
-esp_err_t i2c_sensor_read(uint8_t *data_rd, size_t size);
-esp_err_t i2c_sensor_write(uint8_t *data_wr, size_t size);
+esp_err_t i2c_init(i2c_port_t i2c_num, int scl_pin, int sda_pin);
+esp_err_t i2c_sensor_read(i2c_port_t i2c_num, uint8_t *data_rd, size_t size);
+esp_err_t i2c_sensor_write(i2c_port_t i2c_num, uint8_t *data_wr, size_t size);
 
 
 

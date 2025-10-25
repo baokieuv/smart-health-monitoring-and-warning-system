@@ -128,7 +128,8 @@ double spo2_measurement(int32_t *ir_data, int32_t *red_data, uint64_t ir_mean, u
 	// printf("Z %f\n", Z);
 
 	//SpO2 = (49.7*Z);
-	SpO2 = (-45.06*Z + 30.354)*Z + 94.845;
+	//SpO2 = (-45.06*Z + 30.354)*Z + 94.845;
+	SpO2 = 104.0 - (17.0 * Z);
 	if (SpO2 > 100.0) SpO2 = 100.0;
 	if (SpO2 < 70.0) SpO2 = 70.0;
 	return SpO2;

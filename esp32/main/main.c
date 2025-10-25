@@ -14,8 +14,6 @@
 #include "ds18b20.h"
 #include "cJSON.h"
 #include "max30102/max30102_api.h"
-#include "max30102/algorithm.h"
-#include "max30102/i2c_api.h"
 
 #define TAG                 "IOT"
 #define MAXIMUM_RETRY       5
@@ -33,9 +31,12 @@
 #define NVS_KEY_PASS    "password"
 #define NVS_KEY_CCCD    "cccd"
 
-#define DS18B20_PIN     GPIO_NUM_18
-#define BUFFER_SIZE     128
-#define DELAY_AMOSTRAGEM 40
+#define DS18B20_PIN         GPIO_NUM_18
+
+#define MAX30102_I2C_PORT   I2C_NUM_0
+#define MAX30102_SCL_PIN    GPIO_NUM_22
+#define MAX30102_SDA_PIN    GPIO_NUM_21
+#define BUFFER_SIZE         128
 
 static EventGroupHandle_t event_group;
 static int s_retry_num = 0;
@@ -44,13 +45,6 @@ static httpd_handle_t http_server = NULL;
 static float temperature = 0.0f;
 static int heart_rate = 0;
 static double spo2 = 0.0;
-
-int32_t red_data = 0;
-int32_t ir_data = 0;
-int32_t red_data_buffer[BUFFER_SIZE];
-int32_t ir_data_buffer[BUFFER_SIZE];
-double auto_correlationated_data[BUFFER_SIZE];
-
 
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_index_html_end");
@@ -310,10 +304,10 @@ void heart_rate_task(void *param){
 		.MULTI_LED_CONTROL2.SLOT3   = 0,      //Desabilitado
     };    
 
-    ESP_ERROR_CHECK(i2c_init());
+    ESP_ERROR_CHECK(i2c_init(MAX30102_I2C_PORT, MAX30102_SCL_PIN, MAX30102_SDA_PIN));
 	vTaskDelay(pdMS_TO_TICKS(100));
 	init_time_array();
-    max30102_init(&max30102_configuration);
+    max30102_init(MAX30102_I2C_PORT, &max30102_configuration);
     ESP_LOGI(TAG, "MAX30102 Initialized.");
     uint64_t ir_mean;
     uint64_t red_mean;
@@ -332,12 +326,12 @@ void heart_rate_task(void *param){
 
             // Đợi cờ ngắt PPG_RDY (bit 6) trong REG_INTR_STATUS_1 (0x00)
             while (!(int_status & 0x40)) {
-                read_max30102_reg(REG_INTR_STATUS_1, &int_status, 1);
+                read_max30102_reg(MAX30102_I2C_PORT, REG_INTR_STATUS_1, &int_status, 1);
                 vTaskDelay(pdMS_TO_TICKS(1)); 
             }
 
             // Đọc dữ liệu từ FIFO
-            read_max30102_fifo(&red_buffer[i], &ir_buffer[i]);
+            read_max30102_fifo(MAX30102_I2C_PORT, &red_buffer[i], &ir_buffer[i]);
         }
 
         ESP_LOGI(TAG, "Buffer full. Processing...");
@@ -355,10 +349,8 @@ void heart_rate_task(void *param){
         spo2 = spo2_measurement(ir_buffer, red_buffer, ir_mean, red_mean);
 
         // 5. In kết quả
-        ESP_LOGI(TAG, "=========================");
         ESP_LOGI(TAG, "Heart Rate: %d BPM", heart_rate);
         ESP_LOGI(TAG, "SpO2:       %.2f %%", spo2);
-        ESP_LOGI(TAG, "=========================");
 
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
