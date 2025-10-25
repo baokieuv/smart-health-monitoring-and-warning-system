@@ -1,0 +1,25 @@
+dependencies:
+  idf:
+    source:
+      type: idf
+    version: 5.3.0
+  lvgl/lvgl:
+    component_hash: b702d642e03e95928046d5c6726558e6444e112420c77efa5fdb6650b0a13c5d
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 9.3.0
+  onewire_bus:
+    dependencies: []
+    source:
+      path: D:\Embedded\ESP\esp\v5.3\esp-idf\components\onewire_bus
+      type: local
+    version: 1.0.4
+direct_dependencies:
+- espressif/onewire_bus
+- idf
+- lvgl/lvgl
+manifest_hash: 32f9dd202c264ed9a0dd571fd4acfaaf27c565e5c9250b2d44a40347cc5a411a
+target: esp32
+version: 2.0.0

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart healthcare</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            text-align: center;
+        }
+        h2 {
+            margin: 10px 0;
+            font-size: 18px;
+            color: #555;
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-bottom: 5px;
+            text-align: left;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0 15px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>ESP32</h1>
+        <h1>Webserver</h1>
+        <h2>Smart healthcare</h2>
+        
+        <label for="cccd">CCCD</label>
+        <input type="text" id="cccd" name="cccd" placeholder="Enter cccd">
+
+        <label for="ssid">SSID</label>
+        <input type="text" id="ssid" name="ssid" placeholder="Enter ssid">
+
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter password">
+
+        <input type="submit" id="button1" value="Submit" onclick="myFunction1()">
+        
+    </div>
+
+    <script>
+        var xhttp1 = new XMLHttpRequest();
+
+        function myFunction1(){
+            const payload = {
+                cccd: document.getElementById("cccd").value,
+                ssid: document.getElementById("ssid").value,
+                pass: document.getElementById("password").value,
+            };
+            
+            fetch("/save", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if(!response.ok) throw new Error("HTTP " + response.status);
+                return response.text();
+            })
+            .then(data => console.log("Success: ", data))
+            .catch(err => console.error("Request failed: ", err));
+        }
+        //setInterval(function ( ) {
+        //    xhttp1.open("GET", "/send", true);
+        //    xhttp1.send();
+        //}, 1000 );
+    </script>
+</body>
+</html>
