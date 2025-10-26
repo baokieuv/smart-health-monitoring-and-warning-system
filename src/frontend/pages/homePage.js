@@ -1,58 +1,81 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import './homePage.scss'
 
 const HomePage = () => {
-  const [patients, setPatients] = useState([])
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    // TODO: Fetch data from API
-    // Temporary mock data
-    setPatients([
-      { cccd: '123456789', name: 'Nguyễn Văn A', heartRate: 75, o2: 98, temperature: 36.5, status: 'normal' },
-      { cccd: '987654321', name: 'Trần Thị B', heartRate: 92, o2: 95, temperature: 37.2, status: 'warning' },
-      { cccd: '456789123', name: 'Lê Văn C', heartRate: 110, o2: 89, temperature: 38.5, status: 'danger' },
-    ])
-  }, [])
-
-  const getStatusClass = (status) => {
-    switch(status) {
-      case 'normal': return 'status-normal'
-      case 'warning': return 'status-warning'
-      case 'danger': return 'status-danger'
-      default: return ''
+  const features = [
+    {
+      id: 1,
+      title: '👥 Danh sách bệnh nhân',
+      description: 'Theo dõi và giám sát tình trạng sức khỏe của tất cả bệnh nhân',
+      path: '/patients',
+      icon: '👥',
+      color: '#4CAF50'
+    },
+    {
+      id: 2,
+      title: '🚨 Cảnh báo',
+      description: 'Xem các cảnh báo và thông báo khẩn cấp về tình trạng bệnh nhân',
+      path: '/alerts',
+      icon: '🚨',
+      color: '#FF9800'
+    },
+    {
+      id: 3,
+      title: '📝 Ghi chú',
+      description: 'Quản lý ghi chú, lịch sử điều trị và hồ sơ bệnh án',
+      path: '/notes',
+      icon: '📝',
+      color: '#2196F3'
     }
+  ]
+
+  const handleNavigate = (path) => {
+    navigate(path)
   }
 
   return (
     <div className="home-page">
-      <h2>Dashboard - Giám sát bệnh nhân</h2>
-      
-      <div className="patients-grid">
-        {patients.map((patient) => (
-          <div key={patient.cccd} className={`patient-card ${getStatusClass(patient.status)}`}>
-            <h3>{patient.name}</h3>
-            <p className="cccd">CCCD: {patient.cccd}</p>
-            <div className="vitals">
-              <div className="vital-item">
-                <span className="label">❤️ Nhịp tim:</span>
-                <span className="value">{patient.heartRate} bpm</span>
-              </div>
-              <div className="vital-item">
-                <span className="label">🫁 SpO2:</span>
-                <span className="value">{patient.o2}%</span>
-              </div>
-              <div className="vital-item">
-                <span className="label">🌡️ Nhiệt độ:</span>
-                <span className="value">{patient.temperature}°C</span>
-              </div>
+      <div className="home-header">
+        <h1>🏥 Hệ thống giám sát sức khỏe thông minh</h1>
+        <p className="subtitle">Quản lý và theo dõi tình trạng sức khỏe bệnh nhân theo thời gian thực</p>
+      </div>
+
+      <div className="features-grid">
+        {features.map((feature) => (
+          <div 
+            key={feature.id} 
+            className="feature-card"
+            onClick={() => handleNavigate(feature.path)}
+            style={{ borderTopColor: feature.color }}
+          >
+            <div className="feature-icon" style={{ color: feature.color }}>
+              {feature.icon}
             </div>
-            <div className={`status ${patient.status}`}>
-              {patient.status === 'normal' && '✅ Bình thường'}
-              {patient.status === 'warning' && '⚠️ Cảnh báo'}
-              {patient.status === 'danger' && '🚨 Nguy hiểm'}
-            </div>
+            <h2>{feature.title}</h2>
+            <p>{feature.description}</p>
+            <button className="feature-button" style={{ backgroundColor: feature.color }}>
+              Truy cập →
+            </button>
           </div>
         ))}
+      </div>
+
+      <div className="home-stats">
+        <div className="stat-card">
+          <div className="stat-number">24</div>
+          <div className="stat-label">Bệnh nhân đang theo dõi</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">3</div>
+          <div className="stat-label">Cảnh báo hiện tại</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">157</div>
+          <div className="stat-label">Ghi chú y tế</div>
+        </div>
       </div>
     </div>
   )

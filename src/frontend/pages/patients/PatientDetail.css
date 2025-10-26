@@ -1,0 +1,161 @@
+.patient-detail-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.detail-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.btn-back {
+  padding: 10px 16px;
+  background: #667eea;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-back:hover {
+  background: #5568d3;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.info-card, .vitals-card, .history-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.info-card h3, .vitals-card h3, .history-card h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #667eea;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 10px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-row .label {
+  color: #666;
+  font-weight: 600;
+}
+
+.info-row .value {
+  color: #333;
+}
+
+.room-link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.room-link:hover {
+  text-decoration: underline;
+}
+
+.vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.vital-box {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.vital-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.vital-value {
+  font-size: 32px;
+  font-weight: bold;
+  margin: 8px 0;
+}
+
+.vital-label {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.status-badge-large {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.status-badge-large .badge {
+  font-size: 16px;
+  padding: 10px 20px;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-table th,
+.history-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.history-table th {
+  background: #f9f9f9;
+  font-weight: 600;
+  color: #666;
+}
+
+.history-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  font-size: 18px;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .vitals-grid {
+    grid-template-columns: 1fr;
+  }
+}
