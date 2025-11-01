@@ -1,4 +1,4 @@
-const ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9";
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 
 exports.authenticate = (req, res, next) => {
     try {
