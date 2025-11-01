@@ -7,3 +7,6 @@ sdkconfig
 *.pyc
 *.log
 __pycache__/
+
+# web
+node_modules/
