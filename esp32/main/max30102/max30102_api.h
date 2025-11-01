@@ -2,6 +2,9 @@
 #define MAX30102_H
 
 #include "esp_err.h"
+#include "esp_log.h"
+#include "i2c_api.h"
+#include "algorithm.h"
 
 #define REG_INTR_STATUS_1 0x00
 #define REG_INTR_STATUS_2 0x01
@@ -145,12 +148,12 @@ typedef struct{
 }max_config;
 
 
-void max30102_init(max_config *configuration);
-void write_max30102_reg(uint8_t command, uint8_t reg);
+void max30102_init(i2c_port_t i2c_num, max_config *configuration);
+esp_err_t write_max30102_reg(i2c_port_t i2c_num, uint8_t command, uint8_t reg);
 //void read_max30102_fifo(uint32_t *red_data, uint32_t *ir_data);
-void read_max30102_fifo(int32_t *red_data, int32_t *ir_data);
-float get_max30102_temp();
-void read_max30102_reg(uint8_t reg_addr, uint8_t *data_reg, size_t bytes_to_read);
+void read_max30102_fifo(i2c_port_t i2c_num, int32_t *red_data, int32_t *ir_data);
+float get_max30102_temp(i2c_port_t i2c_num);
+void read_max30102_reg(i2c_port_t i2c_num, uint8_t reg_addr, uint8_t *data_reg, size_t bytes_to_read);
 
 
 #endif
