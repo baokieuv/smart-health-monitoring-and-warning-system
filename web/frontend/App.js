@@ -1,22 +1,22 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import './App.css';
-import HomePage from './frontend/pages/homePage';
-import PatientList from './frontend/pages/patients/PatientList';
-import PatientDetail from './frontend/pages/patients/PatientDetail';
-import RoomList from './frontend/pages/rooms/RoomList';
-import RoomDetail from './frontend/pages/rooms/RoomDetail';
-import ProfilePage from './frontend/pages/profilePage/profilePafe';
-import Header from './frontend/layouts/header/header';
-import Footer from './frontend/layouts/footer/footer';
+import HomePage from './pages/homePage';
+import PatientList from './pages/patients/PatientList';
+import PatientDetail from './pages/patients/PatientDetail';
+import RoomList from './pages/rooms/RoomList';
+import RoomDetail from './pages/rooms/RoomDetail';
+import ProfilePage from './pages/profilePage/profilePafe';
+import Header from './layouts/header/header';
+import Footer from './layouts/footer/footer';
 import Sidebar from './frontend/components/Sidebar';
-import routers from './frontend/utils/routers';
-import { getToken } from './frontend/utils/api';
+import routers from './utils/routers';
+import { getToken } from './utils/api';
 
 // Admin pages
-import LoginPage from './frontend/pages/admin/LoginPage';
-import AdminShell from './frontend/pages/admin/adminShell/adminShell';
-import DoctorList from './frontend/pages/admin/doctors/DoctorList';
-import DoctorForm from './frontend/pages/admin/doctors/DoctorForm';
+import LoginPage from './pages/admin/LoginPage';
+import AdminShell from './pages/admin/adminShell/adminShell';
+import DoctorList from './pages/admin/doctors/DoctorList';
+import DoctorForm from './pages/admin/doctors/DoctorForm';
 
 const Protected = () => {
   const token = getToken()

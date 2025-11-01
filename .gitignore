@@ -1,30 +1,28 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# production
-/build
-
-# misc
+# General
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-# ESP-IDF build files
+.pnpm-debug.log*
+
+# Build artifacts
 build/
+*/build/
+
+# ESP-IDF specific
 sdkconfig
 *.bin
 *.elf
 *.map
-*.pyc
-*.log
+
+# Python cache
 __pycache__/
+*.pyc
+
+# IDE
+.vscode/
+
+# Node backend
+web/backend/node_modules/
+web/backend/package-lock.json
+
