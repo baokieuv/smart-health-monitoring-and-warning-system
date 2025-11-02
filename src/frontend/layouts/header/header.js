@@ -37,13 +37,13 @@ const Header = () => {
                 {userInfo.role === 'admin' ? '👤' : '👨‍⚕️'} {userInfo.name}
               </span>
               <button onClick={handleLogout} className="nav-link logout-btn">
-                🚪 Đăng xuất
+                🚪 Logout
               </button>
             </>
           )}
           {!userInfo && (
             <Link to={routers.Login} className="nav-link">
-              🔑 Đăng nhập
+              🔑 Login
             </Link>
           )}
         </nav>

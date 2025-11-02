@@ -23,7 +23,7 @@ const AdminHeader = ({ title = "Admin Panel", onSearch }) => {
             <form onSubmit={handleSearch}>
               <input
                 type="text"
-                placeholder="Tìm kiếm..."
+                placeholder="Search..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 className="search-input"

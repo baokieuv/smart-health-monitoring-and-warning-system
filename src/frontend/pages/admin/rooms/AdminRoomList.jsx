@@ -35,12 +35,12 @@ export default function AdminRoomList() {
 
   const getStatusBadge = (status, occupied, capacity) => {
     if (status === 'full' || occupied >= capacity) {
-      return { text: '🔴 Đầy', class: 'status-full' }
+      return { text: '🔴 Full', class: 'status-full' }
     }
     if (occupied === 0) {
-      return { text: '🟢 Trống', class: 'status-empty' }
+      return { text: '🟢 Empty', class: 'status-empty' }
     }
-    return { text: '🟡 Còn chỗ', class: 'status-available' }
+    return { text: '🟡 Available', class: 'status-available' }
   }
 
   const handleDelete = async (roomId) => {
@@ -59,22 +59,22 @@ export default function AdminRoomList() {
   return (
     <div className="admin-room-list">
       <div className="room-list-header">
-        <h2 style={{ marginTop: 0, marginBottom: 20, color: '#333' }}>🏥 Danh sách phòng</h2>
-        <Link to={routers.AdminRoomCreate} className="btn primary">+ Thêm phòng</Link>
+        <h2 style={{ marginTop: 0, marginBottom: 20, color: '#333' }}>🏥 Rooms List</h2>
+        <Link to={routers.AdminRoomCreate} className="btn primary">+ Add Room</Link>
       </div>
 
       <div className="card">
         <table className="table">
           <thead>
             <tr>
-              <th>STT</th>
-              <th>Mã phòng</th>
-              <th>Tòa nhà</th>
-              <th>Tầng</th>
-              <th>Sức chứa</th>
-              <th>Đã sử dụng</th>
-              <th>Trạng thái</th>
-              <th style={{ width: 180 }}>Hành động</th>
+              <th>No.</th>
+              <th>Room Code</th>
+              <th>Building</th>
+              <th>Floor</th>
+              <th>Capacity</th>
+              <th>Occupied</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -84,8 +84,8 @@ export default function AdminRoomList() {
                 <tr key={room.id}>
                   <td>{index + 1}</td>
                   <td><strong>{room.code}</strong></td>
-                  <td>Tòa {room.building}</td>
-                  <td>Tầng {room.floor}</td>
+                  <td>Building {room.building}</td>
+                  <td>Floor {room.floor}</td>
                   <td>{room.capacity}</td>
                   <td>{room.occupied}</td>
                   <td>
@@ -96,17 +96,16 @@ export default function AdminRoomList() {
                   <td>
                     <Link 
                       className="btn ghost" 
-                      to={routers.AdminRoomDetail(room.code)} 
-                      style={{ marginRight: 8, padding: '6px 12px', fontSize: 14 }}
+                      to={routers.AdminRoomDetail(room.code)}
                     >
-                      👁️ Xem
+                      👁️ View
                     </Link>
+                    {' '}
                     <button 
                       className="btn danger" 
-                      onClick={() => handleDelete(room.id)} 
-                      style={{ padding: '6px 12px', fontSize: 14 }}
+                      onClick={() => handleDelete(room.id)}
                     >
-                      Xóa
+                      Delete
                     </button>
                   </td>
                 </tr>

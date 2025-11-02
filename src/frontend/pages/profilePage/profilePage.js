@@ -92,19 +92,19 @@ const ProfilePage = () => {
   return (
     <div className="profile-page doctor-profile">
       <div className="profile-header">
-        <h2>👨‍⚕️ Hồ Sơ Bác Sĩ</h2>
+        <h2>👨‍⚕️ Doctor Profile</h2>
         <div className="header-actions">
           {!isEditing ? (
             <button className="btn-edit" onClick={() => setIsEditing(true)}>
-              ✏️ Chỉnh sửa
+              ✏️ Edit
             </button>
           ) : (
             <>
               <button className="btn-save" onClick={handleSave}>
-                ✓ Lưu
+                ✓ Save
               </button>
               <button className="btn-cancel" onClick={handleCancel}>
-                ✗ Hủy
+                ✗ Cancel
               </button>
             </>
           )}
@@ -114,10 +114,10 @@ const ProfilePage = () => {
       <div className="doctor-info">
         {/* Personal Info Section */}
         <div className="info-section">
-          <h3>📋 Thông tin cá nhân</h3>
+          <h3>📋 Personal Information</h3>
           <div className="info-grid">
             <div className="info-item">
-              <label>Họ và tên:</label>
+              <label>Full Name:</label>
               {isEditing ? (
                 <input
                   type="text"
@@ -130,7 +130,7 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="info-item">
-              <label>Ngày sinh:</label>
+              <label>Date of Birth:</label>
               {isEditing ? (
                 <input
                   type="date"
@@ -143,7 +143,7 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="info-item">
-              <label>Địa chỉ:</label>
+              <label>Address:</label>
               {isEditing ? (
                 <input
                   type="text"
@@ -156,7 +156,7 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="info-item">
-              <label>Số điện thoại:</label>
+              <label>Phone Number:</label>
               {isEditing ? (
                 <input
                   type="tel"
@@ -186,10 +186,10 @@ const ProfilePage = () => {
 
         {/* Work Info Section */}
         <div className="info-section">
-          <h3>🏥 Thông tin công việc</h3>
+          <h3>🏥 Work Information</h3>
           <div className="info-grid">
             <div className="info-item">
-              <label>Khoa làm việc:</label>
+              <label>Department:</label>
               {isEditing ? (
                 <select
                   name="department"
@@ -208,7 +208,7 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="info-item">
-              <label>Chuyên môn:</label>
+              <label>Field:</label>
               {isEditing ? (
                 <input
                   type="text"
@@ -221,7 +221,7 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="info-item">
-              <label>Vị trí:</label>
+              <label>Position:</label>
               {isEditing ? (
                 <select
                   name="position"
@@ -238,7 +238,7 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="info-item">
-              <label>Học vấn:</label>
+              <label>Education:</label>
               {isEditing ? (
                 <textarea
                   name="education"
@@ -251,7 +251,7 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="info-item">
-              <label>Kinh nghiệm:</label>
+              <label>Experience:</label>
               {isEditing ? (
                 <input
                   type="text"
@@ -264,7 +264,7 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="info-item">
-              <label>Ngày vào làm:</label>
+              <label>Starting Date:</label>
               {isEditing ? (
                 <input
                   type="date"
@@ -281,18 +281,18 @@ const ProfilePage = () => {
 
         {/* Password Section */}
         <div className="info-section password-section">
-          <h3>🔒 Bảo mật</h3>
+          <h3>🔒 Privacy</h3>
           {!showPasswordChange ? (
             <button 
               className="btn-change-password"
               onClick={() => setShowPasswordChange(true)}
             >
-              Đổi mật khẩu
+              Change Password
             </button>
           ) : (
             <div className="password-form">
               <div className="info-item">
-                <label>Mật khẩu hiện tại:</label>
+                <label>Current Password:</label>
                 <input
                   type="password"
                   name="currentPassword"
@@ -302,7 +302,7 @@ const ProfilePage = () => {
                 />
               </div>
               <div className="info-item">
-                <label>Mật khẩu mới:</label>
+                <label>New Password:</label>
                 <input
                   type="password"
                   name="newPassword"
@@ -312,7 +312,7 @@ const ProfilePage = () => {
                 />
               </div>
               <div className="info-item">
-                <label>Xác nhận mật khẩu:</label>
+                <label>Confirm Password:</label>
                 <input
                   type="password"
                   name="confirmPassword"
@@ -323,7 +323,7 @@ const ProfilePage = () => {
               </div>
               <div className="password-actions">
                 <button className="btn-save" onClick={handlePasswordUpdate}>
-                  Cập nhật mật khẩu
+                  Update Password
                 </button>
                 <button 
                   className="btn-cancel" 
@@ -336,7 +336,7 @@ const ProfilePage = () => {
                     })
                   }}
                 >
-                  Hủy
+                  Cancel
                 </button>
               </div>
             </div>

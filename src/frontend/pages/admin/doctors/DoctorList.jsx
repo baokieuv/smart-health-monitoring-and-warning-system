@@ -40,7 +40,7 @@ export default function DoctorList() {
         setError(`Bạn thao tác quá nhanh. Vui lòng thử lại sau ${sec} giây.`)
       } else {
         setData(mockDoctors(page, limit, search, specialization))
-        setError('Đang hiển thị dữ liệu demo')
+        // setError('Đang hiển thị dữ liệu demo')
       }
     } finally {
       setLoading(false)
@@ -63,7 +63,7 @@ export default function DoctorList() {
 
   return (
     <div>
-      <h2 style={{ marginTop: 0, marginBottom: 20, color: '#333' }}>Danh sách bác sĩ</h2>
+      <h2 style={{ marginTop: 0, marginBottom: 20, color: '#333' }}>Doctors List</h2>
       
       <div className="toolbar">
         <div className="filters">
@@ -80,12 +80,12 @@ export default function DoctorList() {
         <table className="table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Họ và tên</th>
-              <th>Khoa làm việc</th>
-              <th>Vị trí</th>
-              <th>Số điện thoại</th>
-              <th style={{ width: 120 }}>Hành động</th>
+              <th>No.</th>
+              <th>Full Name</th>
+              <th>Department</th>
+              <th>Position</th>
+              <th>Phone</th>
+              <th style={{ width: 120 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -97,7 +97,7 @@ export default function DoctorList() {
                 <td>{d.position || d.specialization}</td>
                 <td>{d.phone}</td>
                 <td>
-                  <Link className="btn ghost" to={routers.AdminDoctorDetail(d.id)} style={{ padding: '6px 12px', fontSize: 14 }}>👁️ Xem</Link>
+                  <Link className="btn ghost" to={routers.AdminDoctorDetail(d.id)} style={{ padding: '6px 12px', fontSize: 14 }}>👁️ View</Link>
                 </td>
               </tr>
             ))}

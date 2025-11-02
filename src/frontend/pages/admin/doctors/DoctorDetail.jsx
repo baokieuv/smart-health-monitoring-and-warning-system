@@ -57,7 +57,7 @@ export default function DoctorDetail() {
         join_date: '2010-08-01',
         username: `doctor${id}`,
       })
-      setError('Đang hiển thị dữ liệu demo')
+      // setError('Đang hiển thị dữ liệu demo')
     } finally {
       setLoading(false)
     }

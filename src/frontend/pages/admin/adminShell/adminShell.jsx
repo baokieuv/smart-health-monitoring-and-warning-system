@@ -63,18 +63,18 @@ export default function AdminShell() {
 
   return (
     <div className="admin-shell">
-      <AdminHeader title="🏥 Bệnh viện A - Admin Panel" onSearch={onHeaderSearch} />
+      <AdminHeader title="🏥 Hospital A - Admin Panel" onSearch={onHeaderSearch} />
       
       <div className="admin-body">
         <aside className="admin-sidebar">
           <nav>
-            <SidebarItem icon="ℹ️" label="Thông tin" to={routers.AdminInfo} />
-            <SidebarItem icon="👨‍⚕️" label="Danh sách bác sĩ" to={routers.AdminDoctors} />
-            <SidebarItem icon="🏥" label="Danh sách phòng" to={routers.AdminRooms} />
-            <SidebarItem icon="💼" label="Công việc" to="#" />
-            <SidebarItem icon="📝" label="Ghi chú" to="#" />
+            <SidebarItem icon="ℹ️" label="Information" to={routers.AdminInfo} />
+            <SidebarItem icon="👨‍⚕️" label="Doctors List" to={routers.AdminDoctors} />
+            <SidebarItem icon="🏥" label="Rooms List" to={routers.AdminRooms} />
+            <SidebarItem icon="💼" label="Jobs" to="#" />
+            <SidebarItem icon="📝" label="Notes" to="#" />
             {getToken() && (
-              <SidebarItem icon="🚪" label="Đăng xuất" onClick={logout} />
+              <SidebarItem icon="🚪" label="Logout" onClick={logout} />
             )}
           </nav>
         </aside>
