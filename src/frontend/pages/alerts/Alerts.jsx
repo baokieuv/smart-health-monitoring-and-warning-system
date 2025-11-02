@@ -61,8 +61,8 @@ export default function Alerts() {
 
   const getAlertStatusBadge = (alertStatus) => {
     const badges = {
-      urgent: { text: '🚨 Khẩn cấp', class: 'alert-urgent' },
-      receiving: { text: '🔵 Đang tiếp nhận', class: 'alert-receiving' }
+      urgent: { text: '🚨 Warning', class: 'alert-urgent' },
+      receiving: { text: '🔵 Processing', class: 'alert-processing' }
     }
     return badges[alertStatus] || badges.urgent
   }
@@ -113,25 +113,25 @@ export default function Alerts() {
   return (
     <div className="alerts-container">
       <div className="alerts-header">
-        <h2>🚨 Danh sách cảnh báo</h2>
+        <h2>🚨 Alerts List</h2>
         <div className="filter-buttons">
           <button 
             className={filter === 'all' ? 'active' : ''} 
             onClick={() => setFilter('all')}
           >
-            Tất cả ({alerts.length})
+            All ({alerts.length})
           </button>
           <button 
             className={filter === 'urgent' ? 'active' : ''} 
             onClick={() => setFilter('urgent')}
           >
-            Khẩn cấp ({alerts.filter(a => a.alertStatus === 'urgent').length})
+            Warning ({alerts.filter(a => a.alertStatus === 'urgent').length})
           </button>
           <button 
             className={filter === 'receiving' ? 'active' : ''} 
             onClick={() => setFilter('receiving')}
           >
-            Đang tiếp nhận ({alerts.filter(a => a.alertStatus === 'receiving').length})
+            Processing ({alerts.filter(a => a.alertStatus === 'receiving').length})
           </button>
         </div>
       </div>
@@ -140,13 +140,13 @@ export default function Alerts() {
         <table className="alerts-table">
           <thead>
             <tr>
-              <th>STT</th>
-              <th>Thời gian</th>
-              <th>Họ và tên</th>
+              <th>No.</th>
+              <th>Time</th>
+              <th>Name</th>
               <th>CCCD</th>
-              <th>Phòng</th>
-              <th>Trạng thái</th>
-              <th>Hành động</th>
+              <th>Room</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -180,14 +180,14 @@ export default function Alerts() {
                         className="btn-receive"
                         onClick={() => handleReceive(alertItem.id)}
                       >
-                        📥 Tiếp nhận
+                        📥 Process
                       </button>
                     ) : (
                       <button 
                         className="btn-complete"
                         onClick={() => handleComplete(alertItem.id)}
                       >
-                        ✅ Xong
+                        ✅ Done
                       </button>
                     )}
                   </td>
@@ -236,15 +236,15 @@ function TreatmentNoteModal({ patient, onSave, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h3>✅ Hoàn thành điều trị</h3>
+        <h3>✅ Treatment Note</h3>
         <div className="patient-info">
-          <p><strong>Bệnh nhân:</strong> {patient.name}</p>
-          <p><strong>CCCD:</strong> {patient.cccd}</p>
-          <p><strong>Phòng:</strong> {patient.room}</p>
+          <p><strong>Patient:</strong> {patient.name}</p>
+          <p><strong>ID Card:</strong> {patient.cccd}</p>
+          <p><strong>Room:</strong> {patient.room}</p>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Phương pháp điều trị: <span className="required">*</span></label>
+            <label>Treatment Method: <span className="required">*</span></label>
             <textarea
               value={treatmentNote}
               onChange={(e) => setTreatmentNote(e.target.value)}
@@ -254,8 +254,8 @@ function TreatmentNoteModal({ patient, onSave, onClose }) {
             />
           </div>
           <div className="modal-actions">
-            <button type="submit" className="btn-primary">Xác nhận</button>
-            <button type="button" className="btn-secondary" onClick={onClose}>Hủy</button>
+            <button type="submit" className="btn-primary">Confirm</button>
+            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           </div>
         </form>
       </div>

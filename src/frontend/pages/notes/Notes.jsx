@@ -65,11 +65,11 @@ export default function Notes() {
   return (
     <div className="notes-container">
       <div className="notes-header">
-        <h2>📝 Ghi chú xử lý</h2>
+        <h2>📝 Medical Notes</h2>
         <div className="search-box">
           <input
             type="text"
-            placeholder="🔍 Tìm kiếm theo tên, CCCD, phòng..."
+            placeholder="🔍 Search by name, ID, room..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -79,7 +79,7 @@ export default function Notes() {
       <div className="notes-stats">
         <div className="stat-card">
           <div className="stat-number">{notes.length}</div>
-          <div className="stat-label">Tổng số ca đã xử lý</div>
+          <div className="stat-label">Total processed cases</div>
         </div>
         <div className="stat-card">
           <div className="stat-number">
@@ -88,7 +88,7 @@ export default function Notes() {
               return n.completedAt.startsWith(today)
             }).length}
           </div>
-          <div className="stat-label">Xử lý hôm nay</div>
+          <div className="stat-label">Processed today</div>
         </div>
       </div>
 
@@ -96,14 +96,14 @@ export default function Notes() {
         <table className="notes-table">
           <thead>
             <tr>
-              <th>STT</th>
-              <th>Thời gian</th>
-              <th>Họ và tên</th>
-              <th>CCCD</th>
-              <th>Phòng</th>
-              <th>Bác sĩ điều trị</th>
-              <th>Phương pháp điều trị</th>
-              <th>Hành động</th>
+              <th>No.</th>
+              <th>Time</th>
+              <th>Name</th>
+              <th>ID</th>
+              <th>Room</th>
+              <th>Doctor</th>
+              <th>Treatment Method</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -129,7 +129,7 @@ export default function Notes() {
                     to={`/patients/${note.id}`} 
                     className="btn-view"
                   >
-                    👁️ Xem
+                    👁️ View
                   </Link>
                 </td>
               </tr>

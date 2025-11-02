@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import './PatientDetail.css'
 
 export default function PatientDetail() {
@@ -27,10 +28,16 @@ export default function PatientDetail() {
     })
 
     setVitals([
-      { time: '08:00', heartRate: 72, spo2: 97, temperature: 36.3 },
-      { time: '12:00', heartRate: 75, spo2: 98, temperature: 36.5 },
-      { time: '16:00', heartRate: 78, spo2: 96, temperature: 36.6 },
-      { time: '20:00', heartRate: 74, spo2: 97, temperature: 36.4 },
+      { time: '00:00', heartRate: 70, spo2: 97, temperature: 36.2 },
+      { time: '00:15', heartRate: 71, spo2: 97, temperature: 36.3 },
+      { time: '00:30', heartRate: 72, spo2: 98, temperature: 36.3 },
+      { time: '00:45', heartRate: 70, spo2: 97, temperature: 36.2 },
+      { time: '01:00', heartRate: 72, spo2: 97, temperature: 36.3 },
+      { time: '01:15', heartRate: 75, spo2: 98, temperature: 36.5 },
+      { time: '01:30', heartRate: 78, spo2: 96, temperature: 36.6 },
+      { time: '01:45', heartRate: 74, spo2: 97, temperature: 36.4 },
+      { time: '02:00', heartRate: 73, spo2: 98, temperature: 36.5 },
+      { time: '02:15', heartRate: 75, spo2: 97, temperature: 36.4 },
     ])
   }, [id])
 
@@ -124,28 +131,50 @@ export default function PatientDetail() {
         </div>
       </div>
 
-      <div className="history-card">
-        <h3>📊 History Vitals</h3>
-        <table className="history-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Heart Rate</th>
-              <th>SpO2</th>
-              <th>Temperature</th>
-            </tr>
-          </thead>
-          <tbody>
-            {vitals.map((v, i) => (
-              <tr key={i}>
-                <td>{v.time}</td>
-                <td>{v.heartRate} bpm</td>
-                <td>{v.spo2}%</td>
-                <td>{v.temperature}°C</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="charts-section">
+        <h3>📊 History Vitals Chart</h3>
+        
+        <div className="chart-container">
+          <h4>❤️ Heart Rate (bpm)</h4>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={vitals} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="time" />
+              <YAxis domain={[60, 100]} />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="heartRate" stroke="#e74c3c" strokeWidth={2} name="Nhịp tim" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-container">
+          <h4>🫁 SpO2 (%)</h4>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={vitals} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="time" />
+              <YAxis domain={[90, 100]} />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="spo2" stroke="#3498db" strokeWidth={2} name="SpO2" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-container">
+          <h4>🌡️ Temperature (°C)</h4>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={vitals} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="time" />
+              <YAxis domain={[35.5, 37.5]} />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="temperature" stroke="#2ecc71" strokeWidth={2} name="Nhiệt độ" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )

@@ -54,7 +54,7 @@
 .alerts-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 800px;
+  min-width: 900px;
 }
 
 .alerts-table thead {
@@ -69,6 +69,14 @@
   font-size: 14px;
   white-space: nowrap;
 }
+
+.alerts-table th:nth-child(1) { width: 50px; text-align: center; } /* STT */
+.alerts-table th:nth-child(2) { width: 150px; } /* Thời gian */
+.alerts-table th:nth-child(3) { width: 180px; } /* Họ và tên */
+.alerts-table th:nth-child(4) { width: 120px; } /* CCCD */
+.alerts-table th:nth-child(5) { width: 100px; } /* Phòng */
+.alerts-table th:nth-child(6) { width: 140px; } /* Trạng thái */
+.alerts-table th:nth-child(7) { width: auto; text-align: center; } /* Hành động */
 
 .alerts-table tbody tr {
   border-bottom: 1px solid #f0f0f0;
@@ -87,7 +95,11 @@
   padding: 14px 12px;
   font-size: 14px;
   color: #333;
+  vertical-align: middle;
 }
+
+.alerts-table td:nth-child(1) { text-align: center; } /* STT */
+.alerts-table td:nth-child(7) { text-align: center; } /* Hành động */
 
 .alerts-table td small {
   color: #666;
@@ -114,7 +126,7 @@
   animation: pulse 2s infinite;
 }
 
-.badge.alert-receiving {
+.badge.alert-processing {
   background: #e3f2fd;
   color: #1565c0;
 }

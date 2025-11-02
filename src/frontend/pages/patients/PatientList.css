@@ -77,6 +77,7 @@
 .patient-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 1000px;
 }
 
 .patient-table thead {
@@ -85,11 +86,22 @@
 }
 
 .patient-table th {
-  padding: 16px;
+  padding: 16px 12px;
   text-align: left;
   font-weight: 600;
   font-size: 14px;
+  white-space: nowrap;
 }
+
+.patient-table th:nth-child(1) { width: 50px; text-align: center; } /* No. */
+.patient-table th:nth-child(2) { width: 180px; } /* Full Name */
+.patient-table th:nth-child(3) { width: 120px; } /* CCCD */
+.patient-table th:nth-child(4) { width: 80px; } /* Gender */
+.patient-table th:nth-child(5) { width: 60px; text-align: center; } /* Age */
+.patient-table th:nth-child(6) { width: 140px; } /* Status */
+.patient-table th:nth-child(7) { width: 130px; } /* Emergency Contact */
+.patient-table th:nth-child(8) { width: 80px; } /* Room */
+.patient-table th:nth-child(9) { width: 100px; text-align: center; } /* Actions */
 
 .patient-table tbody tr {
   border-bottom: 1px solid #f0f0f0;
@@ -109,10 +121,15 @@
 }
 
 .patient-table td {
-  padding: 14px 16px;
+  padding: 14px 12px;
   font-size: 14px;
   color: #333;
+  vertical-align: middle;
 }
+
+.patient-table td:nth-child(1) { text-align: center; } /* No. */
+.patient-table td:nth-child(5) { text-align: center; } /* Age */
+.patient-table td:nth-child(9) { text-align: center; } /* Actions */
 
 .badge {
   display: inline-block;

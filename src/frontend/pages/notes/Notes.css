@@ -74,7 +74,7 @@
 .notes-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 900px;
+  min-width: 1000px;
 }
 
 .notes-table thead {
@@ -90,6 +90,15 @@
   white-space: nowrap;
 }
 
+.notes-table th:nth-child(1) { width: 50px; text-align: center; } /* STT */
+.notes-table th:nth-child(2) { width: 130px; } /* Thời gian */
+.notes-table th:nth-child(3) { width: 150px; } /* Họ và tên */
+.notes-table th:nth-child(4) { width: 110px; } /* CCCD */
+.notes-table th:nth-child(5) { width: 80px; } /* Phòng */
+.notes-table th:nth-child(6) { width: 150px; } /* Bác sĩ điều trị */
+.notes-table th:nth-child(7) { width: auto; min-width: 300px; } /* Phương pháp điều trị - dài hơn */
+.notes-table th:nth-child(8) { width: 100px; text-align: center; } /* Hành động */
+
 .notes-table tbody tr {
   border-bottom: 1px solid #f0f0f0;
   transition: background 0.2s;
@@ -103,7 +112,11 @@
   padding: 14px 12px;
   font-size: 14px;
   color: #333;
+  vertical-align: middle;
 }
+
+.notes-table td:nth-child(1) { text-align: center; } /* STT */
+.notes-table td:nth-child(8) { text-align: center; } /* Hành động */
 
 .notes-table td small {
   color: #666;
@@ -111,9 +124,9 @@
 }
 
 .note-text {
-  max-width: 400px;
+  max-width: 500px;
   white-space: normal;
-  line-height: 1.4;
+  line-height: 1.5;
   color: #666;
   font-size: 13px;
 }

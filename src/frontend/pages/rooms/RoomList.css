@@ -38,6 +38,7 @@
 .room-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 800px;
 }
 
 .room-table thead {
@@ -46,11 +47,21 @@
 }
 
 .room-table th {
-  padding: 16px;
+  padding: 16px 12px;
   text-align: left;
   font-weight: 600;
   font-size: 14px;
+  white-space: nowrap;
 }
+
+.room-table th:nth-child(1) { width: 50px; text-align: center; } /* No. */
+.room-table th:nth-child(2) { width: 150px; } /* Room Code */
+.room-table th:nth-child(3) { width: 150px; } /* Building */
+.room-table th:nth-child(4) { width: 100px; text-align: center; } /* Floor */
+.room-table th:nth-child(5) { width: 120px; text-align: center; } /* Capacity */
+.room-table th:nth-child(6) { width: 120px; text-align: center; } /* Occupied */
+.room-table th:nth-child(7) { width: 140px; } /* Status */
+.room-table th:nth-child(8) { width: 100px; text-align: center; } /* Actions */
 
 .room-table tbody tr {
   border-bottom: 1px solid #f0f0f0;
@@ -62,10 +73,17 @@
 }
 
 .room-table td {
-  padding: 14px 16px;
+  padding: 14px 12px;
   font-size: 14px;
   color: #333;
+  vertical-align: middle;
 }
+
+.room-table td:nth-child(1) { text-align: center; } /* No. */
+.room-table td:nth-child(4) { text-align: center; } /* Floor */
+.room-table td:nth-child(5) { text-align: center; } /* Capacity */
+.room-table td:nth-child(6) { text-align: center; } /* Occupied */
+.room-table td:nth-child(8) { text-align: center; } /* Actions */
 
 .badge {
   display: inline-block;
