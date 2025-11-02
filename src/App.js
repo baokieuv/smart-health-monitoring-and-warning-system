@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import HomePage from './frontend/pages/homePage';
 import PatientList from './frontend/pages/patients/PatientList';
@@ -16,7 +16,7 @@ import routers from './frontend/utils/routers';
 import { getToken, getUserRole } from './frontend/utils/api';
 
 // Admin pages
-import LoginPage from './frontend/pages/admin/adminShell/LoginPage';
+import LoginPage from './frontend/layouts/LoginPage';
 import AdminShell from './frontend/pages/admin/adminShell/adminShell';
 import AdminInfo from './frontend/pages/admin/info/AdminInfo';
 import DoctorList from './frontend/pages/admin/doctors/DoctorList';
@@ -25,10 +25,10 @@ import DoctorDetail from './frontend/pages/admin/doctors/DoctorDetail';
 import AdminRoomList from './frontend/pages/admin/rooms/AdminRoomList';
 import AdminRoomForm from './frontend/pages/admin/rooms/AdminRoomForm';
 
-const Protected = () => {
-  const token = getToken()
-  return token ? <Outlet /> : <Navigate to={routers.Login} replace />
-}
+// const Protected = () => {
+//   const token = getToken()
+//   return token ? <Outlet /> : <Navigate to={routers.Login} replace />
+// }
 
 // Redirect to appropriate page based on login status and role
 const HomeRedirect = () => {
@@ -44,7 +44,7 @@ const HomeRedirect = () => {
   if (userRole === 'admin') {
     return <Navigate to={routers.AdminInfo} replace />
   } else {
-    return <Navigate to={routers.Patient} replace />
+    return <Navigate to={routers.Home} replace />
   }
 }
 
@@ -73,13 +73,13 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Login Route */}
+        {/* Public Login Route */}  
         <Route path={routers.Login} element={<LoginPage />} />
         <Route path={routers.AdminLogin} element={<Navigate to={routers.Login} replace />} />
         
         {/* Home Route - Redirect based on login status */}
-        <Route path={routers.Home} element={<HomeRedirect />} />
-        
+        <Route path={routers.HomeRedirect} element={<HomeRedirect />} />
+        <Route path={routers.Home} element={<HomePage />} />
         {/* User Routes - Protected for 'user' role */}
         <Route element={<ProtectedRoute requiredRole="user" />}>
           <Route path={routers.Patient} element={<MainLayout><PatientList /></MainLayout>} />
@@ -88,7 +88,7 @@ function App() {
           <Route path={routers.RoomDetail} element={<MainLayout><RoomDetail /></MainLayout>} />
           <Route path={routers.Alerts} element={<MainLayout><Alerts /></MainLayout>} />
           <Route path={routers.Notes} element={<MainLayout><Notes /></MainLayout>} />
-          <Route path={routers.ProfilePage} element={<SimpleLayout><ProfilePage /></SimpleLayout>} />
+          <Route path={routers.ProfilePagePath} element={<SimpleLayout><ProfilePage /></SimpleLayout>} />
         </Route>
         
         {/* Admin Routes - Protected for 'admin' role */}

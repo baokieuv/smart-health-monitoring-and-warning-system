@@ -29,7 +29,7 @@ const Header = () => {
           {userInfo && (
             <>
               {userInfo.role === 'user' && (
-                <Link to={routers.ProfilePagePath(userInfo.id)} className="nav-link">
+                <Link to={routers.ProfilePage(userInfo.id)} className="nav-link">
                   👨‍⚕️ Profile
                 </Link>
               )}

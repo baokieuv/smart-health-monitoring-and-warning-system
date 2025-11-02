@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { setToken, setUserInfo } from '../../../utils/api'
-import routers from '../../../utils/routers'
+import { setToken, setUserInfo } from '../utils/api'
+import routers from '../utils/routers'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -57,7 +57,7 @@ export default function LoginPage() {
         if (demoUser.role === 'admin') {
           navigate(routers.AdminInfo)
         } else {
-          navigate(routers.Patient)
+          navigate(routers.Home)
         }
       }, 500)
     } else {

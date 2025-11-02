@@ -1,7 +1,8 @@
 const routers = {
   // Public routes
   Login: '/login',
-  Home: '/',
+  HomeRedirect: '/',
+  Home: '/home',
   Patient: '/patients',
   PatientDetail: '/patients/:id',
   PatientCreate: '/patients/create',
@@ -9,8 +10,8 @@ const routers = {
   RoomDetail: '/rooms/:code',
   Alerts: '/alerts',
   Notes: '/notes',
-  ProfilePage: '/profile/:userId',
-  ProfilePagePath: (userId = ':userId') => `/profile/${userId}`,
+  ProfilePagePath: '/profile/:userId',
+  ProfilePage: (userId = ':userId') => `/profile/${userId}`,
   
   // Admin routes
   AdminLogin: '/admin/login',
