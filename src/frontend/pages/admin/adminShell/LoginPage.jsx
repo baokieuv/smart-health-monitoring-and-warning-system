@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login, setToken } from '../../utils/api'
-import routers from '../../utils/routers'
+import { setToken, setUserInfo } from '../../../utils/api'
+import routers from '../../../utils/routers'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -10,67 +10,75 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
-  const DEMO_USER = {
-    username: 'admin',
-    password: '1',
-    role: 'admin',
-    name: 'Demo Admin',
-  }
-
-  const makeFakeJwt = (payload) => {
-    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-    const body = btoa(JSON.stringify(payload))
-    const sig = 'demo-signature'
-    return `${header}.${body}.${sig}`
-  }
+  const DEMO_ACCOUNTS = [
+    {
+      username: 'admin',
+      password: '1',
+      role: 'admin',
+      name: 'Admin Nguyễn Văn A',
+      id: '1',
+    },
+    {
+      username: 'user',
+      password: '1',
+      role: 'user',
+      name: 'BS. Trần Thị B',
+      id: '2',
+    },
+  ]
 
   const onSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
-    try {
-      // Demo hard-coded login (no backend required)
-      if (username === DEMO_USER.username && password === DEMO_USER.password) {
-        const token = makeFakeJwt({
-          sub: '1',
-          name: DEMO_USER.name,
-          role: DEMO_USER.role,
-          exp: Math.floor(Date.now() / 1000) + 60 * 60,
-        })
-        setToken(token)
-        navigate(routers.AdminDoctors)
-        return
+    
+    const demoUser = DEMO_ACCOUNTS.find(
+      (acc) => acc.username === username && acc.password === password
+    )
+    
+    if (demoUser) {
+     
+      const token = `demo-token-${demoUser.id}`
+      
+      const userInfo = {
+        id: demoUser.id,
+        name: demoUser.name,
+        role: demoUser.role,
+        username: demoUser.username,
       }
-
-      const res = await login({ username, password })
-      if (res?.status === 'success' && res?.access_token) {
-        setToken(res.access_token)
-        navigate(routers.AdminDoctors)
-      } else {
-        setError(res?.message || 'Đăng nhập thất bại')
-      }
-    } catch (err) {
-      if (err?.response?.status === 429) {
-        const sec = err.rateLimit?.retryAfter || 30
-        setError(`Quá nhiều lần đăng nhập. Vui lòng thử lại sau ${sec} giây.`)
-      } else {
-        setError(err?.response?.data?.message || 'Đăng nhập thất bại')
-      }
-    } finally {
-      setLoading(false)
+      
+      // Lưu vào localStorage
+      setToken(token)
+      setUserInfo(userInfo)
+      
+      setTimeout(() => {
+        setLoading(false)
+        // Route based on role
+        if (demoUser.role === 'admin') {
+          navigate(routers.AdminInfo)
+        } else {
+          navigate(routers.Patient)
+        }
+      }, 500)
+    } else {
+      // Sai username hoặc password
+      setTimeout(() => {
+        setLoading(false)
+        setError('Tên đăng nhập hoặc mật khẩu không đúng')
+      }, 500)
     }
   }
 
   return (
     <div style={{ display: 'grid', placeItems: 'center', height: '100vh', background: '#f5f5f5' }}>
       <form className="login-card" onSubmit={onSubmit} style={{ width: 380, padding: 30, background: '#fff', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ marginTop: 0, color: '#667eea', textAlign: 'center' }}>🏥 Admin Login</h2>
+        <h2 style={{ marginTop: 0, color: '#667eea', textAlign: 'center' }}>🏥 Đăng nhập hệ thống</h2>
         <div className="field" style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', marginBottom: 8, fontWeight: 600, color: '#333' }}>Tên đăng nhập</label>
           <input 
             value={username} 
             onChange={(e) => setUsername(e.target.value)} 
-            placeholder="admin"
+            placeholder="Nhập tên đăng nhập"
             style={{ width: '100%', padding: 12, border: '1px solid #ddd', borderRadius: 8 }}
           />
         </div>
@@ -84,8 +92,10 @@ export default function LoginPage() {
             style={{ width: '100%', padding: 12, border: '1px solid #ddd', borderRadius: 8 }}
           />
         </div>
-        <div style={{ color: '#999', fontSize: 12, marginBottom: 12, textAlign: 'center' }}>
-          Demo: {DEMO_USER.username} / {DEMO_USER.password}
+        <div style={{ color: '#999', fontSize: 12, marginBottom: 12, padding: 10, background: '#f9f9f9', borderRadius: 6 }}>
+          <div style={{ marginBottom: 4 }}><strong>Demo accounts:</strong></div>
+          <div>👤 Admin: admin / 1</div>
+          <div>👨‍⚕️ User (Bác sĩ): user / 1</div>
         </div>
         {error && (
           <div style={{ color: '#e5484d', marginBottom: 12, fontSize: 13, textAlign: 'center' }}>

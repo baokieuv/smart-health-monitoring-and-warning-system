@@ -1,20 +1,28 @@
 const routers = {
   // Public routes
+  Login: '/login',
   Home: '/',
-  PatientMonitor: '/patients',
-  PatientDetail: (id = ':id') => `/patients/${id}`,
+  Patient: '/patients',
+  PatientDetail: '/patients/:id',
+  PatientCreate: '/patients/create',
   RoomList: '/rooms',
-  RoomDetail: (code = ':code') => `/rooms/${code}`,
+  RoomDetail: '/rooms/:code',
   Alerts: '/alerts',
   Notes: '/notes',
-  ProfilePage: (cccd = ':cccd') => `/profile/${cccd}`,
+  ProfilePage: '/profile/:userId',
+  ProfilePagePath: (userId = ':userId') => `/profile/${userId}`,
   
   // Admin routes
   AdminLogin: '/admin/login',
+  AdminInfo: '/admin',
   AdminDoctors: '/admin/doctors',
   AdminDoctorCreate: '/admin/doctors/create',
   AdminDoctorDetailPath: '/admin/doctors/:id',
   AdminDoctorDetail: (id = ':id') => `/admin/doctors/${id}`,
+  AdminRooms: '/admin/rooms',
+  AdminRoomCreate: '/admin/rooms/create',
+  AdminRoomDetailPath: '/admin/rooms/:code',
+  AdminRoomDetail: (code = ':code') => `/admin/rooms/${code}`,
 }
 
 export default routers

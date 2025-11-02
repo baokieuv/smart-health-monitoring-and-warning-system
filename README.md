@@ -94,3 +94,28 @@ idf.py set-target esp32
 idf.py build
 idf.py -p <COM port> flash monitor
 ```
+
+---
+### Clone web
+
+Install dependencies
+```bash
+npm install
+```
+
+Run
+```bash
+npm start
+```
+
+Server is running at: `http://localhost:3000`
+
+### Tài khoản demo
+
+- **Admin**: 
+  - Username: `admin`
+  - Password: `1`
+  
+- **User**: 
+  - Username: `user`
+  - Password: `1`

@@ -30,7 +30,6 @@ export default function RoomList() {
     <div className="room-list-container">
       <div className="room-list-header">
         <h2>🏥 Danh sách phòng</h2>
-        <Link to="/rooms/create" className="btn-add">+ Thêm phòng</Link>
       </div>
 
       <div className="table-container">

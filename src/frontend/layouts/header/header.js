@@ -1,8 +1,21 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { getUserInfo, clearToken, clearUserInfo } from '../../utils/api'
+import routers from '../../utils/routers'
 import './header.css'
 
 const Header = () => {
+  const navigate = useNavigate()
+  const userInfo = getUserInfo()
+  
+  const handleLogout = () => {
+    if (window.confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+      clearToken()
+      clearUserInfo()
+      navigate(routers.Login)
+    }
+  }
+  
   return (
     <header className="header">
       <div className="header-container">
@@ -13,7 +26,26 @@ const Header = () => {
         </div>
         <nav className="nav">
           <Link to="/" className="nav-link">Dashboard</Link>
-          <Link to="/profile" className="nav-link">👨‍⚕️ Profile</Link>
+          {userInfo && (
+            <>
+              {userInfo.role === 'user' && (
+                <Link to={routers.ProfilePagePath(userInfo.id)} className="nav-link">
+                  👨‍⚕️ Profile
+                </Link>
+              )}
+              <span className="nav-link user-info">
+                {userInfo.role === 'admin' ? '👤' : '👨‍⚕️'} {userInfo.name}
+              </span>
+              <button onClick={handleLogout} className="nav-link logout-btn">
+                🚪 Đăng xuất
+              </button>
+            </>
+          )}
+          {!userInfo && (
+            <Link to={routers.Login} className="nav-link">
+              🔑 Đăng nhập
+            </Link>
+          )}
         </nav>
       </div>
     </header>

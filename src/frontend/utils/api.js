@@ -2,12 +2,27 @@ import axios from 'axios'
 
 const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:2007'
 const ACCESS_TOKEN_KEY = 'access_token'
+const USER_INFO_KEY = 'user_info'
 
 export const getToken = () => localStorage.getItem(ACCESS_TOKEN_KEY)
 export const setToken = (token) => {
   if (token) localStorage.setItem(ACCESS_TOKEN_KEY, token)
 }
 export const clearToken = () => localStorage.removeItem(ACCESS_TOKEN_KEY)
+
+export const getUserInfo = () => {
+  const userInfo = localStorage.getItem(USER_INFO_KEY)
+  return userInfo ? JSON.parse(userInfo) : null
+}
+export const setUserInfo = (userInfo) => {
+  if (userInfo) localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo))
+}
+export const clearUserInfo = () => localStorage.removeItem(USER_INFO_KEY)
+
+export const getUserRole = () => {
+  const userInfo = getUserInfo()
+  return userInfo?.role || null
+}
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -80,11 +95,22 @@ export const exportDoctorReport = (params = {}) =>
 export const getDoctorVitals = (doctorId) =>
   unwrap(api.get(`/api/v1/admin/doctors/${doctorId}/vitals`).catch((e) => { throw e }))
 
+// Update doctor credentials
+export const updateDoctorUsername = (doctorId, username) =>
+  unwrap(api.put(`/api/v1/admin/doctors/${doctorId}/username`, { username }))
+
+export const updateDoctorPassword = (doctorId, password) =>
+  unwrap(api.put(`/api/v1/admin/doctors/${doctorId}/password`, { password }))
+
 export default {
   api,
   getToken,
   setToken,
   clearToken,
+  getUserInfo,
+  setUserInfo,
+  clearUserInfo,
+  getUserRole,
   login,
   logout,
   createDoctor,
@@ -95,4 +121,6 @@ export default {
   getDoctorSpecializations,
   exportDoctorReport,
   getDoctorVitals,
+  updateDoctorUsername,
+  updateDoctorPassword,
 }

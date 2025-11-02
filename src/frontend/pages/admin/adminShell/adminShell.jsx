@@ -1,8 +1,8 @@
 import React from 'react'
 import { Link, Outlet, useNavigate, useSearchParams } from 'react-router-dom'
 import routers from '../../../utils/routers'
-import { clearToken, getToken } from '../../../utils/api'
-import Header from '../../../layouts/header/header'
+import { clearToken, clearUserInfo, getToken } from '../../../utils/api'
+import AdminHeader from './AdminHeader'
 import Footer from '../../../layouts/footer/footer'
 import './adminShell.scss'
 
@@ -46,8 +46,11 @@ export default function AdminShell() {
   
   const logout = (e) => {
     if (e && e.preventDefault) e.preventDefault()
-    clearToken()
-    navigate(routers.AdminLogin, { replace: true })
+    if (window.confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+      clearToken()
+      clearUserInfo()
+      navigate(routers.Login, { replace: true })
+    }
   }
 
   const onHeaderSearch = (q) => {
@@ -60,13 +63,14 @@ export default function AdminShell() {
 
   return (
     <div className="admin-shell">
-      <Header title="🏥 Bệnh viện A - Admin" onSearch={onHeaderSearch} />
+      <AdminHeader title="🏥 Bệnh viện A - Admin Panel" onSearch={onHeaderSearch} />
       
       <div className="admin-body">
         <aside className="admin-sidebar">
           <nav>
-            <SidebarItem icon="ℹ️" label="Thông tin" to={routers.AdminDoctors} />
-            <SidebarItem icon="📋" label="Danh sách bác sĩ" to={routers.AdminDoctors} />
+            <SidebarItem icon="ℹ️" label="Thông tin" to={routers.AdminInfo} />
+            <SidebarItem icon="👨‍⚕️" label="Danh sách bác sĩ" to={routers.AdminDoctors} />
+            <SidebarItem icon="🏥" label="Danh sách phòng" to={routers.AdminRooms} />
             <SidebarItem icon="💼" label="Công việc" to="#" />
             <SidebarItem icon="📝" label="Ghi chú" to="#" />
             {getToken() && (

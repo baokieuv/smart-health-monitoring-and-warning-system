@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import './profilePage.scss'
 
 const ProfilePage = () => {
   const navigate = useNavigate()
+  const { userId } = useParams() // Lấy userId từ URL
   const [isEditing, setIsEditing] = useState(false)
   const [doctor, setDoctor] = useState(null)
   const [formData, setFormData] = useState({})
@@ -15,13 +16,15 @@ const ProfilePage = () => {
   })
 
   useEffect(() => {
-    // TODO: Fetch current logged-in doctor data from API
+    // TODO: Fetch doctor data by userId from API
     // Temporary mock data
     const mockDoctor = {
-      id: 1,
+      id: userId,
       name: 'BS. Nguyễn Văn Minh',
       dateOfBirth: '1985-05-15',
+      address: 'Số 123, Đường ABC, Quận XYZ',
       department: 'Khoa Nội',
+      position: 'Bác sĩ',
       education: 'Bác sĩ Nội khoa - Đại học Y Hà Nội',
       phone: '0912345678',
       email: 'nguyenvanminh@hospital.com',
@@ -31,7 +34,7 @@ const ProfilePage = () => {
     }
     setDoctor(mockDoctor)
     setFormData(mockDoctor)
-  }, [])
+  }, [userId])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -59,7 +62,7 @@ const ProfilePage = () => {
 
   const handlePasswordUpdate = () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('Mật khẩu mới và xác nhận không khớp!')
+      alert('Mật khẩu mới không khớp!')
       return
     }
     if (passwordData.newPassword.length < 6) {
@@ -140,6 +143,19 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="info-item">
+              <label>Địa chỉ:</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                />
+              ) : (
+                <span>{doctor.address}</span>
+              )}
+            </div>
+            <div className="info-item">
               <label>Số điện thoại:</label>
               {isEditing ? (
                 <input
@@ -204,7 +220,24 @@ const ProfilePage = () => {
                 <span>{doctor.specialization}</span>
               )}
             </div>
-            <div className="info-item full-width">
+            <div className="info-item">
+              <label>Vị trí:</label>
+              {isEditing ? (
+                <select
+                  name="position"
+                  value={formData.position}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Chọn vị trí</option>
+                  <option value="Bác sĩ">Bác sĩ</option>
+                  <option value="Trưởng khoa">Trưởng khoa</option>
+                  <option value="Điều dưỡng">Điều dưỡng</option>
+                </select>
+              ) : (
+                <span>{doctor.position}</span>
+              )}
+            </div>
+            <div className="info-item">
               <label>Học vấn:</label>
               {isEditing ? (
                 <textarea
@@ -219,11 +252,29 @@ const ProfilePage = () => {
             </div>
             <div className="info-item">
               <label>Kinh nghiệm:</label>
-              <span>{doctor.experience}</span>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="experience"
+                  value={formData.experience}
+                  onChange={handleInputChange}
+                />
+              ) : (
+                <span>{doctor.experience}</span>
+              )}
             </div>
             <div className="info-item">
               <label>Ngày vào làm:</label>
-              <span>{new Date(doctor.joinDate).toLocaleDateString('vi-VN')}</span>
+              {isEditing ? (
+                <input
+                  type="date"
+                  name="joinDate"
+                  value={formData.joinDate}
+                  onChange={handleInputChange}
+                />
+              ) : (
+                <span>{new Date(doctor.joinDate).toLocaleDateString('vi-VN')}</span>
+              )}
             </div>
           </div>
         </div>

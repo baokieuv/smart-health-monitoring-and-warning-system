@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { deleteDoctor, exportDoctorReport, getDoctorList, getDoctorSpecializations } from '../../../utils/api'
+import { getDoctorList, getDoctorSpecializations } from '../../../utils/api'
 import routers from '../../../utils/routers'
-import Pagination from '../../../elements/Pagination'
+import Pagination from '../../../components/Pagination'
 
 export default function DoctorList() {
   const [params, setParams] = useSearchParams()
@@ -61,33 +61,6 @@ export default function DoctorList() {
     setParams(next, { replace: true })
   }
 
-  const onDelete = async (id) => {
-    if (!window.confirm('Xóa bác sĩ này?')) return
-    try {
-      await deleteDoctor(id)
-      load()
-    } catch (e) {
-      alert(e?.response?.data?.message || 'Xóa thất bại')
-    }
-  }
-
-  const onExport = async () => {
-    try {
-      const res = await exportDoctorReport({ page, limit, search, specialization })
-      const blob = new Blob([res.data], { type: res.headers['content-type'] || 'application/octet-stream' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'doctors_report.xlsx'
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      alert(e?.response?.data?.message || 'Endpoint xuất báo cáo chưa sẵn sàng.')
-    }
-  }
-
   return (
     <div>
       <h2 style={{ marginTop: 0, marginBottom: 20, color: '#333' }}>Danh sách bác sĩ</h2>
@@ -101,10 +74,6 @@ export default function DoctorList() {
             ))}
           </select>
         </div>
-        <div>
-          <Link to={routers.AdminDoctorCreate} className="btn">+ Thêm bác sĩ</Link>
-          <button className="btn secondary" style={{ marginLeft: 8 }} onClick={onExport}>Xuất báo cáo</button>
-        </div>
       </div>
 
       <div className="card">
@@ -113,11 +82,10 @@ export default function DoctorList() {
             <tr>
               <th>ID</th>
               <th>Họ và tên</th>
-              <th>Ngày sinh</th>
-              <th>Địa chỉ</th>
-              <th>Điện thoại</th>
+              <th>Khoa làm việc</th>
               <th>Vị trí</th>
-              <th style={{ width: 180 }}>Hành động</th>
+              <th>Số điện thoại</th>
+              <th style={{ width: 120 }}>Hành động</th>
             </tr>
           </thead>
           <tbody>
@@ -125,18 +93,16 @@ export default function DoctorList() {
               <tr key={d.id}>
                 <td>{d.id}</td>
                 <td>{d.full_name}</td>
-                <td>{d.birthday}</td>
-                <td>{d.address}</td>
+                <td>{d.department || 'Chưa có'}</td>
+                <td>{d.position || d.specialization}</td>
                 <td>{d.phone}</td>
-                <td>{d.specialization}</td>
                 <td>
-                  <Link className="btn ghost" to={routers.AdminDoctorDetail(d.id)} style={{ marginRight: 8, padding: '6px 12px', fontSize: 14 }}>Sửa</Link>
-                  <button className="btn danger" onClick={() => onDelete(d.id)} style={{ padding: '6px 12px', fontSize: 14 }}>Xóa</button>
+                  <Link className="btn ghost" to={routers.AdminDoctorDetail(d.id)} style={{ padding: '6px 12px', fontSize: 14 }}>👁️ Xem</Link>
                 </td>
               </tr>
             ))}
             {data.doctors?.length === 0 && !loading && (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 16, color: '#999' }}>Không có dữ liệu</td></tr>
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 16, color: '#999' }}>Không có dữ liệu</td></tr>
             )}
           </tbody>
         </table>
@@ -162,12 +128,14 @@ export default function DoctorList() {
 }
 
 function mockDoctors(page = 1, limit = 10, search = '', specialization = '') {
-  const all = Array.from({ length: 42 }).map((_, i) => ({
+  const all = Array.from({ length: 8 }).map((_, i) => ({
     id: i + 1,
     full_name: `Bác sĩ Demo ${i + 1}`,
     birthday: `198${(i % 10)}-0${(i % 9) + 1}-1${(i % 9)}`,
     address: `Số ${i + 10}, Đường Demo, Quận ${(i % 10) + 1}`,
     phone: `09${(i % 10)}${(1000000 + i).toString().slice(0,7)}`,
+    department: ['Khoa Nội', 'Khoa Ngoại', 'Khoa Nhi', 'Khoa Sản'][i % 4],
+    position: ['Bác sĩ', 'Trưởng khoa', 'Điều dưỡng'][i % 3],
     specialization: ['Bác sĩ', 'Trưởng khoa', 'Điều dưỡng'][i % 3],
   }))
 
