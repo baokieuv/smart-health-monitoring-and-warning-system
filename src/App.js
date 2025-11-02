@@ -80,6 +80,7 @@ function App() {
         {/* Home Route - Redirect based on login status */}
         <Route path={routers.HomeRedirect} element={<HomeRedirect />} />
         <Route path={routers.Home} element={<HomePage />} />
+        
         {/* User Routes - Protected for 'user' role */}
         <Route element={<ProtectedRoute requiredRole="user" />}>
           <Route path={routers.Patient} element={<MainLayout><PatientList /></MainLayout>} />

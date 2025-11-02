@@ -8,24 +8,24 @@ const HomePage = () => {
   const features = [
     {
       id: 1,
-      title: '👥 Danh sách bệnh nhân',
-      description: 'Theo dõi và giám sát tình trạng sức khỏe của tất cả bệnh nhân',
+      title: '👥 Patients List',
+      description: 'Monitor and track the health status of all patients',
       path: '/patients',
       icon: '👥',
       color: '#4CAF50'
     },
     {
       id: 2,
-      title: '🚨 Cảnh báo',
-      description: 'Xem các cảnh báo và thông báo khẩn cấp về tình trạng bệnh nhân',
+      title: '🚨 Current Alerts',
+      description: 'View alerts and emergency notifications regarding patient conditions',
       path: '/alerts',
       icon: '🚨',
       color: '#FF9800'
     },
     {
       id: 3,
-      title: '📝 Ghi chú',
-      description: 'Quản lý ghi chú, lịch sử điều trị và hồ sơ bệnh án',
+      title: '📝 Medical Notes',
+      description: 'Manage notes, medical history, and patient records',
       path: '/notes',
       icon: '📝',
       color: '#2196F3'
@@ -39,8 +39,8 @@ const HomePage = () => {
   return (
     <div className="home-page">
       <div className="home-header">
-        <h1>🏥 Hệ thống giám sát sức khỏe thông minh</h1>
-        <p className="subtitle">Quản lý và theo dõi tình trạng sức khỏe bệnh nhân theo thời gian thực</p>
+        <h1>🏥 Smart Health Monitoring System</h1>
+        <p className="subtitle">Manage and monitor patients's health in real time</p>
       </div>
 
       <div className="features-grid">
@@ -57,7 +57,7 @@ const HomePage = () => {
             <h2>{feature.title}</h2>
             <p>{feature.description}</p>
             <button className="feature-button" style={{ backgroundColor: feature.color }}>
-              Truy cập →
+              Access →
             </button>
           </div>
         ))}
@@ -65,16 +65,16 @@ const HomePage = () => {
 
       <div className="home-stats">
         <div className="stat-card">
-          <div className="stat-number">24</div>
-          <div className="stat-label">Bệnh nhân đang theo dõi</div>
+          <div className="stat-number">10</div>
+          <div className="stat-label">Patients being monitored</div>
         </div>
         <div className="stat-card">
-          <div className="stat-number">3</div>
-          <div className="stat-label">Cảnh báo hiện tại</div>
+          <div className="stat-number">7</div>
+          <div className="stat-label">Alerts</div>
         </div>
         <div className="stat-card">
-          <div className="stat-number">157</div>
-          <div className="stat-label">Ghi chú y tế</div>
+          <div className="stat-number">20</div>
+          <div className="stat-label">Notes</div>
         </div>
       </div>
     </div>

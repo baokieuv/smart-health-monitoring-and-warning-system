@@ -51,27 +51,27 @@ export default function PatientList() {
   return (
     <div className="patient-list-container">
       <div className="patient-list-header">
-        <h2>📋 Danh sách bệnh nhân</h2>
+        <h2>📋 Patients List</h2>
         <div className="header-actions">
-          <button className="btn-add" onClick={() => setShowAddModal(true)}>+ Thêm bệnh nhân</button>
+          <button className="btn-add" onClick={() => setShowAddModal(true)}>+ Add Patient</button>
           <div className="filter-buttons">
             <button 
               className={filter === 'all' ? 'active' : ''} 
               onClick={() => setFilter('all')}
             >
-              Tất cả ({patients.length})
+              All ({patients.length})
             </button>
             <button 
               className={filter === 'normal' ? 'active' : ''} 
               onClick={() => setFilter('normal')}
             >
-              Bình thường ({patients.filter(p => p.status === 'normal').length})
+              Normal ({patients.filter(p => p.status === 'normal').length})
             </button>
             <button 
               className={filter === 'warning' ? 'active' : ''} 
               onClick={() => setFilter('warning')}
             >
-              Cảnh báo ({patients.filter(p => p.status === 'warning').length})
+              Warning ({patients.filter(p => p.status === 'warning').length})
             </button>
           </div>
         </div>
@@ -81,15 +81,15 @@ export default function PatientList() {
         <table className="patient-table">
           <thead>
             <tr>
-              <th>STT</th>
-              <th>Họ và tên</th>
+              <th>No.</th>
+              <th>Full Name</th>
               <th>CCCD</th>
-              <th>Giới tính</th>
-              <th>Tuổi</th>
-              <th>Tình trạng</th>
-              <th>SĐT người nhà</th>
-              <th>Phòng</th>
-              <th>Hành động</th>
+              <th>Gender</th>
+              <th>Age</th>
+              <th>Status</th>
+              <th>Emergency Contact</th>
+              <th>Room</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -118,7 +118,7 @@ export default function PatientList() {
                       to={`/patients/${patient.id}`} 
                       className="btn-view"
                     >
-                      👁️ Xem
+                      👁️ View
                     </Link>
                   </td>
                 </tr>
@@ -190,10 +190,10 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h3>➕ Thêm bệnh nhân mới</h3>
+        <h3>➕ Add Patient</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Họ và tên: <span className="required">*</span></label>
+            <label>Full Name: <span className="required">*</span></label>
             <input
               type="text"
               name="name"
@@ -218,7 +218,7 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
             </div>
             
             <div className="form-group">
-              <label>Giới tính:</label>
+              <label>Gender:</label>
               <select name="gender" value={formData.gender} onChange={handleChange}>
                 <option value="Nam">Nam</option>
                 <option value="Nữ">Nữ</option>
@@ -226,7 +226,7 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
             </div>
             
             <div className="form-group">
-              <label>Tuổi: <span className="required">*</span></label>
+              <label>Age: <span className="required">*</span></label>
               <input
                 type="number"
                 name="age"
@@ -241,7 +241,7 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
           </div>
           
           <div className="form-group">
-            <label>SĐT người nhà: <span className="required">*</span></label>
+            <label>Emergency Contact Phone: <span className="required">*</span></label>
             <input
               type="tel"
               name="phone"
@@ -253,7 +253,7 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
           </div>
           
           <div className="form-group">
-            <label>Phòng: <span className="required">*</span></label>
+            <label>Room: <span className="required">*</span></label>
             <select name="room" value={formData.room} onChange={handleChange} required>
               <option value="">-- Chọn phòng --</option>
               {availableRooms.map(room => (
@@ -268,7 +268,7 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
           </div>
           
           <div className="form-group">
-            <label>Tình trạng ban đầu:</label>
+            <label>Status:</label>
             <select name="status" value={formData.status} onChange={handleChange}>
               <option value="normal">Bình thường</option>
               <option value="warning">Cảnh báo</option>
@@ -276,8 +276,8 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
           </div>
           
           <div className="modal-actions">
-            <button type="submit" className="btn-primary">Thêm bệnh nhân</button>
-            <button type="button" className="btn-secondary" onClick={onClose}>Hủy</button>
+            <button type="submit" className="btn-primary">Add</button>
+            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
           </div>
         </form>
       </div>

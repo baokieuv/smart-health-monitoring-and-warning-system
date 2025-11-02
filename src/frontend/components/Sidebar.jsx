@@ -20,28 +20,28 @@ export default function Sidebar() {
           className={`sidebar-item ${isActive('/patients') ? 'active' : ''}`}
         >
           <span className="icon">👥</span>
-          <span className="label">Danh sách bệnh nhân</span>
+          <span className="label">Patients List</span>
         </Link>
         <Link 
           to="/rooms" 
           className={`sidebar-item ${isActive('/rooms') ? 'active' : ''}`}
         >
           <span className="icon">🏥</span>
-          <span className="label">Danh sách phòng</span>
+          <span className="label">Rooms List</span>
         </Link>
         <Link 
           to="/alerts" 
           className={`sidebar-item ${isActive('/alerts') ? 'active' : ''}`}
         >
           <span className="icon">🚨</span>
-          <span className="label">Cảnh báo</span>
+          <span className="label">Alerts</span>
         </Link>
         <Link 
           to="/notes" 
           className={`sidebar-item ${isActive('/notes') ? 'active' : ''}`}
         >
           <span className="icon">📝</span>
-          <span className="label">Ghi chú</span>
+          <span className="label">Notes</span>
         </Link>
       </nav>
     </aside>

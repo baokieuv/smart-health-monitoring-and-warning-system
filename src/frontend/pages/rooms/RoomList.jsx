@@ -18,32 +18,32 @@ export default function RoomList() {
 
   const getStatusBadge = (status, occupied, capacity) => {
     if (status === 'full' || occupied >= capacity) {
-      return { text: '🔴 Đầy', class: 'status-full' }
+      return { text: '🔴 Full', class: 'status-full' }
     }
     if (occupied === 0) {
-      return { text: '🟢 Trống', class: 'status-empty' }
+      return { text: '🟢 Empty', class: 'status-empty' }
     }
-    return { text: '🟡 Còn chỗ', class: 'status-available' }
+    return { text: '🟡 Available', class: 'status-available' }
   }
 
   return (
     <div className="room-list-container">
       <div className="room-list-header">
-        <h2>🏥 Danh sách phòng</h2>
+        <h2>🏥 Rooms List</h2>
       </div>
 
       <div className="table-container">
         <table className="room-table">
           <thead>
             <tr>
-              <th>STT</th>
-              <th>Mã phòng</th>
-              <th>Tòa nhà</th>
-              <th>Tầng</th>
-              <th>Sức chứa</th>
-              <th>Đã sử dụng</th>
-              <th>Trạng thái</th>
-              <th>Hành động</th>
+              <th>No.</th>
+              <th>Room Code</th>
+              <th>Building</th>
+              <th>Floor</th>
+              <th>Capacity</th>
+              <th>Occupied</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -53,8 +53,8 @@ export default function RoomList() {
                 <tr key={room.id}>
                   <td>{index + 1}</td>
                   <td><strong>{room.code}</strong></td>
-                  <td>Tòa {room.building}</td>
-                  <td>Tầng {room.floor}</td>
+                  <td>Building {room.building}</td>
+                  <td>Floor {room.floor}</td>
                   <td>{room.capacity}</td>
                   <td>{room.occupied}</td>
                   <td>
@@ -64,7 +64,7 @@ export default function RoomList() {
                   </td>
                   <td>
                     <Link to={`/rooms/${room.code}`} className="btn-view">
-                      👁️ Xem
+                      👁️ View
                     </Link>
                   </td>
                 </tr>

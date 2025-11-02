@@ -42,7 +42,7 @@ export default function PatientDetail() {
     const badges = {
       normal: { text: '✅ Bình thường', class: 'status-normal' },
       warning: { text: '⚠️ Cảnh báo', class: 'status-warning' },
-      danger: { text: '🚨 Nguy hiểm', class: 'status-danger' }
+      // danger: { text: '🚨 Nguy hiểm', class: 'status-danger' }
     }
     return badges[status] || badges.normal
   }
@@ -52,15 +52,15 @@ export default function PatientDetail() {
   return (
     <div className="patient-detail-container">
       <div className="detail-header">
-        <Link to="/patients" className="btn-back">← Quay lại danh sách</Link>
-        <h2>Thông tin bệnh nhân</h2>
+        <Link to="/patients" className="btn-back">← Return to List</Link>
+        <h2>Patient Information</h2>
       </div>
 
       <div className="detail-grid">
         <div className="info-card">
-          <h3>📋 Thông tin cá nhân</h3>
+          <h3>📋 Personal Information</h3>
           <div className="info-row">
-            <span className="label">Họ tên:</span>
+            <span className="label">Full Name:</span>
             <span className="value"><strong>{patient.name}</strong></span>
           </div>
           <div className="info-row">
@@ -68,31 +68,31 @@ export default function PatientDetail() {
             <span className="value">{patient.cccd}</span>
           </div>
           <div className="info-row">
-            <span className="label">Ngày sinh:</span>
+            <span className="label">Date of Birth:</span>
             <span className="value">{patient.dob}</span>
           </div>
           <div className="info-row">
-            <span className="label">Tuổi:</span>
+            <span className="label">Age:</span>
             <span className="value">{patient.age}</span>
           </div>
           <div className="info-row">
-            <span className="label">Giới tính:</span>
+            <span className="label">Gender:</span>
             <span className="value">{patient.gender}</span>
           </div>
           <div className="info-row">
-            <span className="label">Địa chỉ:</span>
+            <span className="label">Address:</span>
             <span className="value">{patient.address}</span>
           </div>
           <div className="info-row">
-            <span className="label">SĐT:</span>
+            <span className="label">Phone:</span>
             <span className="value">{patient.phone}</span>
           </div>
           <div className="info-row">
-            <span className="label">SĐT người nhà:</span>
+            <span className="label">Emergency Contact Phone:</span>
             <span className="value">{patient.emergencyContact}</span>
           </div>
           <div className="info-row">
-            <span className="label">Phòng:</span>
+            <span className="label">Room:</span>
             <span className="value">
               <Link to={`/rooms/${patient.room}`} className="room-link">{patient.room}</Link>
             </span>
@@ -100,12 +100,12 @@ export default function PatientDetail() {
         </div>
 
         <div className="vitals-card">
-          <h3>❤️ Chỉ số hiện tại</h3>
+          <h3>❤️ Current Vitals</h3>
           <div className="vitals-grid">
             <div className="vital-box">
               <div className="vital-icon">❤️</div>
               <div className="vital-value">{patient.heartRate}</div>
-              <div className="vital-label">Nhịp tim (bpm)</div>
+              <div className="vital-label">Heart Rate (bpm)</div>
             </div>
             <div className="vital-box">
               <div className="vital-icon">🫁</div>
@@ -115,7 +115,7 @@ export default function PatientDetail() {
             <div className="vital-box">
               <div className="vital-icon">🌡️</div>
               <div className="vital-value">{patient.temperature}</div>
-              <div className="vital-label">Nhiệt độ (°C)</div>
+              <div className="vital-label">Temperature (°C)</div>
             </div>
           </div>
           <div className="status-badge-large">
@@ -125,14 +125,14 @@ export default function PatientDetail() {
       </div>
 
       <div className="history-card">
-        <h3>📊 Lịch sử chỉ số</h3>
+        <h3>📊 History Vitals</h3>
         <table className="history-table">
           <thead>
             <tr>
-              <th>Thời gian</th>
-              <th>Nhịp tim</th>
+              <th>Time</th>
+              <th>Heart Rate</th>
               <th>SpO2</th>
-              <th>Nhiệt độ</th>
+              <th>Temperature</th>
             </tr>
           </thead>
           <tbody>
