@@ -78,14 +78,12 @@ git clone https://github.com/baokieuv/smart-health-monitoring-and-warning-system
 cd esp32
 ```
 
-#### Cấu hình thông số WiFi và MQTT
 
-Mở file [main.c](https://github.com/baokieuv/smart-health-monitoring-and-warning-system/blob/main/esp32/main/main.c) và chỉnh sửa các thông số sau:
-```c
-#define WIFI_SSID       "Ten WiFi"
-#define WIFI_PASS       "Mat khau WiFi"
-#define MQTT_BROKER_URI "mqtt://<Dia chi ThingsBoard>:1883"
-#define MQTT_USER_NAME  "<Access Token cua device>"
+#### Add dependencies
+```bash
+idf.py add-dependency "espressif/onewire_bus^1.0.4"
+idf.py add-dependency "espressif/ds18b20^0.2.0"
+idf.py add-dependency "espressif/onewire_bus^1.0.4"
 ```
 
 #### Build và Flash lên ESP32
