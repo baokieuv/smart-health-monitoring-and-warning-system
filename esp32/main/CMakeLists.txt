@@ -11,6 +11,7 @@ idf_component_register(
         "sensors/max30102/i2c_api.c"
         "sensors/max30102/max30102_api.c"
         "sensors/ds18b20/temperature.c"
+        "sensors/mpu6050/mpu6050_api.c"
         "gpio/gpio_handler.c"
 
     INCLUDE_DIRS 
@@ -22,5 +23,6 @@ idf_component_register(
         "provisioning"
         "sensors/ds18b20"
         "sensors/max30102"
+        "sensors/mpu6050"
         "gpio"
 )

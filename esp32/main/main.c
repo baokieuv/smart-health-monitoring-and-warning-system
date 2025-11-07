@@ -15,6 +15,7 @@
 #include "mqtt/mqtt_tb.h"
 #include "sensors/ds18b20/temperature.h"
 #include "sensors/max30102/heart_rate.h"
+#include "sensors/mpu6050/mpu6050_api.h"
 #include "gpio/gpio_handler.h"
 
 static const char *TAG = "MAIN";
@@ -70,7 +71,23 @@ static void mqtt_send_task(void *param) {
         vTaskDelay(pdMS_TO_TICKS(MQTT_SEND_DELAY_MS));
     }
 }
+/**
+ * @brief Button press callback - switches to AP mode
+ */
+static void mpu6050_task(void *param) {
+    ESP_LOGI(TAG, "MPU6050 send task started");
 
+    while (1) {
+        mpu6050_data_t d = {0};
+        if (mpu6050_read_all(&d) == ESP_OK) {
+            ESP_LOGI(TAG, "ACC[g]=[%.3f, %.3f, %.3f]  GYRO[dps]=[%.2f, %.2f, %.2f]  TEMP=%.2fC  ANG[roll=%.2f, pitch=%.2f]",
+                     d.accel.ax, d.accel.ay, d.accel.az,
+                     d.gyro.gx, d.gyro.gy, d.gyro.gz,
+                     d.temp.celsius, d.angle.roll, d.angle.pitch);
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
 /**
  * @brief Button press callback - switches to AP mode
  */
@@ -116,6 +133,10 @@ static esp_err_t system_init(void) {
 
     // Initialize WiFi manager
     ESP_ERROR_CHECK(wifi_manager_init(event_group));
+
+    // Initialize MPU650
+    ESP_ERROR_CHECK(mpu6050_init(I2C_PORT, I2C_SDA, I2C_SCL, I2C_FREQ, 
+                                 MPU_ADDR, MPU6050_ACCE_2G, MPU6050_GYRO_250DPS));
 
     ESP_LOGI(TAG, "System initialized successfully");
     return ESP_OK;
@@ -163,7 +184,16 @@ static esp_err_t start_normal_mode(const char *ssid, const char *pass,
     }
 
     // Start MQTT telemetry task
-    xTaskCreate(mqtt_send_task, "mqtt_send", 4096, NULL, 5, NULL);
+    BaseType_t rc = xTaskCreate(mqtt_send_task, "mqtt_send", 4096, NULL, 5, NULL);
+    if (rc != pdPASS) {
+        ESP_LOGE(TAG, "xTaskCreate failed: mqtt_send");
+    }
+
+    // Start MPU6050 task
+    rc = xTaskCreate(mpu6050_task, "mpu6050_task", 2048, NULL, 5, NULL);
+    if (rc != pdPASS) {
+        ESP_LOGE(TAG, "xTaskCreate failed: mpu6050_task");
+    }
 
     ESP_LOGI(TAG, "Normal mode started successfully");
     return ESP_OK;

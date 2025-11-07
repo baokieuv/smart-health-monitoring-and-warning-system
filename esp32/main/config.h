@@ -49,6 +49,13 @@
 #define HEART_READ_DELAY_MS     2000
 #define MQTT_SEND_DELAY_MS      5000
 
+//MPU6050 Configuration
+#define I2C_PORT   I2C_NUM_0
+#define I2C_SDA    GPIO_NUM_21
+#define I2C_SCL    GPIO_NUM_22
+#define I2C_FREQ   400000
+#define MPU_ADDR   0x68
+
 // Event Group Bits
 #define WIFI_CONNECTED_BIT  BIT0
 #define WIFI_FAIL_BIT       BIT1

@@ -1,18 +1,20 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
-  "idf.espIdfPathWin": "d:\\Embedded\\ESP\\esp\\v5.3\\esp-idf",
-  "idf.pythonInstallPath": "D:\\Embedded\\ESP\\Espressif\\tools\\idf-python\\3.11.2\\python.exe",
-  "idf.openOcdConfigs": [
-    "board/esp32-bridge.cfg"
-  ],
-  "idf.toolsPathWin": "D:\\Embedded\\ESP\\Espressif",
+  "idf.espIdfPathWin": "C:\\Users\\FPT\\esp\\v5.5.1\\esp-idf",
+  "idf.pythonInstallPath": "C:\\Users\\FPT\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
+  "idf.openOcdConfigs": ["board/esp32-bridge.cfg"],
+  "idf.toolsPathWin": "C:\\Users\\FPT\\.espressif",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32"
   },
-  "idf.portWin": "COM4",
+  "idf.portWin": "COM10",
   "idf.flashType": "UART",
   "files.associations": {
     "max30102_api.h": "c",
-    "algorithm.h": "c"
+    "algorithm.h": "c",
+    "esp_log.h": "c",
+    "freertos.h": "c",
+    "chrono": "c",
+    "xlocale": "c"
   }
 }
