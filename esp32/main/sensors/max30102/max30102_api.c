@@ -1,31 +1,32 @@
 #include "max30102_api.h"
 
-void max30102_init(i2c_port_t i2c_num, max_config *configuration)
+esp_err_t max30102_init(i2c_port_t i2c_num, max_config *configuration)
 {
 	ESP_LOGI("MAX30102_INIT", "Starting sensor configuration...");
 
     // Thêm Reset cảm biến (Rất quan trọng!)
     if (write_max30102_reg(i2c_num, 0x40, REG_MODE_CONFIG) != ESP_OK) {
         ESP_LOGE("MAX30102_INIT", "Failed to reset sensor!");
-        return;
+        return ESP_ERR_NOT_FINISHED;
     }
 
     vTaskDelay(pdMS_TO_TICKS(100)); // Chờ reset
-	if (write_max30102_reg(i2c_num, configuration->data1, REG_INTR_ENABLE_1) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data2, REG_INTR_ENABLE_2) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data3, REG_FIFO_WR_PTR) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data4, REG_OVF_COUNTER) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data5, REG_FIFO_RD_PTR) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data6, REG_FIFO_CONFIG) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data7, REG_MODE_CONFIG) != ESP_OK) return; // Kích hoạt chế độ
-	if (write_max30102_reg(i2c_num, configuration->data8, REG_SPO2_CONFIG) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data9, REG_LED1_PA) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data10, REG_LED2_PA) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data11, REG_PILOT_PA) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data12, REG_MULTI_LED_CTRL1) != ESP_OK) return;
-	if (write_max30102_reg(i2c_num, configuration->data13, REG_MULTI_LED_CTRL2) != ESP_OK) return;
+	if (write_max30102_reg(i2c_num, configuration->data1, REG_INTR_ENABLE_1) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data2, REG_INTR_ENABLE_2) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data3, REG_FIFO_WR_PTR) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data4, REG_OVF_COUNTER) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data5, REG_FIFO_RD_PTR) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data6, REG_FIFO_CONFIG) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data7, REG_MODE_CONFIG) != ESP_OK) return ESP_ERR_NOT_FINISHED; // Kích hoạt chế độ
+	if (write_max30102_reg(i2c_num, configuration->data8, REG_SPO2_CONFIG) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data9, REG_LED1_PA) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data10, REG_LED2_PA) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data11, REG_PILOT_PA) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data12, REG_MULTI_LED_CTRL1) != ESP_OK) return ESP_ERR_NOT_FINISHED;
+	if (write_max30102_reg(i2c_num, configuration->data13, REG_MULTI_LED_CTRL2) != ESP_OK) return ESP_ERR_NOT_FINISHED;
 
 	ESP_LOGI("MAX30102_INIT", "Sensor configuration OK.");
+	return ESP_OK;
 }
 
 
