@@ -1,29 +1,38 @@
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
+const { verifyAccessToken } = require('../utils/token');
 
 exports.authenticate = (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
-        
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({
-                status: "error",
-                message: "Authentication required."
+                status: 'error',
+                message: 'Authentication required.'
             });
         }
 
-        const token = authHeader.substring(7);
-
-        if(token !== ACCESS_TOKEN){
-            return res.status(401).json({
-                status: "error",
-                message: "Authentication required."
-            });
-        }
-        next();
+        const token = authHeader.slice(7);
+        const payload = verifyAccessToken(token);
+        req.user = {
+            id: payload.sub,
+            email: payload.email,
+            role: payload.role
+        };
+        return next();
     } catch (error) {
-        return res.status(500).json({
-            status: "error",
-            message: "Unexpected error occurred."
+        const status = error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError' ? 401 : 500;
+        return res.status(status).json({
+            status: 'error',
+            message: status === 401 ? 'Authentication required.' : 'Unexpected error occurred.'
         });
     }
+};
+
+exports.authorizeRoles = (...roles) => (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+        return res.status(403).json({
+            status: 'error',
+            message: 'Permission denied.'
+        });
+    }
+    return next();
 };

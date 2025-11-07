@@ -1,6 +1,6 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
-const { authenticate } = require('../middlewares/auth.middleware');
+const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
 const { validateRequest } = require('../middlewares/validate.middleware');
 const doctorController = require('../controllers/doctor.controller');
 const { validateCCCD, validatePhone, validateDate } = require('../utils/validator');
@@ -8,8 +8,10 @@ const { validateCCCD, validatePhone, validateDate } = require('../utils/validato
 const router = express.Router();
 
 // 3. Create Doctor API
-router.post('/',
+router.post(
+	'/',
 	authenticate,
+	authorizeRoles('admin'),
 	[
 		body('cccd')
 			.notEmpty().withMessage('CCCD is required')
@@ -35,8 +37,10 @@ router.post('/',
 );
 
 // 4. Get Doctor List API
-router.get('/',
+router.get(
+	'/',
 	authenticate,
+	authorizeRoles('admin'),
 	[
 		query('page')
 			.optional()
@@ -56,8 +60,10 @@ router.get('/',
 );
 
 // 5. Get Doctor Detail API
-router.get('/:doctor_id',
+router.get(
+	'/:doctor_id',
 	authenticate,
+	authorizeRoles('admin'),
 	[
 		param('doctor_id')
 			.isInt({ min: 1 }).withMessage('Doctor ID must be a positive integer')
@@ -67,8 +73,10 @@ router.get('/:doctor_id',
 );
 
 // 6. Update Doctor API
-router.put('/:doctor_id',
+router.put(
+	'/:doctor_id',
 	authenticate,
+	authorizeRoles('admin'),
 	[
 		param('doctor_id')
 			.isInt({ min: 1 }).withMessage('Doctor ID must be a positive integer'),
@@ -96,8 +104,10 @@ router.put('/:doctor_id',
 );
 
 // 7. Delete Doctor API
-router.delete('/:doctor_id',
+router.delete(
+	'/:doctor_id',
 	authenticate,
+	authorizeRoles('admin'),
 	[
 		param('doctor_id')
 			.isInt({ min: 1 }).withMessage('Doctor ID must be a positive integer')
