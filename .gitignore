@@ -21,6 +21,8 @@ __pycache__/
 
 # IDE
 .vscode/
+launch.json
+tasks.json
 
 # Node backend
 web/backend/node_modules/

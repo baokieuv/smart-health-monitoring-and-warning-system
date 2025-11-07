@@ -148,7 +148,7 @@ typedef struct{
 }max_config;
 
 
-void max30102_init(i2c_port_t i2c_num, max_config *configuration);
+esp_err_t max30102_init(i2c_port_t i2c_num, max_config *configuration);
 esp_err_t write_max30102_reg(i2c_port_t i2c_num, uint8_t command, uint8_t reg);
 //void read_max30102_fifo(uint32_t *red_data, uint32_t *ir_data);
 void read_max30102_fifo(i2c_port_t i2c_num, int32_t *red_data, int32_t *ir_data);
