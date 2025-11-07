@@ -83,7 +83,7 @@ cd esp32
 ```bash
 idf.py add-dependency "espressif/onewire_bus^1.0.4"
 idf.py add-dependency "espressif/ds18b20^0.2.0"
-idf.py add-dependency "espressif/onewire_bus^1.0.4"
+idf.py add-dependency "espressif/mpu6050^1.2.0"
 ```
 
 #### Build và Flash lên ESP32
