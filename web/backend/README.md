@@ -1,1 +1,1 @@
-npm install express cors express-validator helmet dotenv
+npm install express cors express-validator helmet dotenv jsonwebtoken

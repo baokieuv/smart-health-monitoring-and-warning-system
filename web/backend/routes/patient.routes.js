@@ -1,16 +1,17 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
-const { authenticate } = require('../middlewares/auth.middleware');
+const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
 const { validateRequest } = require('../middlewares/validate.middleware');
 const patientController = require('../controllers/patient.controller');
 const { validateCCCD, validatePhone, validateDate } = require('../utils/validator');
 
 const router = express.Router();
 
-
 // 8. Create Patient API
-router.post('/',
+router.post(
+    '/',
     authenticate,
+    authorizeRoles('admin', 'doctor'),
     [
         body('cccd')
             .notEmpty().withMessage('CCCD is required')
@@ -36,8 +37,10 @@ router.post('/',
 );
 
 // 9. Get Patient List API
-router.get('/',
+router.get(
+    '/',
     authenticate,
+    authorizeRoles('admin', 'doctor'),
     [
         query('page')
             .optional()
@@ -54,8 +57,10 @@ router.get('/',
 );
 
 // 10. Get Patient Detail API
-router.get('/:patient_id',
+router.get(
+    '/:patient_id',
     authenticate,
+    authorizeRoles('admin', 'doctor'),
     [
         param('patient_id')
             .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer')
@@ -65,8 +70,10 @@ router.get('/:patient_id',
 );
 
 // 11. Update Patient API
-router.put('/:patient_id',
+router.put(
+    '/:patient_id',
     authenticate,
+    authorizeRoles('admin', 'doctor'),
     [
         param('patient_id')
             .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer'),
@@ -94,8 +101,10 @@ router.put('/:patient_id',
 );
 
 // 12. Get Patient Health Info API
-router.get('/:patient_id/health',
+router.get(
+    '/:patient_id/health',
     authenticate,
+    authorizeRoles('admin', 'doctor', 'family'),
     [
         param('patient_id')
             .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer')
@@ -105,8 +114,10 @@ router.get('/:patient_id/health',
 );
 
 // 13. Delete Patient API
-router.delete('/:patient_id',
+router.delete(
+    '/:patient_id',
     authenticate,
+    authorizeRoles('admin'),
     [
         param('patient_id')
             .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer')
