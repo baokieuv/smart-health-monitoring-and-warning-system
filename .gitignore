@@ -7,7 +7,8 @@ yarn-error.log*
 
 # Build artifacts
 build/
-*/build/
+esp32/build/
+esp32/managed_components/
 
 # ESP-IDF specific
 sdkconfig

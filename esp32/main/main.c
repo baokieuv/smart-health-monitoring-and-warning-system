@@ -320,7 +320,7 @@ static void handle_mpu6050_data(void *param) {
             if (acc_norm > IMPACT_G_THRESH) {
                 state = ST_POST_MONITOR;
                 t_state = now;  // bắt đầu quan sát sau impact
-                // ESP_LOGI(TAG, "Impact detected (|acc|=%.2fg)", acc_norm);
+                ESP_LOGI(TAG, "Impact detected (|acc|=%.2fg)", acc_norm);
             } else if (elapsed > pdMS_TO_TICKS(IMPACT_TIMEOUT_MS)) {
                 // Không thấy impact trong thời gian cho phép -> hủy
                 state = ST_IDLE;
@@ -362,8 +362,8 @@ static void handle_mpu6050_data(void *param) {
         }
 
         // (tuỳ chọn) cũng có thể log thưa để theo dõi:
-        // ESP_LOGI(TAG, "state=%d |acc|=%.2f |gyro|=%.0f roll=%.1f pitch=%.1f",
-        //          state, acc_norm, gyro_norm, d.angle.roll, d.angle.pitch);
+        ESP_LOGI(TAG, "state=%d |acc|=%.2f |gyro|=%.0f roll=%.1f pitch=%.1f",
+                 state, acc_norm, gyro_norm, d.angle.roll, d.angle.pitch);
     }
 }
 
