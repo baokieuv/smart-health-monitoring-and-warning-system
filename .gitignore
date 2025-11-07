@@ -21,8 +21,8 @@ __pycache__/
 *.pyc
 
 # IDE
-.vscode/
-*/vscode/
+.vscode
+*/.vscode/
 
 # Node backend
 web/backend/node_modules/
