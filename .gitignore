@@ -9,6 +9,7 @@ yarn-error.log*
 build/
 esp32/build/
 esp32/managed_components/
+esp32/.devcontainer/
 
 # ESP-IDF specific
 sdkconfig
