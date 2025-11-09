@@ -25,6 +25,10 @@ import DoctorDetail from './frontend/pages/admin/doctors/DoctorDetail';
 import AdminRoomList from './frontend/pages/admin/rooms/AdminRoomList';
 import AdminRoomForm from './frontend/pages/admin/rooms/AdminRoomForm';
 
+// Family access pages
+import FamilyAccessPage from './frontend/pages/familyAccess/FamilyAccessPage';
+import FamilyPatientDetail from './frontend/pages/familyAccess/FamilyPatientDetail';
+
 // const Protected = () => {
 //   const token = getToken()
 //   return token ? <Outlet /> : <Navigate to={routers.Login} replace />
@@ -76,6 +80,10 @@ function App() {
         {/* Public Login Route */}  
         <Route path={routers.Login} element={<LoginPage />} />
         <Route path={routers.AdminLogin} element={<Navigate to={routers.Login} replace />} />
+        
+        {/* Family Access Routes - Public, no authentication needed */}
+        <Route path={routers.FamilyAccess} element={<FamilyAccessPage />} />
+        <Route path={routers.FamilyPatientDetailPath} element={<FamilyPatientDetail />} />
         
         {/* Home Route - Redirect based on login status */}
         <Route path={routers.HomeRedirect} element={<HomeRedirect />} />

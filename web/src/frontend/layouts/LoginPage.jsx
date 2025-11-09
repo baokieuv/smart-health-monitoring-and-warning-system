@@ -120,6 +120,37 @@ export default function LoginPage() {
         >
           {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </button>
+        
+        <div style={{ textAlign: 'center', marginTop: 20, paddingTop: 20, borderTop: '1px solid #e0e0e0' }}>
+          <p style={{ margin: '0 0 12px 0', fontSize: 14, color: '#666' }}>
+            Bạn là người nhà bệnh nhân?
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(routers.FamilyAccess)}
+            style={{
+              width: '100%',
+              padding: 12,
+              background: 'transparent',
+              color: '#667eea',
+              border: '2px solid #667eea',
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.3s'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = '#667eea'
+              e.target.style.color = '#fff'
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'transparent'
+              e.target.style.color = '#667eea'
+            }}
+          >
+            Truy cập thông tin bệnh nhân
+          </button>
+        </div>
       </form>
     </div>
   )
