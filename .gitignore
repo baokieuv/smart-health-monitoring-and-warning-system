@@ -23,6 +23,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # ESP-IDF build files
+build/
 esp32/build/
 esp32/sdkconfig
 esp32/sdkconfig.old
