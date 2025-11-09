@@ -19,6 +19,9 @@ router.post(
 		body('full_name')
 			.notEmpty().withMessage('Full name is required')
 			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
+		body('email')
+			.notEmpty().withMessage('Email is required')
+			.isEmail().withMessage('Invalid email format'),
 		body('birthday')
 			.notEmpty().withMessage('Birthday is required')
 			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
@@ -86,6 +89,9 @@ router.put(
 		body('full_name')
 			.notEmpty().withMessage('Full name is required')
 			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
+		body('email')
+			.optional()
+			.isEmail().withMessage('Invalid email format'),
 		body('birthday')
 			.notEmpty().withMessage('Birthday is required')
 			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),

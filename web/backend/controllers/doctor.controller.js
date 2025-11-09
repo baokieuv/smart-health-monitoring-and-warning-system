@@ -1,19 +1,141 @@
 const doctors = require('../data/doctors');
 const { sanitizeInput } = require('../utils/validator');
+const tokenStore = require('../utils/token-store');
+
+const THINGSBOARD_URL = "http://localhost:8080";
+const ADMIN_ID = 'admin';
+
+async function createTenantAccount(userId, email, name, phone, systoken){
+	try{
+
+	    const tenantRes = await fetch(`${THINGSBOARD_URL}/api/tenant`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Authorization": `Bearer ${systoken}`
+            },
+            body: JSON.stringify({
+                title: `doctor${userId}`
+            })
+        });
+        if (!tenantRes.ok) {
+            const err = await tenantRes.text();
+            throw new Error(`Failed to create tenant: ${tenantRes.status} - ${err}`);
+        }
+		const tenant = await tenantRes.json();
+
+		const payload = {
+			authority: 'TENANT_ADMIN',
+			tenantId: { 
+				id: tenant.id.id,
+				entityType: 'TENANT'
+			},
+			email: email + "@thingsboard.local",
+			firstName: name,
+			phone: phone,
+		};
+
+		const res = await fetch(`${THINGSBOARD_URL}/api/user?sendActivationMail=false`, {
+			method: "POST",
+			body: JSON.stringify(payload),
+			headers: {
+				"Content-Type": "application/json",
+				"X-Authorization": `Bearer ${systoken}`
+			}
+		});
+
+		if(!res.ok){
+			const errorText = await res.text();
+			throw new Error(`ThingsBoard API error: ${res.status} - ${errorText}`);
+		}
+
+		const data = await res.json();
+		console.log('Tenant Admin created successfully:', data);
+
+		const doctorIndex = doctors.findIndex(doc => doc.id == userId);
+		console.log(doctorIndex);
+		doctors[doctorIndex] = {
+			...doctors[doctorIndex],
+			tenantid: data.id.id
+		}
+
+		console.log(doctors[doctorIndex])
+		const tokenRes = await fetch(`${THINGSBOARD_URL}/api/user/${data.id.id}/activationLink`, {
+            method: "GET",
+            headers: {
+                "X-Authorization": `Bearer ${systoken}`
+            }
+        });
+
+		if (!tokenRes.ok) {
+            const err = await tokenRes.text();
+            throw new Error(`Failed to get activation token: ${tokenRes.status} - ${err}`);
+        }
+
+		const activationLink = await tokenRes.text();
+        const activationToken = new URL(activationLink).searchParams.get('activateToken');
+
+		console.log(activationLink);
+		console.log(activationToken);
+		const activateRes = await fetch(`${THINGSBOARD_URL}/api/noauth/activate?sendActivationMail=false`, {
+            method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				activateToken: activationToken,
+				password: phone
+			})
+        });
+
+        if (!activateRes.ok) {
+            const err = await activateRes.text();
+            throw new Error(`Failed to activate user: ${activateRes.status} - ${err}`);
+        }
+
+		return data;
+	}catch(err){
+		console.error('Failed to create tenant admin:', err.response?.data || err.message);
+		throw err;
+	}
+}
+
+async function deleteTenantAccount(userId, systoken){
+	try{
+		const res = await fetch(`${THINGSBOARD_URL}/api/user/${userId}`, {
+			method: "DELETE",
+			headers:{
+				"X-Authorization": `Bearer ${systoken}`
+			}
+		});
+
+		if (!res.ok) {
+			const errorText = await res.text();
+			throw new Error(`ThingsBoard API error: ${res.status} - ${errorText}`);
+		}
+
+		console.log(`Tenant account ${userId} deleted successfully`);
+		return true;
+	}catch(err){
+		throw err;
+	}
+}
 
 // 3. Create Doctor API
-exports.createDoctor = (req, res) => {
+exports.createDoctor = async (req, res) => {
 	try {
 		const doctorData = {
 			cccd: sanitizeInput(req.body.cccd),
 			full_name: sanitizeInput(req.body.full_name),
+			email: sanitizeInput(req.body.email),
+			password: sanitizeInput(req.body.phone),
 			birthday: req.body.birthday,
 			address: sanitizeInput(req.body.address),
 			phone: sanitizeInput(req.body.phone),
 			specialization: sanitizeInput(req.body.specialization)
 		};
 
-		const duplicateDoctor = doctors.find(doctor => doctor.cccd === doctorData.cccd || doctor.phone === doctorData.phone);
+		const duplicateDoctor = doctors.find(doctor => doctor.cccd === doctorData.cccd);
 		if (duplicateDoctor) {
 			return res.status(409).json({
 				status: "error",
@@ -26,10 +148,28 @@ exports.createDoctor = (req, res) => {
 
 		doctors.push(newDoctor);
 
+		//create a new tenant account on thingsboard
+		const systoken = tokenStore.findThingsBoardToken(ADMIN_ID);
+
+		if(systoken){
+			try{
+				await createTenantAccount(newId.toString(),
+					doctorData.cccd,
+					doctorData.full_name,
+					doctorData.phone,
+					systoken
+				);
+			}catch(err){
+				console.error('ThingsBoard tenant creation failed:', err.message);
+			}
+		}
+
+		const { password, ...doctorResponse } = newDoctor;
+
 		res.status(201).json({
 			status: "success",
 			message: "Doctor created successfully.",
-			doctor: newDoctor
+			doctor: doctorResponse
 		});
 	} catch (error) {
 		console.error('Create doctor error:', error);
@@ -184,7 +324,7 @@ exports.updateDoctor = (req, res) => {
 };
 
 // 7. Delete Doctor API
-exports.deleteDoctor = (req, res) => {
+exports.deleteDoctor = async (req, res) => {
 	try {
 		const doctorId = parseInt(req.params.doctor_id);
 		const doctorIndex = doctors.findIndex(doc => doc.id === doctorId);
@@ -196,8 +336,18 @@ exports.deleteDoctor = (req, res) => {
 			});
 		}
 
-		doctors.splice(doctorIndex, 1);
+		//Delete tenant account on thingsboard
+		const systoken = tokenStore.findThingsBoardToken(ADMIN_ID);
+		if(systoken){
+			try{
+				await deleteTenantAccount(doctors[doctorIndex].tenantid, systoken);
+			}catch(err){
+				console.error('ThingsBoard tenant deletion failed:', err.message);
+			}
+		}
 
+		doctors.splice(doctorIndex, 1);
+		
 		res.status(200).json({
 			status: "success",
 			message: "Doctor deleted successfully.",

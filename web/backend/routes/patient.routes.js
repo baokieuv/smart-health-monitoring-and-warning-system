@@ -11,7 +11,7 @@ const router = express.Router();
 router.post(
     '/',
     authenticate,
-    authorizeRoles('admin', 'doctor'),
+    authorizeRoles('doctor'),
     [
         body('cccd')
             .notEmpty().withMessage('CCCD is required')
@@ -40,7 +40,7 @@ router.post(
 router.get(
     '/',
     authenticate,
-    authorizeRoles('admin', 'doctor'),
+    authorizeRoles('doctor'),
     [
         query('page')
             .optional()
@@ -60,7 +60,7 @@ router.get(
 router.get(
     '/:patient_id',
     authenticate,
-    authorizeRoles('admin', 'doctor'),
+    authorizeRoles('doctor'),
     [
         param('patient_id')
             .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer')
@@ -73,7 +73,7 @@ router.get(
 router.put(
     '/:patient_id',
     authenticate,
-    authorizeRoles('admin', 'doctor'),
+    authorizeRoles('doctor'),
     [
         param('patient_id')
             .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer'),
@@ -104,7 +104,7 @@ router.put(
 router.get(
     '/:patient_id/health',
     authenticate,
-    authorizeRoles('admin', 'doctor', 'family'),
+    authorizeRoles('doctor'),
     [
         param('patient_id')
             .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer')
@@ -117,7 +117,7 @@ router.get(
 router.delete(
     '/:patient_id',
     authenticate,
-    authorizeRoles('admin'),
+    authorizeRoles('doctor'),
     [
         param('patient_id')
             .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer')

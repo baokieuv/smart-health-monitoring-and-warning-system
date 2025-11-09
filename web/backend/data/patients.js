@@ -17,7 +17,7 @@ module.exports = [
         address: "Hai Bà Trưng, Hà Nội, Việt Nam",
         phone: "0987654321",
         room: "B405",
-        doctor_id: 1
+        doctor_id: 2
     },
     {
         id: 3,
