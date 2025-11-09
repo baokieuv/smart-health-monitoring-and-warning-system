@@ -1,2 +1,28 @@
-idf_component_register(SRCS "main.c" "max30102/algorithm.c" "max30102/i2c_api.c" "max30102/max30102_api.c"
-                    INCLUDE_DIRS ".")
+idf_component_register(
+    SRCS 
+        "main.c" 
+        "storage/nvs_storage.c"
+        "wifi/wifi_manager.c"
+        "http/http_server.c"
+        "mqtt/mqtt_tb.c"
+        "provisioning/provisioning.c"
+        "sensors/max30102/algorithm.c"
+        "sensors/max30102/heart_rate.c"
+        "sensors/max30102/i2c_api.c"
+        "sensors/max30102/max30102_api.c"
+        "sensors/ds18b20/temperature.c"
+        "sensors/mpu6050/mpu6050_api.c"
+        "gpio/gpio_handler.c"
+
+    INCLUDE_DIRS 
+        "."
+        "storage"
+        "wifi"
+        "http"
+        "mqtt"
+        "provisioning"
+        "sensors/ds18b20"
+        "sensors/max30102"
+        "sensors/mpu6050"
+        "gpio"
+)

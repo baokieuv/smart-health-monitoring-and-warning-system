@@ -1,444 +1,406 @@
-#include <driver/gpio.h>
 #include "esp_log.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
-#include "esp_wifi.h"
-#include "esp_event.h"
 #include "esp_netif.h"
-#include "esp_timer.h"
-#include "mqtt_client.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_http_server.h"
-#include "onewire_bus.h"
-#include "ds18b20.h"
-#include "cJSON.h"
-#include "max30102/max30102_api.h"
-#include "max30102/algorithm.h"
-#include "max30102/i2c_api.h"
+#include "freertos/event_groups.h"
+#include <string.h>
+#include <math.h>
 
-#define TAG                 "IOT"
-#define MAXIMUM_RETRY       5
+// Application modules
+#include "config.h"
+#include "storage/nvs_stoarge.h"
+#include "wifi/wifi_manager.h"
+#include "http/http_server.h"
+#include "mqtt/mqtt_tb.h"
+#include "sensors/ds18b20/temperature.h"
+#include "sensors/max30102/heart_rate.h"
+#include "sensors/mpu6050/mpu6050_api.h"
+#include "gpio/gpio_handler.h"
 
-#define MQTT_BROKER         "mqtt://demo.thingsboard.io:1883"
-#define MQTT_USER_NAME      "lNfdsh6tgjbgfBUC8yjn"
-#define TELEMETRY_TOPIC     "v1/devices/me/telemetry"
+static const char *TAG = "MAIN";
+// static EventGroupHandle_t event_group = NULL;
 
-#define WIFI_CONNECTED_BIT  BIT0
-#define WIFI_FAIL_BIT       BIT1
-#define MQTT_CONNECTED_BIT  BIT2
+// // Sensor data storage
+// static struct {
+//     char cccd[CCCD_MAX_LEN];
+//     float temperature;
+//     int heart_rate;
+//     double spo2;
+// } sensor_data = {0};
 
-#define NVS_NAMESPACE   "wifi_config"
-#define NVS_KEY_SSID    "ssid"
-#define NVS_KEY_PASS    "password"
-#define NVS_KEY_CCCD    "cccd"
+// /**
+//  * @brief Callback for temperature sensor updates
+//  */
+// static void on_temperature_update(float temp) {
+//     sensor_data.temperature = temp;
+// }
 
-#define DS18B20_PIN     GPIO_NUM_18
-#define BUFFER_SIZE     128
-#define DELAY_AMOSTRAGEM 40
+// /**
+//  * @brief Callback for heart rate sensor updates
+//  */
+// static void on_heart_rate_update(heart_rate_data_t data) {
+//     sensor_data.heart_rate = data.heart_rate;
+//     sensor_data.spo2 = data.spo2;
+// }
 
-static EventGroupHandle_t event_group;
-static int s_retry_num = 0;
-static esp_mqtt_client_handle_t client = NULL;
-static httpd_handle_t http_server = NULL;
-static float temperature = 0.0f;
-static int heart_rate = 0;
-static double spo2 = 0.0;
+// /**
+//  * @brief MQTT telemetry sending task
+//  */
+// static void mqtt_send_task(void *param) {
+//     ESP_LOGI(TAG, "MQTT send task started");
 
-int32_t red_data = 0;
-int32_t ir_data = 0;
-int32_t red_data_buffer[BUFFER_SIZE];
-int32_t ir_data_buffer[BUFFER_SIZE];
-double auto_correlationated_data[BUFFER_SIZE];
+//     while (1) {
+//         // Wait for MQTT connection
+//         EventBits_t bits = xEventGroupWaitBits(event_group, MQTT_CONNECTED_BIT, pdFALSE, pdFALSE, pdMS_TO_TICKS(1000));
 
+//         if (bits & MQTT_CONNECTED_BIT) {
+//             // Send telemetry
+//             esp_err_t err = mqtt_publish_telemetry(
+//                 sensor_data.cccd,
+//                 sensor_data.heart_rate,
+//                 sensor_data.spo2,
+//                 sensor_data.temperature
+//             );
 
-extern const uint8_t index_html_start[] asm("_binary_index_html_start");
-extern const uint8_t index_html_end[] asm("_binary_index_html_end");
+//             if (err != ESP_OK) {
+//                 ESP_LOGW(TAG, "Failed to publish telemetry");
+//             }
+//         }
 
-void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
-{
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        esp_wifi_connect();
-    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry_num < MAXIMUM_RETRY) {
-            esp_wifi_connect();
-            s_retry_num++;
-            ESP_LOGI(TAG, "retry to connect to the AP");
-        } else {
-            xEventGroupSetBits(event_group, WIFI_FAIL_BIT);
-            ESP_LOGI(TAG,"connect to the AP fail");   
-        }
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
-        s_retry_num = 0;
-        xEventGroupSetBits(event_group, WIFI_CONNECTED_BIT);
-    }
-}
+//         vTaskDelay(pdMS_TO_TICKS(MQTT_SEND_DELAY_MS));
+//     }
+// }
 
-void save_wifi_config(const char *ssid, const char *pass, const char *cccd) {
-    nvs_handle_t nvs;
-    nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs);
-    nvs_set_str(nvs, NVS_KEY_SSID, ssid);
-    nvs_set_str(nvs, NVS_KEY_PASS, pass);
-    nvs_set_str(nvs, NVS_KEY_CCCD, cccd);
-    nvs_commit(nvs);
-    nvs_close(nvs);
-    ESP_LOGI(TAG, "WiFi config saved to NVS");
-}
-bool load_wifi_config(char *ssid, char *pass, char *cccd) {
-    nvs_handle_t nvs;
-    if (nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs) != ESP_OK) return false;
+// /**
+//  * @brief Button press callback - switches to AP mode
+//  */
+// static void on_button_pressed(void) {
+//     ESP_LOGW(TAG, "Button pressed - Switching to AP mode");
 
-    size_t ssid_len = 32, pass_len = 64, cccd_len = 16;
-    if (nvs_get_str(nvs, NVS_KEY_SSID, ssid, &ssid_len) != ESP_OK) return false;
-    if (nvs_get_str(nvs, NVS_KEY_PASS, pass, &pass_len) != ESP_OK) return false;
-    if (nvs_get_str(nvs, NVS_KEY_CCCD, cccd, &cccd_len) != ESP_OK) return false;
-
-    nvs_close(nvs);
-    return true;
-}
-
-esp_err_t send_handler(httpd_req_t* req){
-    ESP_ERROR_CHECK(httpd_resp_set_type(req, "text/html"));
-    ESP_ERROR_CHECK(httpd_resp_send(req, (char*)index_html_start, index_html_end - index_html_start));
-    return ESP_OK;
-}
-esp_err_t receive_handler(httpd_req_t* req){
-    char data[100] = { 0 };
-    httpd_req_recv(req, data, req->content_len);
-
-    cJSON *root = cJSON_Parse(data);
-    if(!root){
-        ESP_LOGE("JSON", "Failed to parse JSON");
-        httpd_resp_send_500(req);
-        return ESP_ERR_NOT_ALLOWED;
-    }
-
-    const cJSON *cccd = cJSON_GetObjectItem(root, "cccd");
-    const cJSON *ssid = cJSON_GetObjectItem(root, "ssid");
-    const cJSON *pass = cJSON_GetObjectItem(root, "pass");
-
-    if (!cccd || !ssid || !pass || !cJSON_IsString(cccd) || !cJSON_IsString(ssid) || !cJSON_IsString(pass)) {
-        ESP_LOGE(TAG, "Invalid JSON: missing or wrong type field(s)");
-        cJSON_Delete(root);
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
-        return ESP_FAIL;
-    }
-
-    ESP_LOGI(TAG, "CCCD: %s, SSID: %s, PASS: %s", cccd->valuestring, ssid->valuestring, pass->valuestring);
-
-    save_wifi_config(ssid->valuestring, pass->valuestring, cccd->valuestring);
-    cJSON_Delete(root);
-
-    httpd_resp_sendstr(req, "<h3>Đã lưu cấu hình, ESP sẽ khởi động lại...</h3>");
-    vTaskDelay(pdMS_TO_TICKS(1500));
-    esp_restart();
-    return ESP_OK;
-}
-
-esp_err_t start_http_server(void){
-    httpd_uri_t uri_send = {
-        .uri = "/",
-        .method = HTTP_GET,
-        .handler = send_handler,
-        .user_ctx = NULL,
-    };
-
-    httpd_uri_t uri_receive = {
-        .uri = "/save",
-        .method = HTTP_POST,
-        .handler = receive_handler,
-        .user_ctx = NULL,
-    };
-
-    if(http_server != NULL) return ESP_OK;
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+//     // Stop current operations
+//     mqtt_client_stop();
+//     wifi_stop();
     
+//     // Start AP mode for reconfiguration
+//     wifi_start_ap_mode();
+//     http_server_start();
+    
+//     ESP_LOGI(TAG, "Switched to configuration mode");
+// }
 
-    if (httpd_start(&http_server, &config) == ESP_OK)
-    {
-        ESP_ERROR_CHECK(httpd_register_uri_handler(http_server, &uri_send));
-        ESP_ERROR_CHECK(httpd_register_uri_handler(http_server, &uri_receive));
-        ESP_LOGI(TAG, "HTTP server started");
-    }
-    return ESP_OK;
-}
-void stop_http_server(void) {
-    if (http_server) {
-        httpd_stop(http_server);
-        http_server = NULL;
-        ESP_LOGI(TAG, "HTTP server stopped");
-    }
-}
+// /**
+//  * @brief Initialize system
+//  */
+// static esp_err_t system_init(void) {
+//     // Initialize NVS
+//     esp_err_t ret = nvs_flash_init();
+//     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+//         ESP_ERROR_CHECK(nvs_flash_erase());
+//         ret = nvs_flash_init();
+//     }
+//     ESP_ERROR_CHECK(ret);
 
-void start_ap_mode(void) {
-    ESP_LOGI(TAG, "Starting AP mode...");
-    esp_netif_create_default_wifi_ap();
+//     // Initialize networking
+//     ESP_ERROR_CHECK(esp_netif_init());
+//     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    esp_wifi_init(&cfg);
-    wifi_config_t ap_config = {
-        .ap = {
-            .ssid = "ESP32_Config",
-            .ssid_len = strlen("ESP32_Config"),
-            .channel = 1,
-            .max_connection = 3,
-            .authmode = WIFI_AUTH_OPEN,
-        },
-    };
-    esp_wifi_set_mode(WIFI_MODE_AP);
-    esp_wifi_set_config(WIFI_IF_AP, &ap_config);
-    esp_wifi_start();
+//     // Create event group
+//     event_group = xEventGroupCreate();
+//     if (!event_group) {
+//         ESP_LOGE(TAG, "Failed to create event group");
+//         return ESP_FAIL;
+//     }
 
-    start_http_server();
-    ESP_LOGI(TAG, "AP Mode started, SSID: ESP32_Config");
-}
-bool start_station_mode(const char *ssid, const char *pass)
-{
-    esp_netif_create_default_wifi_sta();
+//     // Initialize GPIO and button handler
+//     ESP_ERROR_CHECK(gpio_handler_init(on_button_pressed));
 
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL, NULL));
+//     // Initialize WiFi manager
+//     ESP_ERROR_CHECK(wifi_manager_init(event_group));
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+       // Initialize MPU650
+       
+//     ESP_LOGI(TAG, "System initialized successfully");
+//     return ESP_OK;
+// }
 
-    wifi_config_t wifi_config = { 0 };
-    strncpy((char*)wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid));
-    strncpy((char*)wifi_config.sta.password, pass, sizeof(wifi_config.sta.password));
+// /**
+//  * @brief Start normal operation mode with WiFi and MQTT
+//  */
+// static esp_err_t start_normal_mode(const char *ssid, const char *pass, 
+//                                    const char *token, const char *cccd) {
+//     ESP_LOGI(TAG, "Starting normal operation mode...");
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
-    ESP_ERROR_CHECK(esp_wifi_start());
+//     // Store CCCD for telemetry
+//     strncpy(sensor_data.cccd, cccd, sizeof(sensor_data.cccd) - 1);
 
-    EventBits_t bits = xEventGroupWaitBits(event_group,
-                                           WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-                                           pdFALSE, pdFALSE,
-                                           pdMS_TO_TICKS(15000));
+//     // Connect to WiFi
+//     if (!wifi_start_station_mode(ssid, pass)) {
+//         ESP_LOGW(TAG, "WiFi connection failed");
+//         return ESP_FAIL;
+//     }
 
-    if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "Connected to WiFi successfully");
-        return true;
-    } else {
-        ESP_LOGE(TAG, "WiFi connection failed!");
-        return false;
-    }
-}
+//     // Stop HTTP server if running
+//     http_server_stop();
 
-void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
-{
-    ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%ld", base, event_id);
-    esp_mqtt_event_handle_t event = event_data;
+//     // Initialize MQTT
+//     esp_err_t err = mqtt_client_init(token, event_group);
+//     if (err != ESP_OK) {
+//         ESP_LOGE(TAG, "MQTT initialization failed");
+//         return err;
+//     }
 
-    switch ((esp_mqtt_event_id_t)event_id)
-    {
-    case MQTT_EVENT_CONNECTED:
-        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-        xEventGroupSetBits(event_group, MQTT_CONNECTED_BIT);
-        break;
-    case MQTT_EVENT_DISCONNECTED:
-        ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
-        xEventGroupClearBits(event_group, MQTT_CONNECTED_BIT);
-        break;
-    case MQTT_EVENT_PUBLISHED:
-        ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_DATA:
-        ESP_LOGI(TAG, "MQTT_EVENT_DATA: %s", event->topic);
-        break;
-    case MQTT_EVENT_SUBSCRIBED:
-        ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_ERROR:
-        ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
-        break;
-    default:
-        ESP_LOGI(TAG, "Other event id:%d", event->event_id);
-        break;
-    }
-}
-void mqtt_init(void)
-{
-    ESP_LOGI(TAG, "STARTING MQTT");
-    esp_mqtt_client_config_t mqttConfig = {
-        .broker.address.uri = MQTT_BROKER,
-        .credentials.username = MQTT_USER_NAME,
-    };
+//     // Initialize sensors
+//     err = temperature_sensor_init();
+//     if (err != ESP_OK) {
+//         ESP_LOGW(TAG, "Temperature sensor initialization failed");
+//     } else {
+//         temperature_start_task(on_temperature_update);
+//     }
 
-    client = esp_mqtt_client_init(&mqttConfig);
-    ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client));
-    ESP_ERROR_CHECK(esp_mqtt_client_start(client));
-}
+//     err = heart_rate_sensor_init();
+//     if (err != ESP_OK) {
+//         ESP_LOGW(TAG, "Heart rate sensor initialization failed");
+//     } else {
+//         heart_rate_start_task(on_heart_rate_update);
+//     }
 
-void fill_buffers_data()
-{
-	for(int i = 0; i < BUFFER_SIZE; i++){
-		read_max30102_fifo(&red_data, &ir_data);
-		ir_data_buffer[i] = ir_data;
-		red_data_buffer[i] = red_data;
-		ir_data = 0;
-		red_data = 0;
-		vTaskDelay(pdMS_TO_TICKS(DELAY_AMOSTRAGEM));
-	}
-}
-void read_max30102(void *pvParameters)
-{
-    max_config max30102_configuration = {
+//     // Start MQTT telemetry task
+//     xTaskCreate(mqtt_send_task, "mqtt_send", 4096, NULL, 5, NULL);
 
-		.INT_EN_1.A_FULL_EN         = 1,
-		.INT_EN_1.PPG_RDY_EN        = 1,
-		.INT_EN_1.ALC_OVF_EN        = 0,
-		.INT_EN_1.PROX_INT_EN       = 0,
+//     ESP_LOGI(TAG, "Normal mode started successfully");
+//     return ESP_OK;
+// }
 
-		.INT_EN_2.DIE_TEMP_RDY_EN   = 0,
+// /**
+//  * @brief Start configuration mode (AP mode)
+//  */
+// static void start_config_mode(void) {
+//     ESP_LOGI(TAG, "Starting configuration mode...");
+    
+//     wifi_start_ap_mode();
+//     http_server_start();
+    
+//     ESP_LOGI(TAG, "Configuration mode started - Connect to '%s' to configure", AP_SSID);
+// }
 
-		.FIFO_WRITE_PTR.FIFO_WR_PTR = 0,
+// void app_main(void) {
+//     ESP_LOGI(TAG, "=== IoT Health Monitor Starting ===");
 
-		.OVEF_COUNTER.OVF_COUNTER   = 0,
+//     // Initialize system
+//     ESP_ERROR_CHECK(system_init());
 
-		.FIFO_READ_PTR.FIFO_RD_PTR  = 0,
+//     // Try to load saved configuration
+//     char ssid[SSID_MAX_LEN] = {0};
+//     char pass[PASSWORD_MAX_LEN] = {0};
+//     char cccd[CCCD_MAX_LEN] = {0};
+//     char token[TOKEN_MAX_LEN] = {0};
 
-		.FIFO_CONF.SMP_AVE          = 0b010,  //média de 4 valores
-		.FIFO_CONF.FIFO_ROLLOVER_EN = 1,      //fifo rollover enable
-		.FIFO_CONF.FIFO_A_FULL      = 0,      //0
+//     if (nvs_load_wifi_config(ssid, pass, cccd, token)) {
+//         ESP_LOGI(TAG, "Configuration found - Starting normal mode");
+        
+//         // Try to start normal operation
+//         if (start_normal_mode(ssid, pass, token, cccd) != ESP_OK) {
+//             ESP_LOGW(TAG, "Failed to start normal mode - Switching to config mode");
+//             wifi_stop();
+//             start_config_mode();
+//         }
+//     } else {
+//         ESP_LOGI(TAG, "No configuration found - Starting config mode");
+//         start_config_mode();
+//     }
 
-		.MODE_CONF.SHDN             = 0,
-		.MODE_CONF.RESET            = 0,
-		.MODE_CONF.MODE             = 0b011,  //SPO2 mode
+//     ESP_LOGI(TAG, "=== Initialization Complete ===");
+// }
 
-		.SPO2_CONF.SPO2_ADC_RGE     = 0b01,   //16384 nA(Escala do DAC)
-		.SPO2_CONF.SPO2_SR          = 0b001,  //200 samples per second
-		.SPO2_CONF.LED_PW           = 0b10,   //pulso de 215 uS do led.
+// ====== Queue toàn cục ======
+static QueueHandle_t g_mpu_queue = NULL;
 
-		.LED1_PULSE_AMP.LED1_PA     = 0x24,   //CORRENTE DO LED1 25.4mA
-		.LED2_PULSE_AMP.LED2_PA     = 0x24,   //CORRENTE DO LED2 25.4mA
+// ====== Task đọc cảm biến (producer) ======
+static void mpu6050_task(void *param) {
+    ESP_LOGI(TAG, "MPU6050 task started");
 
-		.PROX_LED_PULS_AMP.PILOT_PA = 0X7F,
-
-		.MULTI_LED_CONTROL1.SLOT2   = 0,      //Desabilitado
-		.MULTI_LED_CONTROL1.SLOT1   = 0,      //Desabilitado
-
-		.MULTI_LED_CONTROL2.SLOT4   = 0,      //Desabilitado
-		.MULTI_LED_CONTROL2.SLOT3   = 0,      //Desabilitado
-    };
-	i2c_init();
-	vTaskDelay(pdMS_TO_TICKS(100));
-	max30102_init(&max30102_configuration);
-	init_time_array();
-	uint64_t ir_mean;
-	uint64_t red_mean;
-	float temperature;
-	double r0_autocorrelation;
-
-	for(;;){
-		//vTaskDelay(pdMS_TO_TICKS(100));
-		fill_buffers_data();
-		temperature = get_max30102_temp();
-		remove_dc_part(ir_data_buffer, red_data_buffer, &ir_mean, &red_mean);
-		remove_trend_line(ir_data_buffer);
-		remove_trend_line(red_data_buffer);
-		double pearson_correlation = correlation_datay_datax(red_data_buffer, ir_data_buffer);
-		heart_rate = calculate_heart_rate(ir_data_buffer, &r0_autocorrelation, auto_correlationated_data);
-
-		printf("\n");
-		printf("HEART_RATE %d\n", heart_rate);
-		printf("correlation %f\n", pearson_correlation);
-		printf("Temperature %f\n", temperature);
-
-		if(pearson_correlation >= 0.7){ //Os dois sinais IR e RED devem ser fortemente relacionados.
-			spo2 = spo2_measurement(ir_data_buffer, red_data_buffer, ir_mean, red_mean);
-			printf("SPO2 %f\n", spo2);
-		}
-		printf("\n");
-	}
-}
-
-void read_temperature(void* param){
-    onewire_bus_handle_t bus = NULL;
-    onewire_bus_config_t bus_cfg = {
-        .bus_gpio_num = DS18B20_PIN,
-        .flags = {
-            .en_pull_up = true,
-        }
-    };
-    onewire_bus_rmt_config_t rmt_cfg = {
-        .max_rx_bytes = 10,
-    };
-    ESP_ERROR_CHECK(onewire_new_bus_rmt(&bus_cfg, &rmt_cfg, &bus));
-    ESP_LOGI(TAG, "1-Wire bus installed on GPIO%d", DS18B20_PIN);
-
-    ds18b20_device_handle_t ds18b20;
-    ds18b20_config_t ds_cfg = {};
-    ESP_ERROR_CHECK(ds18b20_new_device_from_bus(bus, &ds_cfg, &ds18b20));
-
-    while(1){
-        ESP_ERROR_CHECK(ds18b20_trigger_temperature_conversion(ds18b20));
-        ESP_ERROR_CHECK(ds18b20_get_temperature(ds18b20, &temperature));
-        ESP_LOGI(TAG, "temperature read from DS18B20: %.2fC", temperature);
-        vTaskDelay(pdMS_TO_TICKS(2000));
+    if (mpu6050_init(I2C_PORT, I2C_SDA, I2C_SCL, I2C_FREQ,
+                     MPU_ADDR, MPU6050_ACCE_2G, MPU6050_GYRO_250DPS) != ESP_OK) {
+        ESP_LOGE(TAG, "mpu6050_init failed");
+        vTaskDelete(NULL);
+        return;
     }
 
-}
+    TickType_t last = xTaskGetTickCount();
 
-void mqtt_send_task(void *param){
-    char cccd[16];
-    nvs_handle_t nvs;
-    nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs);
-    size_t len = sizeof(cccd);
-    nvs_get_str(nvs, NVS_KEY_CCCD, cccd, &len);
-    nvs_close(nvs);
+    while (1) {
+        mpu6050_data_t d = {0};
+        if (mpu6050_read_all(&d) == ESP_OK) {
+            // Đưa vào hàng đợi (không chặn nếu đầy)
+            if (xQueueSend(g_mpu_queue, &d, 0) != pdPASS) {
+                // Queue full -> bỏ mẫu cũ nhất
+                mpu6050_data_t trash;
+                (void)xQueueReceive(g_mpu_queue, &trash, 0);   // pop oldest (non-blocking)
 
-    char payload[256];
-    while(1) {
-        EventBits_t bits = xEventGroupGetBits(event_group);
-        if (bits & MQTT_CONNECTED_BIT) {
-            snprintf(payload, sizeof(payload),
-                "{\"cccd\":\"%s\",\"heartRate\":%d,\"O2\":%lf,\"temperature\":%f,\"alarm\":\"normal\"}",
-                cccd, heart_rate, spo2, temperature);
-            esp_mqtt_client_publish(client, TELEMETRY_TOPIC, payload, 0, 1, 0);
-            ESP_LOGI(TAG, "Telemetry sent: %s", payload);
-        }
-        vTaskDelay(pdMS_TO_TICKS(5000));
-    }
-}
-
-
-void app_main(void){
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-
-    gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_NUM_2, 1);
-
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-    event_group = xEventGroupCreate();
-
-    char ssid[32] = {0}, pass[64] = {0}, cccd[16] = {0};
-
-    if (load_wifi_config(ssid, pass, cccd)) {
-        ESP_LOGI(TAG, "Loaded WiFi config: SSID=%s", ssid);
-        bool ok = start_station_mode(ssid, pass);
-        if (ok) {
-            stop_http_server();  
-            mqtt_init();
-            xTaskCreate(mqtt_send_task, "mqtt_send_task", 4096, NULL, 5, NULL);
+                // thử gửi lại mẫu mới
+                if (xQueueSend(g_mpu_queue, &d, 0) != pdPASS) {
+                    // Trường hợp cực đoan: vẫn không gửi được (race condition)
+                    ESP_LOGW(TAG, "Queue full, dropped newest sample");
+                } else {
+                    ESP_LOGW(TAG, "Queue full, dropped oldest sample");
+                }
+            }
         } else {
-            ESP_LOGW(TAG, "WiFi failed -> Switching to AP mode");
-            esp_wifi_stop();
-            esp_wifi_deinit();
-            start_ap_mode();
+            ESP_LOGW(TAG, "read_all failed");
         }
-    } else {
-        ESP_LOGW(TAG, "No WiFi config -> Starting AP mode");
-        start_ap_mode();
+
+        vTaskDelayUntil(&last, pdMS_TO_TICKS(MPU_PERIOD_MS));
     }
-    xTaskCreate(read_temperature, "read temp", 4086, NULL, 5, NULL);
-    xTaskCreate(read_max30102, "read max30102", 4086, NULL, 5, NULL);
+}
+
+// ==== Trợ giúp ====
+static inline float vec3_norm(float x, float y, float z) {
+    return sqrtf(x*x + y*y + z*z);
+}
+
+typedef enum {
+    ST_IDLE = 0,
+    ST_FREE_FALL,
+    ST_IMPACT_WAIT,
+    ST_POST_MONITOR
+} fall_state_t;
+
+static void handle_mpu6050_data(void *param) {
+    ESP_LOGI(TAG, "Fall detector started");
+
+    fall_state_t state = ST_IDLE;
+    TickType_t   t_state = 0;          // mốc thời gian vào state
+    TickType_t   t_last_report = 0;    // chống spam cảnh báo
+
+    // (tuỳ chọn) giữ mẫu trước để tính delta nếu muốn
+    mpu6050_data_t d;
+
+    while (1) {
+        if (xQueueReceive(g_mpu_queue, &d, portMAX_DELAY) != pdPASS) continue;
+
+        const float acc_norm  = vec3_norm(d.accel.ax, d.accel.ay, d.accel.az);   // g
+        const float gyro_norm = vec3_norm(d.gyro.gx,  d.gyro.gy,  d.gyro.gz);    // dps
+        const float abs_roll  = fabsf(d.angle.roll);
+        const float abs_pitch = fabsf(d.angle.pitch);
+        const TickType_t now  = xTaskGetTickCount();
+
+        switch (state) {
+        case ST_IDLE:
+            // Free-fall bắt đầu khi acc rất thấp trong ≥ FF_MIN_TIME_MS
+            if (acc_norm < FF_G_THRESH) {
+                // vào FF và ghi mốc thời gian
+                state = ST_FREE_FALL;
+                t_state = now;
+                // ESP_LOGI(TAG, "FF start");
+            }
+            break;
+
+        case ST_FREE_FALL: {
+            // Nếu vẫn dưới ngưỡng -> kiểm tra thời lượng
+            TickType_t elapsed = now - t_state;
+            if (acc_norm < FF_G_THRESH) {
+                if (elapsed > pdMS_TO_TICKS(FF_MAX_TIME_MS)) {
+                    // Free-fall quá dài nhưng không có impact, reset
+                    state = ST_IDLE;
+                }
+                // vẫn trong free-fall, chờ impact
+            } else {
+                // acc thoát khỏi FF; chuyển sang chờ impact 1 khoảng ngắn
+                state = ST_IMPACT_WAIT;
+                t_state = now; // bắt đầu "đồng hồ" chờ impact
+            }
+            break;
+        }
+
+        case ST_IMPACT_WAIT: {
+            TickType_t elapsed = now - t_state;
+            // Tìm spike va đập
+            if (acc_norm > IMPACT_G_THRESH) {
+                state = ST_POST_MONITOR;
+                t_state = now;  // bắt đầu quan sát sau impact
+                ESP_LOGI(TAG, "Impact detected (|acc|=%.2fg)", acc_norm);
+            } else if (elapsed > pdMS_TO_TICKS(IMPACT_TIMEOUT_MS)) {
+                // Không thấy impact trong thời gian cho phép -> hủy
+                state = ST_IDLE;
+            }
+            break;
+        }
+
+        case ST_POST_MONITOR: {
+            TickType_t elapsed = now - t_state;
+            // điều kiện "nằm bất động + tư thế bất thường"
+            bool low_motion = (gyro_norm < POST_INACT_DPS);
+            bool bad_pose   = (abs_roll > POST_ANGLE_DEG) || (abs_pitch > POST_ANGLE_DEG);
+
+            if (low_motion && bad_pose) {
+                // Chống spam: chỉ báo nếu quá cooldown
+                if ((now - t_last_report) > pdMS_TO_TICKS(REPORT_COOLDOWN_MS)) {
+                    t_last_report = now;
+                    ESP_LOGW(TAG,
+                        "[FALL DETECTED] |acc|=%.2fg, |gyro|=%.0fdps, roll=%.1f°, pitch=%.1f°",
+                        acc_norm, gyro_norm, d.angle.roll, d.angle.pitch
+                    );
+                    // TODO: ở đây bạn có thể:
+                    //  - publish MQTT/HTTP
+                    //  - bật còi/đèn
+                    //  - lưu sự kiện
+                }
+                // Sau khi báo, quay về IDLE để chờ lần sau
+                state = ST_IDLE;
+            } else if (elapsed > pdMS_TO_TICKS(POST_WINDOW_MS)) {
+                // Hết cửa sổ quan sát mà không đạt điều kiện -> bỏ qua
+                state = ST_IDLE;
+            }
+            break;
+        }
+
+        default:
+            state = ST_IDLE;
+            break;
+        }
+
+        // (tuỳ chọn) cũng có thể log thưa để theo dõi:
+        ESP_LOGI(TAG, "state=%d |acc|=%.2f |gyro|=%.0f roll=%.1f pitch=%.1f",
+                 state, acc_norm, gyro_norm, d.angle.roll, d.angle.pitch);
+    }
+}
+
+void app_main(void)
+{
+    // Tạo hàng đợi trước khi tạo task
+    g_mpu_queue = xQueueCreate(QUEUE_LEN, sizeof(mpu6050_data_t));
+    if (!g_mpu_queue) {
+        ESP_LOGE(TAG, "xQueueCreate failed");
+        return;
+    }
+
+    // Tạo task producer (đọc cảm biến)
+    BaseType_t ok = xTaskCreate(
+        mpu6050_task,
+        "mpu6050_task",
+        4096,      // tăng nếu log nhiều
+        NULL,
+        5,
+        NULL
+    );
+    if (ok != pdPASS) {
+        ESP_LOGE(TAG, "xTaskCreate mpu6050_task failed");
+        return;
+    }
+
+    // Tạo task consumer (xử lý trung bình)
+    ok = xTaskCreate(
+        handle_mpu6050_data,
+        "mpu6050_handler",
+        4096,
+        NULL,
+        4,         // priority thấp hơn producer một chút
+        NULL
+    );
+    if (ok != pdPASS) {
+        ESP_LOGE(TAG, "xTaskCreate handle_mpu6050_data failed");
+        return;
+    }
 }
