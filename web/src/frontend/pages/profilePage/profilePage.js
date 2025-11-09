@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import './profilePage.scss'
 
 const ProfilePage = () => {
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
   const { userId } = useParams() // Lấy userId từ URL
   const [isEditing, setIsEditing] = useState(false)
   const [doctor, setDoctor] = useState(null)

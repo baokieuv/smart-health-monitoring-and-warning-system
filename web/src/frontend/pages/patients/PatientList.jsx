@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import routers from '../../utils/routers'
+// import routers from '../../utils/routers'
 import './PatientList.css'
 
 export default function PatientList() {

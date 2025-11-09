@@ -44,13 +44,13 @@ export default function Notes() {
     ])
   }
 
-  const handleDelete = (noteId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa ghi chú này?')) return
+  // const handleDelete = (noteId) => {
+  //   if (!window.confirm('Bạn có chắc chắn muốn xóa ghi chú này?')) return
     
-    // TODO: Call API to delete note
-    setNotes(notes.filter(note => note.id !== noteId))
-    alert('Đã xóa ghi chú')
-  }
+  //   // TODO: Call API to delete note
+  //   setNotes(notes.filter(note => note.id !== noteId))
+  //   alert('Đã xóa ghi chú')
+  // }
 
   const filteredNotes = notes.filter(note => {
     if (!searchTerm) return true

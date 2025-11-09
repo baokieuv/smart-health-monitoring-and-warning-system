@@ -52,12 +52,12 @@ export default function Alerts() {
     ])
   }
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      warning: { text: '⚠️ Cảnh báo', class: 'status-warning' }
-    }
-    return badges[status] || badges.warning
-  }
+  // const getStatusBadge = (status) => {
+  //   const badges = {
+  //     warning: { text: '⚠️ Cảnh báo', class: 'status-warning' }
+  //   }
+  //   return badges[status] || badges.warning
+  // }
 
   const getAlertStatusBadge = (alertStatus) => {
     const badges = {
