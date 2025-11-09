@@ -2,7 +2,7 @@
 web/node_modules/
 web/.pnp
 web/.pnp.js
-web/package-lock.json
+# web/package-lock.json
 
 # Testing
 web/coverage/
