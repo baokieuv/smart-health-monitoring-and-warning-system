@@ -23,12 +23,14 @@ yarn-debug.log*
 yarn-error.log*
 
 # ESP-IDF build files
+build/
 esp32/build/
 esp32/sdkconfig
 esp32/sdkconfig.old
 esp32/dependencies.lock
 esp32/.vscode/
 esp32/.devcontainer/
+esp32/managed_components/
 
 # Binary files
 *.bin
@@ -43,3 +45,4 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+.vscode/
