@@ -1,45 +1,41 @@
 const mongoose = require('mongoose');
 
 const roomSchema = new mongoose.Schema({
-  roomCode: {
+  code: {
     type: String,
     required: true,
     unique: true,
     trim: true,
-    uppercase: true,
-    // VD: A101, B205, ICU-01
+    uppercase: true
+    // Mã phòng: A301, B205, C102
+    // Định dạng: [Tòa][Tầng][Số phòng]
   },
-  roomName: {
+  building: {
     type: String,
+    required: true,
+    enum: ['A', 'B', 'C', 'D'],
     trim: true
+    // Tòa nhà: A, B, C, D
   },
   floor: {
     type: Number,
     required: true,
-    min: 0
-  },
-  building: {
-    type: String,
-    trim: true,
-    // Tòa nhà: A, B, C, ...
-  },
-  roomType: {
-    type: String,
-    enum: ['standard', 'vip', 'icu', 'emergency', 'operating'],
-    required: true,
-    default: 'standard'
-  },
-  department: {
-    type: String,
-    trim: true,
-    // Khoa: Tim mạch, Nội khoa, Ngoại khoa, ...
+    min: 1,
+    max: 20
+    // Tầng: 1-20
   },
   capacity: {
     type: Number,
     required: true,
     min: 1,
-    default: 1
-    // Số giường tối đa
+    max: 10,
+    default: 2
+    // Sức chứa (số giường): 1-10
+  },
+  description: {
+    type: String,
+    trim: true
+    // Mô tả về phòng
   },
   currentOccupancy: {
     type: Number,
@@ -62,36 +58,10 @@ const roomSchema = new mongoose.Schema({
       default: null
     }
   }],
-  equipment: [{
-    name: String,
-    quantity: Number,
-    status: {
-      type: String,
-      enum: ['working', 'maintenance', 'broken'],
-      default: 'working'
-    }
-  }],
-  features: [{
-    type: String,
-    // VD: Điều hòa, TV, Tủ lạnh, Phòng tắm riêng, ...
-  }],
-  pricePerDay: {
-    type: Number,
-    min: 0,
-    // Giá phòng/ngày (VNĐ)
-  },
   status: {
     type: String,
-    enum: ['available', 'occupied', 'maintenance', 'reserved'],
+    enum: ['available', 'occupied', 'maintenance', 'full'],
     default: 'available'
-  },
-  assignedNurses: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }],
-  notes: {
-    type: String,
-    trim: true
   },
   isActive: {
     type: Boolean,
@@ -109,37 +79,9 @@ const roomSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index
-roomSchema.index({ roomCode: 1 });
-roomSchema.index({ floor: 1 });
+// Indexes
 roomSchema.index({ building: 1 });
-roomSchema.index({ roomType: 1 });
+roomSchema.index({ floor: 1 });
 roomSchema.index({ status: 1 });
-roomSchema.index({ department: 1 });
-
-// Virtual: availableBeds
-roomSchema.virtual('availableBeds').get(function() {
-  return this.capacity - this.currentOccupancy;
-});
-
-// Virtual: occupancyRate
-roomSchema.virtual('occupancyRate').get(function() {
-  if (this.capacity === 0) return 0;
-  return ((this.currentOccupancy / this.capacity) * 100).toFixed(2);
-});
-
-// Ensure virtuals are included
-roomSchema.set('toJSON', { virtuals: true });
-roomSchema.set('toObject', { virtuals: true });
-
-// Pre-save middleware to update status based on occupancy
-roomSchema.pre('save', function(next) {
-  if (this.currentOccupancy >= this.capacity) {
-    this.status = 'occupied';
-  } else if (this.currentOccupancy === 0 && this.status === 'occupied') {
-    this.status = 'available';
-  }
-  next();
-});
 
 module.exports = mongoose.model('Room', roomSchema);

@@ -6,52 +6,43 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
     trim: true,
-    minlength: 3
+    minlength: 3,
+    maxlength: 50
+    // Username để đăng nhập
   },
   password: {
     type: String,
     required: true,
     minlength: 6
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true
-  },
-  fullName: {
-    type: String,
-    required: true,
-    trim: true
+    // Password đã được hash bằng bcrypt
   },
   role: {
     type: String,
     enum: ['admin', 'doctor'],
     required: true,
     default: 'doctor'
+    // Role để phân quyền: admin hoặc doctor
   },
-  phone: {
-    type: String,
-    trim: true
-  },
-  avatar: {
-    type: String,
+  doctorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Doctor',
     default: null
-  },
-  specialization: {
-    type: String,
-    trim: true,
-    // Chỉ áp dụng cho doctor
-  },
-  licenseNumber: {
-    type: String,
-    trim: true,
-    // Số chứng chỉ hành nghề (cho doctor)
+    // Link đến Doctor document nếu role = 'doctor'
   },
   isActive: {
     type: Boolean,
     default: true
+    // Trạng thái tài khoản: true = hoạt động, false = bị khóa
+  },
+  refreshToken: {
+    type: String,
+    default: null
+    // JWT refresh token để làm mới access token
+  },
+  passwordChangedAt: {
+    type: Date,
+    default: null
+    // Thời gian đổi mật khẩu gần nhất
   },
   createdAt: {
     type: Date,
@@ -65,16 +56,10 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index để tìm kiếm nhanh
+// Indexes
 userSchema.index({ username: 1 });
 userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
-
-// Method để ẩn password khi trả về JSON
-userSchema.methods.toJSON = function() {
-  const user = this.toObject();
-  delete user.password;
-  return user;
-};
+userSchema.index({ isActive: 1 });
 
 module.exports = mongoose.model('User', userSchema);
