@@ -1,0 +1,312 @@
+.alerts-container {
+  padding: 24px;
+}
+
+.alerts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.alerts-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-buttons button {
+  padding: 10px 16px;
+  border: 2px solid #e0e0e0;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.filter-buttons button:hover {
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.filter-buttons button.active {
+  background: #f44336;
+  color: #fff;
+  border-color: #f44336;
+}
+
+.table-container {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow-x: auto;
+}
+
+.alerts-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.alerts-table thead {
+  background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+  color: #fff;
+}
+
+.alerts-table th {
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.alerts-table th:nth-child(1) { width: 50px; text-align: center; } /* STT */
+.alerts-table th:nth-child(2) { width: 150px; } /* Thời gian */
+.alerts-table th:nth-child(3) { width: 180px; } /* Họ và tên */
+.alerts-table th:nth-child(4) { width: 120px; } /* CCCD */
+.alerts-table th:nth-child(5) { width: 100px; } /* Phòng */
+.alerts-table th:nth-child(6) { width: 140px; } /* Trạng thái */
+.alerts-table th:nth-child(7) { width: auto; text-align: center; } /* Hành động */
+
+.alerts-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+
+.alerts-table tbody tr:hover {
+  background: #fff8f8;
+}
+
+.alerts-table tbody tr.row-warning {
+  border-left: 4px solid #ff9800;
+}
+
+.alerts-table td {
+  padding: 14px 12px;
+  font-size: 14px;
+  color: #333;
+  vertical-align: middle;
+}
+
+.alerts-table td:nth-child(1) { text-align: center; } /* STT */
+.alerts-table td:nth-child(7) { text-align: center; } /* Hành động */
+
+.alerts-table td small {
+  color: #666;
+  font-size: 12px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge.status-warning {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.badge.alert-urgent {
+  background: #ffebee;
+  color: #c62828;
+  animation: pulse 2s infinite;
+}
+
+.badge.alert-processing {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.room-link {
+  color: #f44336;
+  text-decoration: none;
+  font-weight: 300;
+}
+
+.room-link:hover {
+  text-decoration: underline;
+}
+
+.btn-receive,
+.btn-complete {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-receive {
+  background: #2196f3;
+  color: #fff;
+}
+
+.btn-receive:hover {
+  background: #1976d2;
+}
+
+.btn-complete {
+  background: #4caf50;
+  color: #fff;
+}
+
+.btn-complete:hover {
+  background: #388e3c;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 24px;
+}
+
+.patient-info {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.patient-info p {
+  margin: 8px 0;
+  color: #555;
+  font-size: 14px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #555;
+  font-size: 14px;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.form-group textarea:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.required {
+  color: #f44336;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #4caf50;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #388e3c;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background: #f8f8f8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .alerts-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-buttons {
+    width: 100%;
+  }
+
+  .filter-buttons button {
+    flex: 1;
+    min-width: 100px;
+  }
+}
