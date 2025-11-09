@@ -184,6 +184,14 @@ export default function FamilyPatientDetail() {
             <span className="label">Room:</span>
             <span className="value">{patient.room}</span>
           </div>
+          <div className="info-row">
+            <span className="label">Bác sỹ điều trị:</span>
+            <span className="value"><strong>{patient.doctor}</strong></span>
+          </div>
+          <div className="info-row">
+            <span className="label">Chuẩn đoán:</span>
+            <span className="value diagnosis-text">{patient.diagnosis}</span>
+          </div>
         </div>
 
         <div className="vitals-card">

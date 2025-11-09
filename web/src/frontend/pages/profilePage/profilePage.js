@@ -208,7 +208,7 @@ const ProfilePage = () => {
               )}
             </div>
             <div className="info-item">
-              <label>Field:</label>
+              <label>Specialization:</label>
               {isEditing ? (
                 <input
                   type="text"

@@ -21,6 +21,8 @@ export default function PatientDetail() {
       phone: '0912345678',
       emergencyContact: '0923456789',
       room: 'A301',
+      doctor: 'BS. Trần Thị Lan',
+      diagnosis: 'Tăng huyết áp, theo dõi sau phẫu thuật',
       status: 'normal',
       heartRate: 75,
       spo2: 98,
@@ -103,6 +105,14 @@ export default function PatientDetail() {
             <span className="value">
               <Link to={`/rooms/${patient.room}`} className="room-link">{patient.room}</Link>
             </span>
+          </div>
+          <div className="info-row">
+            <span className="label">Bác sỹ điều trị:</span>
+            <span className="value"><strong>{patient.doctor}</strong></span>
+          </div>
+          <div className="info-row">
+            <span className="label">Chuẩn đoán:</span>
+            <span className="value diagnosis-text">{patient.diagnosis}</span>
           </div>
         </div>
 

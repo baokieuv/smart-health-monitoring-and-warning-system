@@ -68,6 +68,15 @@
   color: #333;
 }
 
+.info-row .value.diagnosis-text {
+  color: #555;
+  font-style: italic;
+  background: #f0f4ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+}
+
 .room-link {
   color: #667eea;
   text-decoration: none;
