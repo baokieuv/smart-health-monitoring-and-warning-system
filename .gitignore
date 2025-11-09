@@ -1,0 +1,45 @@
+# Web dependencies
+web/node_modules/
+web/.pnp
+web/.pnp.js
+web/package-lock.json
+
+# Testing
+web/coverage/
+
+# Production build
+web/build/
+
+# Environment files
+web/.env
+web/.env.local
+web/.env.development.local
+web/.env.test.local
+web/.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ESP-IDF build files
+esp32/build/
+esp32/sdkconfig
+esp32/sdkconfig.old
+esp32/dependencies.lock
+esp32/.vscode/
+esp32/.devcontainer/
+
+# Binary files
+*.bin
+*.elf
+*.map
+
+# Python
+*.pyc
+*.log
+__pycache__/
+
+# OS files
+.DS_Store
+Thumbs.db
