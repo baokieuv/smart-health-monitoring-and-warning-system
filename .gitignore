@@ -30,6 +30,7 @@ esp32/sdkconfig.old
 esp32/dependencies.lock
 esp32/.vscode/
 esp32/.devcontainer/
+esp32/managed_components/
 
 # Binary files
 *.bin
