@@ -63,7 +63,7 @@ router.get(
     authorizeRoles('doctor'),
     [
         param('patient_id')
-            .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer')
+            .isMongoId().withMessage('Invalid Patient ID')
     ],
     validateRequest,
     patientController.getPatientDetail
@@ -76,10 +76,7 @@ router.put(
     authorizeRoles('doctor'),
     [
         param('patient_id')
-            .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer'),
-        body('cccd')
-            .optional()
-            .custom(validateCCCD).withMessage('Invalid CCCD format'),
+            .isMongoId().withMessage('Invalid Patient ID'),
         body('full_name')
             .optional()
             .isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
@@ -101,13 +98,13 @@ router.put(
 );
 
 // 12. Get Patient Health Info API
-router.get(
+router.get( 
     '/:patient_id/health',
     authenticate,
     authorizeRoles('doctor'),
     [
         param('patient_id')
-            .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer')
+            .isMongoId().withMessage('Invalid Patient ID')
     ],
     validateRequest,
     patientController.getHealthInfo
@@ -120,7 +117,7 @@ router.delete(
     authorizeRoles('doctor'),
     [
         param('patient_id')
-            .isInt({ min: 1 }).withMessage('Patient ID must be a positive integer')
+            .isMongoId().withMessage('Invalid Patient ID')
     ],
     validateRequest,
     patientController.deletePatient

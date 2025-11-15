@@ -1,11 +1,24 @@
 const express = require("express");
+const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
+const { validateRequest } = require('../middlewares/validate.middleware');
+const familyController = require('../controllers/family.controller');
+
 const router = express.Router();
-const patientController = require("../controllers/patient.controller");
 
-// GET /api/patients/:patient_id/info
-router.get("/:patient_id/info", patientController.getPatientInfo);
+// GET /api/v1/family/info
+router.get(
+    "/info", 
+    authenticate,
+    authorizeRoles('patient'),
+    validateRequest,
+    familyController.getPatientDetail);
 
-// GET /api/patients/:patient_id/health
-router.get("/:patient_id/health", patientController.getPatientHealth);
+// GET /api/v1/family//health
+router.get(
+    "/health", 
+    authenticate,
+    authorizeRoles('patient'),
+    validateRequest,
+    familyController.getPatientHealth);
 
 module.exports = router;

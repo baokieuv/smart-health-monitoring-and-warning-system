@@ -10,7 +10,7 @@ const signJwt = (payload, secret, expiresIn) => jwt.sign(payload, secret, { expi
 
 exports.generateTokens = (user) => {
 	const basePayload = {
-		sub: user.id,
+		id: user._id.toString(),
 		username: user.username,
 		role: user.role
 	};

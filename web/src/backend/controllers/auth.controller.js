@@ -1,15 +1,13 @@
-const users = require('../data/users');
 const tokenStore = require('../utils/token-store');
 const { generateTokens, verifyRefreshToken } = require('../utils/token');
-const { findUserByUsername, findUserById } = require('../data/users')
-
+const User = require('../models/user.model');
+const Patient = require('../models/patient.model');
 
 const THINGSBOARD_URL = "http://localhost:8080";
 
 const buildUserResponse = (user) => ({
-	id: user.id,
+	id: user._id,
 	username: user.username,
-	full_name: user.fullName,
 	role: user.role
 });
 
@@ -19,7 +17,6 @@ exports.login = async (req, res) => {
 		const username = (req.body.username || '').toLowerCase();
 		const password = req.body.password || '';
 
-		//const user = users.find((candidate) => candidate.email === email);
 		if (!username || !password) {
 			return res.status(400).json({
 				status: 'error',
@@ -27,8 +24,8 @@ exports.login = async (req, res) => {
 			});
 		}
 
-		// Find user (admin by email or doctor by cccd)
-		const user = findUserByUsername(username);
+		const normalizedUsername = username.toLowerCase().trim();
+		const user = await User.findOne({username: normalizedUsername});
 
 		if (!user || user.password !== password) {
 			return res.status(401).json({
@@ -38,15 +35,44 @@ exports.login = async (req, res) => {
 		}
 
 		const tokens = generateTokens(user);
-		tokenStore.saveRefreshToken(tokens.refreshTokenId, user.id, tokens.refreshTokenExpiresAt);
+		tokenStore.saveRefreshToken(tokens.refreshTokenId, user._id, tokens.refreshTokenExpiresAt);
 
-		const tbUsername = user.role === 'admin' ? user.username : user.username + "@thingsboard.local";
-		const tbPass = user.role === 'admin' ? user.password : user.phone;
-		// const tbPass = user.password;
+		let tbUsername = "";
+		let tbPass = "";
 
-		// const formData = new FormData();
-		// formData.append("username", user.username);
-		// formData.append("password", user.password);
+		if(user.role === 'patient'){
+			const patient = await Patient.findById(user.patientId)
+				.populate({
+					path: 'doctorId',
+					model: 'User',
+					populate: {
+						path: 'doctorId',
+						model: 'Doctor'
+					}
+				})
+				.exec();
+
+			if (!patient) {
+				return res.status(404).json({
+					status: "error",
+					message: "Patient profile not found."
+				});
+			}
+
+			if (!patient.doctorId || !patient.doctorId.doctorId) {
+				return res.status(404).json({
+					status: "error",
+					message: "Doctor not assigned to this patient."
+				});
+			}
+
+			tbUsername = patient.doctorId.doctorId.cccd + "@thingsboard.local";
+			tbPass = patient.doctorId.doctorId.cccd;
+		}else{
+			tbUsername = user.role === 'admin' ? user.username : user.username + "@thingsboard.local";
+			tbPass = user.role === 'admin' ? user.password : user.username;
+		}
+
 		const payload = {
 			username: tbUsername,
 			password: tbPass
@@ -60,12 +86,10 @@ exports.login = async (req, res) => {
 			}
 		});
 
-		console.log(tbUsername)
-		console.log(user.password)
-		console.log(resp.status);
 		if(resp.ok){
 			const json = await resp.json();
-			tokenStore.saveThingsBoardToken(user.id, json.token, tokens.refreshTokenExpiresAt);		
+			console.log(user._id);
+			tokenStore.saveThingsBoardToken(user._id.toString(), json.token, tokens.refreshTokenExpiresAt);		
 
 			return res.status(200).json({
 				status: 'success',
@@ -93,7 +117,7 @@ exports.login = async (req, res) => {
 	}
 };
 
-exports.refreshToken = (req, res) => {
+exports.refreshToken = async (req, res) => {
 	try {
 		tokenStore.clearExpiredTokens();
 		const incomingToken = req.body.refresh_token;
@@ -113,9 +137,8 @@ exports.refreshToken = (req, res) => {
 			});
 		}
 
-		//const user = users.find((candidate) => candidate.id === payload.sub);
 		// Find user by ID (admin or doctor)
-		const user = findUserById(payload.sub);
+		const user = await User.findById(payload.id);
 		if (!user) {
 			tokenStore.deleteRefreshToken(payload.tokenId);
 			return res.status(401).json({
@@ -126,7 +149,7 @@ exports.refreshToken = (req, res) => {
 
 		tokenStore.deleteRefreshToken(payload.tokenId);
 		const tokens = generateTokens(user);
-		tokenStore.saveRefreshToken(tokens.refreshTokenId, user.id, tokens.refreshTokenExpiresAt);
+		tokenStore.saveRefreshToken(tokens.refreshTokenId, user._id, tokens.refreshTokenExpiresAt);
 
 		return res.status(200).json({
 			status: 'success',

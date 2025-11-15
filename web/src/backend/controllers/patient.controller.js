@@ -1,12 +1,13 @@
-const patients = require('../data/patients')
 const { sanitizeInput } = require('../utils/validator')
 const tokenStore = require('../utils/token-store');
+const Patient = require('../models/patient.model');
+const User = require('../models/user.model');
 
 const THINGSBOARD_URL = "http://localhost:8080";
 
 async function findAndCacheDeviceID(patient, token) {
-    if(patient.device_id){
-        return patient.device_id;
+    if(patient.deviceId){
+        return patient.deviceId;
     }
 
     console.log('Searching for device for CCCD:', patient.cccd);
@@ -45,7 +46,12 @@ async function findAndCacheDeviceID(patient, token) {
                 
                 if(cccdAttr && cccdAttr.value == patient.cccd){
                     console.log(`Device found: ${device.id.id} for CCCD ${patient.cccd}`);
-                    patient.device_id = device.id.id;
+                    //-> gán access token 
+                    await Patient.updateOne(
+                        { _id: patient._id },
+                        { deviceId: device.id.id }
+                    );
+
                     return device.id.id;
                 }
             }catch(err){
@@ -82,7 +88,7 @@ async function deleteDeviceFromThingsBoard(deviceId, token) {
 }
 
 // 8. Create Patient API
-exports.createPatient = (req, res) => {
+exports.createPatient = async (req, res) => {
     try {
         const patientData = {
             cccd: sanitizeInput(req.body.cccd),
@@ -90,12 +96,11 @@ exports.createPatient = (req, res) => {
             birthday: req.body.birthday,
             address: sanitizeInput(req.body.address),
             phone: sanitizeInput(req.body.phone),
-            room: sanitizeInput(req.body.room),
-            doctor_id: 1
+            room: sanitizeInput(req.body.room)
         };
 
         // Check duplicate CCCD
-        const existingPatient = patients.find(p => p.cccd === patientData.cccd);
+        const existingPatient  = await Patient.findOne({ cccd: patientData.cccd });
         if (existingPatient) {
             return res.status(409).json({
                 status: "error",
@@ -103,13 +108,22 @@ exports.createPatient = (req, res) => {
             });
         }
 
-        //gen ID -> 
-        //New ID
-        const newId = patients.length > 0 ? Math.max(...patients.map(p => p.id)) + 1 : 1;
-        const newPatient = { id: newId, ...patientData };
-        
         //Add new patient
-        patients.push(newPatient);
+        const user = await User.create({
+            username: patientData.cccd,
+            password: patientData.phone,
+            role: "patient"
+        });
+        const newPatient = await Patient.create({
+            ...patientData,
+            userId: user._id,
+            doctorId: req.user.id   //userId của doctor
+        });
+
+        await User.updateOne(
+            { _id: user._id },
+            { patientId: newPatient._id }
+        );
 
         res.status(201).json({
             status: "success",
@@ -127,28 +141,29 @@ exports.createPatient = (req, res) => {
 
 // 9. Get Patient List API
 
-exports.getPatients = (req, res) => {
+exports.getPatients = async (req, res) => {
     try {
         const { page = 1, limit = 10, search } = req.query;
-
-        // Filter patients by doctor
-        let filteredPatients = [...patients];
+        let query = { doctorId: req.user.id };
 
         // Search by name
         if (search) {
-            const searchLower = sanitizeInput(search).toLowerCase();
-            filteredPatients = filteredPatients.filter(p =>
-                p.full_name.toLowerCase().includes(searchLower)
-            );
+            const searchRegex = new RegExp(sanitizeInput(search), 'i');
+            query.full_name = searchRegex;
         }
 
         // Pagination
         const pageInt = parseInt(page);
         const limitInt = parseInt(limit);
-        const total = filteredPatients.length;
+        const skip = (pageInt - 1) * limitInt;
+
+        const total = await Patient.countDocuments(query);
+        const patients = await Patient.find(query)
+            .skip(skip)
+            .limit(limitInt)
+            .lean();
+
         const total_pages = Math.ceil(total / limitInt) || 1;
-        const startIndex = (pageInt - 1) * limitInt;
-        const paginatedPatients = filteredPatients.slice(startIndex, startIndex + limitInt);
 
         res.status(200).json({
             status: "success",
@@ -158,7 +173,7 @@ exports.getPatients = (req, res) => {
                 page: pageInt,
                 limit: limitInt,
                 total_pages,
-                patients: paginatedPatients
+                patients
             }
         });
     } catch (error) {
@@ -172,17 +187,22 @@ exports.getPatients = (req, res) => {
 
 
 // 10. Get Patient Detail API
-exports.getPatientDetail = (req, res) => {
+exports.getPatientDetail = async (req, res) => {
     try {
-        const patientId = parseInt(req.params.patient_id);
-        
-        // Find patient and check ownership
-        const patient = patients.find(p => p.id === patientId);
+        const patient = await Patient.findById(req.params.patient_id);
 
         if (!patient) {
             return res.status(404).json({
                 status: "error",
                 message: "Patient not found."
+            });
+        }
+
+        // check doctor id
+        if(patient.doctorId.toString() !== req.user.id.toString()){
+            return res.status(403).json({
+                status: "error",
+                message: "Permission denied."
             });
         }
 
@@ -201,53 +221,54 @@ exports.getPatientDetail = (req, res) => {
 }
 
 // 11. Update Patient API
-exports.updatePatient = (req, res) => {
+exports.updatePatient = async (req, res) => {
     try {
-        const patientId = parseInt(req.params.patient_id);
-        
-        // Find patient
-        const patientIdx = patients.findIndex(p => p.id === patientId);
+        const patient = await Patient.findById(req.params.patient_id);
 
         //Case not found
-        if (patientIdx === -1) {
+        if (!patient) {
             return res.status(404).json({
                 status: "error",
                 message: "Patient not found."
             });
         }
 
-        // Check duplicate CCCD if updating
-        if (req.body.cccd && req.body.cccd !== patients[patientIdx].cccd) {
-            const duplicateCCCD = patients.find(p => p.cccd === req.body.cccd);
-            if (duplicateCCCD) {
-                return res.status(400).json({
-                    status: "error",
-                    message: "Invalid field values."
-                });
-            }
+        // check doctor id
+        if(patient.doctorId.toString() !== req.user.id.toString()){
+            return res.status(403).json({
+                status: "error",
+                message: "Permission denied."
+            });
         }
 
         // Prepare update data
         const updateData = {};
-        const allowedFields = ['cccd', 'full_name', 'birthday', 'address', 'phone', 'room'];
+        const allowedFields = ['full_name', 'birthday', 'address', 'phone', 'room'];
         
         //Lọc data
         allowedFields.forEach(field => {
             if (req.body[field] !== undefined) {
-                updateData[field] = sanitizeInput(req.body[field]);
+                updateData[field] = field === 'birthday' ? req.body[field] : sanitizeInput(req.body[field]);
             }
         });
 
-        // Update patient
-        patients[patientIdx] = { 
-            ...patients[patientIdx], 
-            ...updateData 
-        };
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                status: "error",
+                message: "No valid fields to update."
+            });
+        }
+
+        const result = await Patient.findByIdAndUpdate(
+            patient._id,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
 
         res.status(200).json({
             status: "success",
             message: "Patient information updated successfully.",
-            patient: patients[patientIdx]
+            patient: result
         });
     } catch (error) {
         console.error('Update patient error:', error);
@@ -261,11 +282,7 @@ exports.updatePatient = (req, res) => {
 // 12. Get Patient Health Info API
 exports.getHealthInfo = async (req, res) => {
     try {
-        const patientId = parseInt(req.params.patient_id);
-        
-        // Find patient and check ownership
-        const patient = patients.find(p => p.id === patientId);
-
+        const patient = await Patient.findById(req.params.patient_id);
         //Case not found
         if (!patient) {
             return res.status(404).json({
@@ -274,15 +291,8 @@ exports.getHealthInfo = async (req, res) => {
             });
         }
 
-        // fetch thingsboard (device -> deviceid)
-        // GET /api/tenant/devices -> get list device 
-        // Duyệt từng device -> GET /api/plugins/telemetry/DEVICE/{deviceid}/keys/attributes?scopes=CLIENT_SCOPE
-        // -> tách trường cccd để gán cho từng bệnh nhân cụ thể
-        // -> từ deviceid -> GET /api/plugins/telemetry/DEVICE/{deviceid}/keys/timeseries
-        // Mock health data (in production, fetch from health monitoring system)
-
-        // Check authorization for doctors
-        if (req.user.role === 'doctor' && patient.doctor_id !== req.user.id) {
+        // check doctor id
+        if(patient.doctorId.toString() !== req.user.id.toString()){
             return res.status(403).json({
                 status: "error",
                 message: "Permission denied."
@@ -296,6 +306,7 @@ exports.getHealthInfo = async (req, res) => {
                 message: "ThingsBoard connection not available."
             });
         }
+        
         // Find device ID for this patient
         const deviceId = await findAndCacheDeviceID(patient, token);
 
@@ -318,7 +329,6 @@ exports.getHealthInfo = async (req, res) => {
         }
 
         const telemetryData  = await response.json();
-        console.log(telemetryData);
 
         const healthInfo = Object.fromEntries(
             Object.entries(telemetryData).map(([key, values]) => {
@@ -339,7 +349,7 @@ exports.getHealthInfo = async (req, res) => {
 
         res.status(200).json({
             status: "success",
-            patient_id: patientId,
+            patient_id: patient._id,
             health_info: payload
         });
     } catch (error) {
@@ -354,29 +364,18 @@ exports.getHealthInfo = async (req, res) => {
 // 13. Delete Patient API
 exports.deletePatient = async (req, res) => {
     try {
-        const patientId = parseInt(req.params.patient_id);
-        
-        // Find patient and check ownership
-        const patientIdx = patients.findIndex(p => p.id === patientId);
+        const patient = await Patient.findById(req.params.patient_id);
 
         //case not found
-        if (patientIdx === -1) {
+        if (!patient) {
             return res.status(404).json({
                 status: "error",
                 message: "Patient not found."
             });
         }
 
-        const patient = patients[patientIdx];
-
-        // Xóa thiết bị trên thingsboard
-        // Đã được cung cấp thiết bị? -> xóa thiết bị trên thingsboard
-        // DELETE /api/device/{deviceid}
-        // Remove patient
-        // Get ThingsBoard token
-
-                // Check authorization for doctors
-        if (req.user.role === 'doctor' && patient.doctor_id !== req.user.id) {
+        // check doctor id
+        if(patient.doctorId.toString() !== req.user.id.toString()){
             return res.status(403).json({
                 status: "error",
                 message: "Permission denied."
@@ -384,13 +383,6 @@ exports.deletePatient = async (req, res) => {
         }
 
         const token = tokenStore.findThingsBoardToken(req.user.id);
-        if (!token) {
-            return res.status(503).json({
-                status: "error",
-                message: "ThingsBoard connection not available."
-            });
-        }
-   
         if (token) {
             // Try to find and delete device on ThingsBoard
             const deviceId = await findAndCacheDeviceID(patient, token);
@@ -405,12 +397,13 @@ exports.deletePatient = async (req, res) => {
             }
         }
 
-        patients.splice(patientIdx, 1);
+        await User.deleteOne({ patientId: patient._id });
+        await Patient.deleteOne({ _id: patient._id });
 
         res.status(200).json({
             status: "success",
             message: "Patient deleted successfully.",
-            deleted_patient_id: patientId
+            deleted_patient_id: patient._id
         });
     } catch (error) {
         console.error('Delete patient error:', error);
