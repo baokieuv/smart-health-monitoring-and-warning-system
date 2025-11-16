@@ -39,5 +39,5 @@ direct_dependencies:
 - espressif/mpu6050
 - espressif/onewire_bus
 manifest_hash: 1f4799b8f60a8145185dd62193ee43a6382e71fe38d7ec25b0f1be508afd5f9d
-target: esp32
+target: esp32s3
 version: 2.0.0
