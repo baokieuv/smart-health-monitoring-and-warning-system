@@ -1,41 +1,41 @@
-const doctors = require('../data/doctors');
 const { sanitizeInput } = require('../utils/validator');
 const tokenStore = require('../utils/token-store');
+const Doctor = require('../models/doctor.model');
+const User = require('../models/user.model');
 
 const THINGSBOARD_URL = "http://localhost:8080";
-const ADMIN_ID = 'admin';
 
-async function createTenantAccount(userId, email, name, phone, systoken){
+async function createTenantAccount(doctor, email, name, password, systoken){
 	try{
 
-	    const tenantRes = await fetch(`${THINGSBOARD_URL}/api/tenant`, {
+	    const createTenantResp = await fetch(`${THINGSBOARD_URL}/api/tenant`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "X-Authorization": `Bearer ${systoken}`
             },
             body: JSON.stringify({
-                title: `doctor${userId}`
+                title: `${name} - ${password}`
             })
         });
-        if (!tenantRes.ok) {
-            const err = await tenantRes.text();
-            throw new Error(`Failed to create tenant: ${tenantRes.status} - ${err}`);
+        if (!createTenantResp.ok) {
+            const err = await createTenantResp.text();
+            throw new Error(`Failed to create tenant: ${createTenantResp.status} - ${err}`);
         }
-		const tenant = await tenantRes.json();
+
+		const tenantJSON = await createTenantResp.json();
 
 		const payload = {
 			authority: 'TENANT_ADMIN',
 			tenantId: { 
-				id: tenant.id.id,
+				id: tenantJSON.id.id,
 				entityType: 'TENANT'
 			},
-			email: email + "@thingsboard.local",
-			firstName: name,
-			phone: phone,
+			email: email,
+			firstName: name
 		};
 
-		const res = await fetch(`${THINGSBOARD_URL}/api/user?sendActivationMail=false`, {
+		const activeAccountResp = await fetch(`${THINGSBOARD_URL}/api/user?sendActivationMail=false`, {
 			method: "POST",
 			body: JSON.stringify(payload),
 			headers: {
@@ -44,53 +44,46 @@ async function createTenantAccount(userId, email, name, phone, systoken){
 			}
 		});
 
-		if(!res.ok){
-			const errorText = await res.text();
-			throw new Error(`ThingsBoard API error: ${res.status} - ${errorText}`);
+		if(!activeAccountResp.ok){
+			const err = await activeAccountResp.text();
+			throw new Error(`ThingsBoard API error: ${activeAccountResp.status} - ${err}`);
 		}
 
-		const data = await res.json();
-		console.log('Tenant Admin created successfully:', data);
-
-		const doctorIndex = doctors.findIndex(doc => doc.id == userId);
-		console.log(doctorIndex);
-		doctors[doctorIndex] = {
-			...doctors[doctorIndex],
-			tenantid: data.id.id
-		}
-
-		console.log(doctors[doctorIndex])
-		const tokenRes = await fetch(`${THINGSBOARD_URL}/api/user/${data.id.id}/activationLink`, {
+		const data = await activeAccountResp.json();
+		await Doctor.updateOne(
+			{ _id: doctor._id },
+			{tenantAccountID: data.id.id}
+		);
+		
+		const tokenResp = await fetch(`${THINGSBOARD_URL}/api/user/${data.id.id}/activationLink`, {
             method: "GET",
             headers: {
                 "X-Authorization": `Bearer ${systoken}`
             }
         });
 
-		if (!tokenRes.ok) {
-            const err = await tokenRes.text();
-            throw new Error(`Failed to get activation token: ${tokenRes.status} - ${err}`);
+		if (!tokenResp.ok) {
+            const err = await tokenResp.text();
+            throw new Error(`Failed to get activation token: ${tokenResp.status} - ${err}`);
         }
 
-		const activationLink = await tokenRes.text();
+		const activationLink = await tokenResp.text();
         const activationToken = new URL(activationLink).searchParams.get('activateToken');
 
-		console.log(activationLink);
-		console.log(activationToken);
-		const activateRes = await fetch(`${THINGSBOARD_URL}/api/noauth/activate?sendActivationMail=false`, {
+		const activateResp = await fetch(`${THINGSBOARD_URL}/api/noauth/activate?sendActivationMail=false`, {
             method: "POST",
 			headers: {
 				"Content-Type": "application/json"
 			},
 			body: JSON.stringify({
 				activateToken: activationToken,
-				password: phone
+				password: password
 			})
         });
 
-        if (!activateRes.ok) {
-            const err = await activateRes.text();
-            throw new Error(`Failed to activate user: ${activateRes.status} - ${err}`);
+        if (!activateResp.ok) {
+            const err = await activateResp.text();
+            throw new Error(`Failed to activate user: ${activateResp.status} - ${err}`);
         }
 
 		return data;
@@ -110,8 +103,8 @@ async function deleteTenantAccount(userId, systoken){
 		});
 
 		if (!res.ok) {
-			const errorText = await res.text();
-			throw new Error(`ThingsBoard API error: ${res.status} - ${errorText}`);
+			const err = await res.text();
+			throw new Error(`ThingsBoard API error: ${res.status} - ${err}`);
 		}
 
 		console.log(`Tenant account ${userId} deleted successfully`);
@@ -135,7 +128,8 @@ exports.createDoctor = async (req, res) => {
 			specialization: sanitizeInput(req.body.specialization)
 		};
 
-		const duplicateDoctor = doctors.find(doctor => doctor.cccd === doctorData.cccd);
+		const duplicateDoctor = await Doctor.findOne({cccd: doctorData.cccd});
+
 		if (duplicateDoctor) {
 			return res.status(409).json({
 				status: "error",
@@ -143,33 +137,45 @@ exports.createDoctor = async (req, res) => {
 			});
 		}
 
-		const newId = doctors.length > 0 ? Math.max(...doctors.map(doc => doc.id)) + 1 : 1;
-		const newDoctor = { id: newId, ...doctorData };
+		const user = await User.create({
+			username: doctorData.cccd,
+			password: doctorData.phone,
+			role: "doctor",
+		});
 
-		doctors.push(newDoctor);
+		const doctor = await Doctor.create({
+			...doctorData,
+			userId: user._id
+		});
+
+		await User.updateOne(
+			{ _id: user._id},
+			{ doctorId: doctor._id }
+		);
 
 		//create a new tenant account on thingsboard
-		const systoken = tokenStore.findThingsBoardToken(ADMIN_ID);
+		const systoken = tokenStore.findThingsBoardToken(req.user.id);
 
 		if(systoken){
 			try{
-				await createTenantAccount(newId.toString(),
-					doctorData.cccd,
-					doctorData.full_name,
-					doctorData.phone,
-					systoken
+				await createTenantAccount(
+					doctor,								//object doctor
+					doctor.cccd + "@thingsboard.local",	//email
+					doctor.full_name,					//name
+					doctor.cccd,						//password
+					systoken							//token thingsboard
 				);
 			}catch(err){
 				console.error('ThingsBoard tenant creation failed:', err.message);
 			}
+		}else{
+			console.log("Doesn't have sysadmin account");
 		}
-
-		const { password, ...doctorResponse } = newDoctor;
 
 		res.status(201).json({
 			status: "success",
 			message: "Doctor created successfully.",
-			doctor: doctorResponse
+			doctor: doctor
 		});
 	} catch (error) {
 		console.error('Create doctor error:', error);
@@ -181,32 +187,32 @@ exports.createDoctor = async (req, res) => {
 };
 
 // 4. Get Doctor List API
-exports.getDoctors = (req, res) => {
+exports.getDoctors = async (req, res) => {
 	try {
 		const { page = 1, limit = 10, search = '', specialization = '' } = req.query;
-
-		let filteredDoctors = [...doctors];
+		let query = {};
 
 		if (search) {
-			const searchLower = sanitizeInput(search).toLowerCase();
-			filteredDoctors = filteredDoctors.filter(doctor =>
-				doctor.full_name.toLowerCase().includes(searchLower)
-			);
+			const searchRegex = new RegExp(sanitizeInput(search), 'i');
+			query.full_name = searchRegex;
 		}
 
 		if (specialization) {
-			const specialLower = sanitizeInput(specialization).toLowerCase();
-			filteredDoctors = filteredDoctors.filter(doctor =>
-				doctor.specialization.toLowerCase().includes(specialLower)
-			);
+			const searchRegex = new RegExp(sanitizeInput(specialization), 'i');
+			query.specialization = searchRegex;
 		}
 
 		const pageInt = parseInt(page);
 		const limitInt = parseInt(limit);
-		const total = filteredDoctors.length;
+		const skip = (pageInt - 1) * limitInt;
+
+		const total = await Doctor.countDocuments(query);
+		const doctors = await Doctor.find(query)
+            .skip(skip)
+            .limit(limitInt)
+            .lean();
+
 		const total_pages = Math.ceil(total / limitInt) || 1;
-		const startIndex = (pageInt - 1) * limitInt;
-		const paginatedDoctors = filteredDoctors.slice(startIndex, startIndex + limitInt);
 
 		res.status(200).json({
 			status: "success",
@@ -216,7 +222,7 @@ exports.getDoctors = (req, res) => {
 				page: pageInt,
 				limit: limitInt,
 				total_pages,
-				doctors: paginatedDoctors
+				doctors
 			}
 		});
 	} catch (error) {
@@ -229,10 +235,9 @@ exports.getDoctors = (req, res) => {
 };
 
 // 5. Get Doctor Detail API
-exports.getDoctorDetail = (req, res) => {
+exports.getDoctorDetail = async (req, res) => {
 	try {
-		const doctorId = parseInt(req.params.doctor_id);
-		const doctor = doctors.find(doc => doc.id === doctorId);
+		const doctor = await Doctor.findById(req.params.doctor_id);
 
 		if (!doctor) {
 			return res.status(404).json({
@@ -255,20 +260,19 @@ exports.getDoctorDetail = (req, res) => {
 	}
 };
 
-// 6. Update Doctor API
-exports.updateDoctor = (req, res) => {
+// 6. Update Doctor API -> ko update cccd (mỗi người là duy nhất)
+exports.updateDoctor = async (req, res) => {
 	try {
-		const doctorId = parseInt(req.params.doctor_id);
-		const doctorIndex = doctors.findIndex(doc => doc.id === doctorId);
+		const doctor = await Doctor.findById(req.params.doctor_id);
 
-		if (doctorIndex === -1) {
+		if(!doctor){
 			return res.status(404).json({
 				status: "error",
 				message: "Doctor not found."
 			});
 		}
 
-		const updateFields = ['cccd', 'full_name', 'birthday', 'address', 'phone', 'specialization'];
+		const updateFields = ['full_name', 'birthday', 'address', 'phone', 'specialization'];
 		const updateData = {};
 
 		updateFields.forEach(field => {
@@ -280,39 +284,20 @@ exports.updateDoctor = (req, res) => {
 		if (Object.keys(updateData).length === 0) {
 			return res.status(400).json({
 				status: "error",
-				message: "Invalid field values."
+				message: "No valid fields to update."
 			});
 		}
 
-		if (updateData.cccd && updateData.cccd !== doctors[doctorIndex].cccd) {
-			const duplicateCCCD = doctors.find(doc => doc.cccd === updateData.cccd);
-			if (duplicateCCCD) {
-				return res.status(400).json({
-					status: "error",
-					message: "Invalid field values."
-				});
-			}
-		}
-
-		if (updateData.phone && updateData.phone !== doctors[doctorIndex].phone) {
-			const duplicatePhone = doctors.find(doc => doc.phone === updateData.phone);
-			if (duplicatePhone) {
-				return res.status(400).json({
-					status: "error",
-					message: "Invalid field values."
-				});
-			}
-		}
-
-		doctors[doctorIndex] = {
-			...doctors[doctorIndex],
-			...updateData
-		};
+		const result = await Doctor.findByIdAndUpdate(
+			doctor._id,
+			{ $set: updateData },
+			{ new: true, runValidators: true }
+		);
 
 		res.status(200).json({
 			status: "success",
 			message: "Doctor information updated successfully.",
-			doctor: doctors[doctorIndex]
+			doctor: result
 		});
 	} catch (error) {
 		console.error('Update doctor error:', error);
@@ -326,10 +311,9 @@ exports.updateDoctor = (req, res) => {
 // 7. Delete Doctor API
 exports.deleteDoctor = async (req, res) => {
 	try {
-		const doctorId = parseInt(req.params.doctor_id);
-		const doctorIndex = doctors.findIndex(doc => doc.id === doctorId);
+		const doctor = await Doctor.findById(req.params.doctor_id);
 
-		if (doctorIndex === -1) {
+		if (!doctor) {
 			return res.status(404).json({
 				status: "error",
 				message: "Doctor not found."
@@ -337,21 +321,22 @@ exports.deleteDoctor = async (req, res) => {
 		}
 
 		//Delete tenant account on thingsboard
-		const systoken = tokenStore.findThingsBoardToken(ADMIN_ID);
-		if(systoken){
+		const systoken = tokenStore.findThingsBoardToken(req.user.id);
+		if(systoken && doctor.tenantAccountID){
 			try{
-				await deleteTenantAccount(doctors[doctorIndex].tenantid, systoken);
+				await deleteTenantAccount(doctor.tenantAccountID, systoken);
 			}catch(err){
 				console.error('ThingsBoard tenant deletion failed:', err.message);
 			}
 		}
 
-		doctors.splice(doctorIndex, 1);
+		await User.deleteOne({ doctorId: doctor._id });
+		await Doctor.deleteOne({ _id: doctor._id });
 		
 		res.status(200).json({
 			status: "success",
 			message: "Doctor deleted successfully.",
-			deleted_doctor_id: doctorId
+			deleted_doctor_id: doctor._id
 		});
 	} catch (error) {
 		console.error('Delete doctor error:', error);

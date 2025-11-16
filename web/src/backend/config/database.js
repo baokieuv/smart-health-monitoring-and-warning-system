@@ -13,10 +13,10 @@ const connectDB = async () => {
         await mongoose.connect(db, {
             tls: true
         });
-        console.log("✅ MongoDB Connected!");
-        console.log("📂 Database:", mongoose.connection.name);
+        console.log("MongoDB Connected!");
+        console.log("Database:", mongoose.connection.name);
     } catch (error) {
-        console.error("❌ MongoDB Connection Failed!", error.message);
+        console.error("MongoDB Connection Failed!", error.message);
         process.exit(1);
     }
 };

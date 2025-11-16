@@ -69,7 +69,7 @@ router.get(
 	authorizeRoles('admin'),
 	[
 		param('doctor_id')
-			.isInt({ min: 1 }).withMessage('Doctor ID must be a positive integer')
+			.isMongoId().withMessage('Invalid Doctor ID')
 	],
 	validateRequest,
 	doctorController.getDoctorDetail
@@ -82,27 +82,24 @@ router.put(
 	authorizeRoles('admin'),
 	[
 		param('doctor_id')
-			.isInt({ min: 1 }).withMessage('Doctor ID must be a positive integer'),
-		body('cccd')
-			.notEmpty().withMessage('CCCD is required')
-			.custom(validateCCCD).withMessage('Invalid CCCD format'),
+			.isMongoId().withMessage('Invalid Doctor ID'),
 		body('full_name')
-			.notEmpty().withMessage('Full name is required')
+			.optional()
 			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
 		body('email')
 			.optional()
 			.isEmail().withMessage('Invalid email format'),
 		body('birthday')
-			.notEmpty().withMessage('Birthday is required')
+			.optional()
 			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
 		body('address')
-			.notEmpty().withMessage('Address is required')
+			.optional()
 			.isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
 		body('phone')
-			.notEmpty().withMessage('Phone is required')
+			.optional()
 			.custom(validatePhone).withMessage('Invalid phone format'),
 		body('specialization')
-			.notEmpty().withMessage('Specialization is required')
+			.optional()
 			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters')
 	],
 	validateRequest,
@@ -116,7 +113,7 @@ router.delete(
 	authorizeRoles('admin'),
 	[
 		param('doctor_id')
-			.isInt({ min: 1 }).withMessage('Doctor ID must be a positive integer')
+			.isMongoId().withMessage('Doctor ID must be a positive integer')
 	],
 	validateRequest,
 	doctorController.deleteDoctor

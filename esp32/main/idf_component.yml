@@ -1,6 +1,2 @@
 component_embed_txtfiles:
   - ../main/index.html
-dependencies:
-  espressif/onewire_bus: ^1.0.4
-  espressif/ds18b20: ^0.2.0
-  espressif/mpu6050: ^1.2.0
