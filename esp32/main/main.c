@@ -195,34 +195,28 @@ static void mpu6050_task(void *param) {
     TickType_t last = xTaskGetTickCount();
     while (1) {
         mpu6050_data_t data = {0};
-        if (mpu6050_read_all(&data) == ESP_OK) {
-            if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
-                mpu6050_data_t trash;
-                (void)xQueueReceive(g_mpu_queue, &trash, 0);   // pop oldest (non-blocking)
-                if (mpu6050_is_ready()) {
-                    esp_err_t err = mpu6050_read_all(&data);
-                    if (err == ESP_OK) {
-                        if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
-                            mpu6050_data_t trash;
-                            (void)xQueueReceive(g_mpu_queue, &trash, 0);   // pop oldest (non-blocking)
+        if (mpu6050_is_ready()) {
+            esp_err_t err = mpu6050_read_all(&data);
+            if (err == ESP_OK) {
+                if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
+                    mpu6050_data_t trash;
+                    (void)xQueueReceive(g_mpu_queue, &trash, 0);   // pop oldest (non-blocking)
 
-                            if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
-                                ESP_LOGW(TAG, "Queue full, dropped newest sample");
-                            } else {
-                                ESP_LOGW(TAG, "Queue full, dropped oldest sample");
-                            }
-                        } else {
-                            ESP_LOGW(TAG, "read_all failed");
-                        }
+                    if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
+                        ESP_LOGW(TAG, "Queue full, dropped newest sample");
                     } else {
-                        ESP_LOGW(TAG, "mpu6050_read_all failed: %s", esp_err_to_name(err));
+                        ESP_LOGW(TAG, "Queue full, dropped oldest sample");
                     }
                 } else {
-                    ESP_LOGW(TAG, "MPU6050 not ready");
+                    ESP_LOGW(TAG, "read_all failed");
                 }
-                vTaskDelay(pdMS_TO_TICKS(MPU_PERIOD_MS));
+            } else {
+                ESP_LOGW(TAG, "mpu6050_read_all failed: %s", esp_err_to_name(err));
             }
+        } else {
+            ESP_LOGW(TAG, "MPU6050 not ready");
         }
+        vTaskDelay(pdMS_TO_TICKS(MPU_PERIOD_MS));
     }
 }
 
