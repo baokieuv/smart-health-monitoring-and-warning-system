@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const tokenStore = require('../utils/token-store');
 const { generateTokens, verifyRefreshToken } = require('../utils/token');
 const User = require('../models/user.model');
@@ -27,7 +28,17 @@ exports.login = async (req, res) => {
 		const normalizedUsername = username.toLowerCase().trim();
 		const user = await User.findOne({username: normalizedUsername});
 
-		if (!user || user.password !== password) {
+		if (!user) {
+			return res.status(401).json({
+				status: 'error',
+				message: 'Invalid credentials.'
+			});
+		}
+
+		// Compare password using bcrypt
+		const isPasswordValid = await bcrypt.compare(password, user.password);
+		
+		if (!isPasswordValid) {
 			return res.status(401).json({
 				status: 'error',
 				message: 'Invalid credentials.'
@@ -73,41 +84,46 @@ exports.login = async (req, res) => {
 			tbPass = user.role === 'admin' ? user.password : user.username;
 		}
 
-		const payload = {
-			username: tbUsername,
-			password: tbPass
-		}
-
-		const resp = await fetch(`${THINGSBOARD_URL}/api/auth/login`, {
-			method: "POST",
-			body: JSON.stringify(payload),
-			headers: {
-				"Content-Type": "application/json"
+		// Try to connect to ThingsBoard
+		try {
+			const payload = {
+				username: tbUsername,
+				password: tbPass
 			}
-		});
 
-		if(resp.ok){
-			const json = await resp.json();
-			console.log(user._id);
-			tokenStore.saveThingsBoardToken(user._id.toString(), json.token, tokens.refreshTokenExpiresAt);		
-
-			return res.status(200).json({
-				status: 'success',
-				message: 'Login successful.',
-				data: {
-					user: buildUserResponse(user),
-					access_token: tokens.accessToken,
-					access_token_expires_at: tokens.accessTokenExpiresAt,
-					refresh_token: tokens.refreshToken,
-					refresh_token_expires_at: tokens.refreshTokenExpiresAt
+			const resp = await fetch(`${THINGSBOARD_URL}/api/auth/login`, {
+				method: "POST",
+				body: JSON.stringify(payload),
+				headers: {
+					"Content-Type": "application/json"
 				}
 			});
-		}else{
-			return res.status(502).json({
-				status: "error",
-				message: "Bad gateway"
-			});
+
+			if(resp.ok){
+				const json = await resp.json();
+				tokenStore.saveThingsBoardToken(user._id.toString(), json.token, tokens.refreshTokenExpiresAt);
+				console.log('✅ ThingsBoard token saved for user:', user._id);
+			} else {
+				console.warn('⚠️ ThingsBoard login failed with status:', resp.status);
+			}
+		} catch (tbError) {
+			// ThingsBoard connection failed - this is OK, we can still login to our system
+			console.warn('⚠️ ThingsBoard connection failed (service may not be running):', tbError.message);
+			console.log('ℹ️ User can still login to the system without ThingsBoard');
 		}
+
+		// Return success regardless of ThingsBoard connection status
+		return res.status(200).json({
+			status: 'success',
+			message: 'Login successful.',
+			data: {
+				user: buildUserResponse(user),
+				access_token: tokens.accessToken,
+				access_token_expires_at: tokens.accessTokenExpiresAt,
+				refresh_token: tokens.refreshToken,
+				refresh_token_expires_at: tokens.refreshTokenExpiresAt
+			}
+		});
 	} catch (error) {
 		console.error('Login error:', error);
 		return res.status(500).json({

@@ -89,8 +89,8 @@ function App() {
         <Route path={routers.HomeRedirect} element={<HomeRedirect />} />
         <Route path={routers.Home} element={<HomePage />} />
         
-        {/* User Routes - Protected for 'user' role */}
-        <Route element={<ProtectedRoute requiredRole="user" />}>
+        {/* Doctor Routes - Protected for 'doctor' role */}
+        <Route element={<ProtectedRoute requiredRole="doctor" />}>
           <Route path={routers.Patient} element={<MainLayout><PatientList /></MainLayout>} />
           <Route path={routers.PatientDetail} element={<MainLayout><PatientDetail /></MainLayout>} />
           <Route path={routers.RoomList} element={<MainLayout><RoomList /></MainLayout>} />

@@ -112,8 +112,10 @@ Server is running at: `http://localhost:3000`
 
 - **Admin**: 
   - Username: `admin`
-  - Password: `1`
+  - Password: `admin123`
   
 - **User**: 
-  - Username: `user`
-  - Password: `1`
+  - Username: `doctor01`
+  - Password: `1234`
+  - Username: `doctor02`
+  - Password: `1234`
