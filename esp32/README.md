@@ -13,4 +13,6 @@ idf.py add-dependency "espressif/mpu6050^1.2.0"
 idf.py set-target esp32
 idf.py build
 idf.py -p <COM port> flash monitor
+# idf.py -p COM10 flash monitor
+
 ```

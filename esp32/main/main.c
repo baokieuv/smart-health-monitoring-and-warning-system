@@ -185,222 +185,245 @@ static void start_config_mode(void) {
     ESP_LOGI(TAG, "Configuration mode started - Connect to '%s' to configure", AP_SSID);
 }
 
-void app_main(void) {
-    ESP_LOGI(TAG, "=== IoT Health Monitor Starting ===");
+// ====== Queue toàn cục ======
+static QueueHandle_t g_mpu_queue = NULL;
 
-    // Initialize system
-    ESP_ERROR_CHECK(system_init());
+// ====== Task đọc cảm biến (producer) ======
+static void mpu6050_task(void *param) {
+    ESP_LOGI(TAG, "MPU6050 task started");
 
-    // Try to load saved configuration
-    char ssid[SSID_MAX_LEN] = {0};
-    char pass[PASSWORD_MAX_LEN] = {0};
-    char cccd[CCCD_MAX_LEN] = {0};
-    char token[TOKEN_MAX_LEN] = {0};
+    TickType_t last = xTaskGetTickCount();
+    while (1) {
+        mpu6050_data_t data = {0};
+        if (mpu6050_read_all(&data) == ESP_OK) {
+            if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
+                mpu6050_data_t trash;
+                (void)xQueueReceive(g_mpu_queue, &trash, 0);   // pop oldest (non-blocking)
+                if (mpu6050_is_ready()) {
+                    esp_err_t err = mpu6050_read_all(&data);
+                    if (err == ESP_OK) {
+                        if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
+                            mpu6050_data_t trash;
+                            (void)xQueueReceive(g_mpu_queue, &trash, 0);   // pop oldest (non-blocking)
 
-    if (nvs_load_wifi_config(ssid, pass, cccd, token)) {
-        ESP_LOGI(TAG, "Configuration found - Starting normal mode");
-        
-        // Try to start normal operation
-        if (start_normal_mode(ssid, pass, token, cccd) != ESP_OK) {
-            ESP_LOGW(TAG, "Failed to start normal mode - Switching to config mode");
-            wifi_stop();
-            start_config_mode();
+                            if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
+                                ESP_LOGW(TAG, "Queue full, dropped newest sample");
+                            } else {
+                                ESP_LOGW(TAG, "Queue full, dropped oldest sample");
+                            }
+                        } else {
+                            ESP_LOGW(TAG, "read_all failed");
+                        }
+                    } else {
+                        ESP_LOGW(TAG, "mpu6050_read_all failed: %s", esp_err_to_name(err));
+                    }
+                } else {
+                    ESP_LOGW(TAG, "MPU6050 not ready");
+                }
+                vTaskDelay(pdMS_TO_TICKS(MPU_PERIOD_MS));
+            }
         }
-    } else {
-        ESP_LOGI(TAG, "No configuration found - Starting config mode");
-        start_config_mode();
     }
-
-    ESP_LOGI(TAG, "=== Initialization Complete ===");
 }
 
-// // ====== Queue toàn cục ======
-// static QueueHandle_t g_mpu_queue = NULL;
+// ==== Trợ giúp ====
+static inline float vec3_norm(float x, float y, float z) {
+    return sqrtf(x*x + y*y + z*z);
+}
 
-// // ====== Task đọc cảm biến (producer) ======
-// static void mpu6050_task(void *param) {
-//     ESP_LOGI(TAG, "MPU6050 task started");
+typedef enum {
+    ST_IDLE,
+    ST_FREE_FALL,
+    ST_IMPACT_WAIT,
+    ST_POST_MONITOR
+} fall_state_t;
 
-//     if (mpu6050_init(I2C_PORT, I2C_SDA, I2C_SCL, I2C_FREQ,
-//                      MPU_ADDR, MPU6050_ACCE_2G, MPU6050_GYRO_250DPS) != ESP_OK) {
-//         ESP_LOGE(TAG, "mpu6050_init failed");
-//         vTaskDelete(NULL);
-//         return;
-//     }
+/// Test
+#define FALL_LED_GPIO   GPIO_NUM_4   
 
-//     TickType_t last = xTaskGetTickCount();
+static const char *fall_state_to_str(fall_state_t s)
+{
+    switch (s) {
+    case ST_IDLE:         return "IDLE";
+    case ST_FREE_FALL:    return "FREE_FALL";
+    case ST_IMPACT_WAIT:  return "IMPACT_WAIT";
+    case ST_POST_MONITOR: return "POST_MONITOR";
+    default:              return "UNKNOWN";
+    }
+}
+///
+static void handle_mpu6050_data(void *param) {
+    ESP_LOGI(TAG, "Fall detector started");
+    // Demo: init LED ngay trong handler
+    static bool s_led_inited = false;
+    if (!s_led_inited) {
+        gpio_config_t io_conf = {
+            .pin_bit_mask = 1ULL << FALL_LED_GPIO,
+            .mode = GPIO_MODE_OUTPUT,
+            .pull_up_en = GPIO_PULLUP_DISABLE,
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .intr_type = GPIO_INTR_DISABLE,
+        };
+        gpio_config(&io_conf);
+        gpio_set_level(FALL_LED_GPIO, 0);  
+        s_led_inited = true;
+    }
+    /////
+    
+    fall_state_t state = ST_FREE_FALL;
+    fall_state_t prev_state = state;   
+    TickType_t   t_state = 0;          
+    TickType_t   t_last_report = 0;    
 
-//     while (1) {
-//         mpu6050_data_t d = {0};
-//         if (mpu6050_read_all(&d) == ESP_OK) {
-//             // Đưa vào hàng đợi (không chặn nếu đầy)
-//             if (xQueueSend(g_mpu_queue, &d, 0) != pdPASS) {
-//                 // Queue full -> bỏ mẫu cũ nhất
-//                 mpu6050_data_t trash;
-//                 (void)xQueueReceive(g_mpu_queue, &trash, 0);   // pop oldest (non-blocking)
+    mpu6050_data_t data;
 
-//                 // thử gửi lại mẫu mới
-//                 if (xQueueSend(g_mpu_queue, &d, 0) != pdPASS) {
-//                     // Trường hợp cực đoan: vẫn không gửi được (race condition)
-//                     ESP_LOGW(TAG, "Queue full, dropped newest sample");
-//                 } else {
-//                     ESP_LOGW(TAG, "Queue full, dropped oldest sample");
-//                 }
-//             }
-//         } else {
-//             ESP_LOGW(TAG, "read_all failed");
+    while (1) {
+        if (xQueueReceive(g_mpu_queue, &data, portMAX_DELAY) != pdPASS) continue;
+
+        const float acc_norm  = vec3_norm(data.accel.ax, data.accel.ay, data.accel.az);   // g
+        const float gyro_norm = vec3_norm(data.gyro.gx,  data.gyro.gy,  data.gyro.gz);    // dps
+        const float abs_roll  = fabsf(data.angle.roll);
+        const float abs_pitch = fabsf(data.angle.pitch);
+        const TickType_t now  = xTaskGetTickCount();
+
+        switch (state) {
+        case ST_IDLE:
+            if (acc_norm < FF_G_THRESH) {
+                state   = ST_FREE_FALL;
+                t_state = now;
+                ESP_LOGI(TAG, "FF start");
+            }
+            break;
+
+        case ST_FREE_FALL: {
+            TickType_t elapsed = now - t_state;
+            ESP_LOGI(TAG, "ST_FREE_FALL (|acc|=%.2fg)", acc_norm);
+            if (acc_norm < FF_G_THRESH) {
+                if (elapsed > pdMS_TO_TICKS(FF_MAX_TIME_MS)) {
+                    state = ST_IDLE;
+                }
+            } else {
+                state = ST_IMPACT_WAIT;
+                t_state = now; 
+            }
+            break;
+        }
+
+        case ST_IMPACT_WAIT: {
+            TickType_t elapsed = now - t_state;
+            ESP_LOGI(TAG, "ST_IMPACT_WAIT (|acc|=%.2fg)", acc_norm);
+            if (acc_norm > IMPACT_G_THRESH) {
+                state = ST_POST_MONITOR;
+                t_state = now; 
+                ESP_LOGI(TAG, "Impact detected (|acc|=%.2fg)", acc_norm);
+            } else if (elapsed > pdMS_TO_TICKS(IMPACT_TIMEOUT_MS)) {
+                state = ST_IDLE;
+            }
+            break;
+        }
+
+        case ST_POST_MONITOR: {
+            TickType_t elapsed = now - t_state;
+            bool low_motion = (gyro_norm < POST_INACT_DPS);
+            // bool bad_pose   = (abs_roll > POST_ANGLE_DEG) || (abs_pitch > POST_ANGLE_DEG);
+            if (low_motion) {
+                if ((now - t_last_report) > pdMS_TO_TICKS(REPORT_COOLDOWN_MS)) {
+                    t_last_report = now;
+                    ESP_LOGW(TAG, "[FALL DETECTED] |acc|=%.2fg, |gyro|=%.0fdps, roll=%.1f°, pitch=%.1f°", acc_norm, gyro_norm, data.angle.roll, data.angle.pitch);
+                    // ================= DEMO BÁO ĐÈN NGAY TẠI TODO =================
+                    for (int i = 0; i < 3; ++i) {
+                        gpio_set_level(FALL_LED_GPIO, 1);
+                        vTaskDelay(pdMS_TO_TICKS(200));
+                        gpio_set_level(FALL_LED_GPIO, 0);
+                        vTaskDelay(pdMS_TO_TICKS(200));
+                    }
+                    // ==============================================================
+                }
+                state = ST_IDLE;
+            } else if (elapsed > pdMS_TO_TICKS(POST_WINDOW_MS)) {
+                state = ST_IDLE;
+            }
+            break;
+        }
+
+        default:
+            state = ST_IDLE;
+            break;
+        }
+
+        if (state != prev_state) {
+            ESP_LOGI(TAG, "Fall state changed: %s -> %s",
+                     fall_state_to_str(prev_state),
+                     fall_state_to_str(state));
+            prev_state = state;
+        }
+
+        ESP_LOGI(TAG,
+                "ACC: ax=%6.3f ay=%6.3f az=%6.3f | "
+                "GYR: gx=%7.3f gy=%7.3f gz=%7.3f | "
+                "TMP: %5.2f C | "
+                "ANG: roll=%6.2f pitch=%6.2f",
+                data.accel.ax, data.accel.ay, data.accel.az,
+                data.gyro.gx,  data.gyro.gy,  data.gyro.gz,
+                data.temp.celsius,
+                data.angle.roll, data.angle.pitch);
+    }
+}
+
+void app_main(void)
+{
+    g_mpu_queue = xQueueCreate(QUEUE_LEN, sizeof(mpu6050_data_t));
+    if (!g_mpu_queue) {
+        ESP_LOGE(TAG, "xQueueCreate failed");
+        return;
+    }
+
+    esp_err_t err = mpu6050_init(I2C_PORT, I2C_SDA, I2C_SCL, I2C_FREQ);
+    
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "mpu6050_init failed: %s", esp_err_to_name(err));
+        return;
+    }
+    ESP_LOGI(TAG, "MPU6050 init OK, starting task...");
+
+    // Tạo task producer (đọc cảm biến)
+    if (xTaskCreate(mpu6050_task, "mpu6050_task", 4096, NULL, 5, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "xTaskCreate mpu6050_task failed");
+        return;
+    }
+
+    // Tạo task consumer (xử lý ngã)
+    if (xTaskCreate(handle_mpu6050_data, "mpu6050_handler", 4096, NULL, 4, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "xTaskCreate handle_mpu6050_data failed");
+        return;
+    }
+}
+
+// void app_main(void) {
+//     ESP_LOGI(TAG, "=== IoT Health Monitor Starting ===");
+
+//     // Initialize system
+//     ESP_ERROR_CHECK(system_init());
+
+//     // Try to load saved configuration
+//     char ssid[SSID_MAX_LEN] = {0};
+//     char pass[PASSWORD_MAX_LEN] = {0};
+//     char cccd[CCCD_MAX_LEN] = {0};
+//     char token[TOKEN_MAX_LEN] = {0};
+
+//     if (nvs_load_wifi_config(ssid, pass, cccd, token)) {
+//         ESP_LOGI(TAG, "Configuration found - Starting normal mode");
+        
+//         // Try to start normal operation
+//         if (start_normal_mode(ssid, pass, token, cccd) != ESP_OK) {
+//             ESP_LOGW(TAG, "Failed to start normal mode - Switching to config mode");
+//             wifi_stop();
+//             start_config_mode();
 //         }
-
-//         vTaskDelayUntil(&last, pdMS_TO_TICKS(MPU_PERIOD_MS));
-//     }
-// }
-
-// // ==== Trợ giúp ====
-// static inline float vec3_norm(float x, float y, float z) {
-//     return sqrtf(x*x + y*y + z*z);
-// }
-
-// typedef enum {
-//     ST_IDLE = 0,
-//     ST_FREE_FALL,
-//     ST_IMPACT_WAIT,
-//     ST_POST_MONITOR
-// } fall_state_t;
-
-// static void handle_mpu6050_data(void *param) {
-//     ESP_LOGI(TAG, "Fall detector started");
-
-//     fall_state_t state = ST_IDLE;
-//     TickType_t   t_state = 0;          // mốc thời gian vào state
-//     TickType_t   t_last_report = 0;    // chống spam cảnh báo
-
-//     // (tuỳ chọn) giữ mẫu trước để tính delta nếu muốn
-//     mpu6050_data_t d;
-
-//     while (1) {
-//         if (xQueueReceive(g_mpu_queue, &d, portMAX_DELAY) != pdPASS) continue;
-
-//         const float acc_norm  = vec3_norm(d.accel.ax, d.accel.ay, d.accel.az);   // g
-//         const float gyro_norm = vec3_norm(d.gyro.gx,  d.gyro.gy,  d.gyro.gz);    // dps
-//         const float abs_roll  = fabsf(d.angle.roll);
-//         const float abs_pitch = fabsf(d.angle.pitch);
-//         const TickType_t now  = xTaskGetTickCount();
-
-//         switch (state) {
-//         case ST_IDLE:
-//             // Free-fall bắt đầu khi acc rất thấp trong ≥ FF_MIN_TIME_MS
-//             if (acc_norm < FF_G_THRESH) {
-//                 // vào FF và ghi mốc thời gian
-//                 state = ST_FREE_FALL;
-//                 t_state = now;
-//                 // ESP_LOGI(TAG, "FF start");
-//             }
-//             break;
-
-//         case ST_FREE_FALL: {
-//             // Nếu vẫn dưới ngưỡng -> kiểm tra thời lượng
-//             TickType_t elapsed = now - t_state;
-//             if (acc_norm < FF_G_THRESH) {
-//                 if (elapsed > pdMS_TO_TICKS(FF_MAX_TIME_MS)) {
-//                     // Free-fall quá dài nhưng không có impact, reset
-//                     state = ST_IDLE;
-//                 }
-//                 // vẫn trong free-fall, chờ impact
-//             } else {
-//                 // acc thoát khỏi FF; chuyển sang chờ impact 1 khoảng ngắn
-//                 state = ST_IMPACT_WAIT;
-//                 t_state = now; // bắt đầu "đồng hồ" chờ impact
-//             }
-//             break;
-//         }
-
-//         case ST_IMPACT_WAIT: {
-//             TickType_t elapsed = now - t_state;
-//             // Tìm spike va đập
-//             if (acc_norm > IMPACT_G_THRESH) {
-//                 state = ST_POST_MONITOR;
-//                 t_state = now;  // bắt đầu quan sát sau impact
-//                 ESP_LOGI(TAG, "Impact detected (|acc|=%.2fg)", acc_norm);
-//             } else if (elapsed > pdMS_TO_TICKS(IMPACT_TIMEOUT_MS)) {
-//                 // Không thấy impact trong thời gian cho phép -> hủy
-//                 state = ST_IDLE;
-//             }
-//             break;
-//         }
-
-//         case ST_POST_MONITOR: {
-//             TickType_t elapsed = now - t_state;
-//             // điều kiện "nằm bất động + tư thế bất thường"
-//             bool low_motion = (gyro_norm < POST_INACT_DPS);
-//             bool bad_pose   = (abs_roll > POST_ANGLE_DEG) || (abs_pitch > POST_ANGLE_DEG);
-
-//             if (low_motion && bad_pose) {
-//                 // Chống spam: chỉ báo nếu quá cooldown
-//                 if ((now - t_last_report) > pdMS_TO_TICKS(REPORT_COOLDOWN_MS)) {
-//                     t_last_report = now;
-//                     ESP_LOGW(TAG,
-//                         "[FALL DETECTED] |acc|=%.2fg, |gyro|=%.0fdps, roll=%.1f°, pitch=%.1f°",
-//                         acc_norm, gyro_norm, d.angle.roll, d.angle.pitch
-//                     );
-//                     // TODO: ở đây bạn có thể:
-//                     //  - publish MQTT/HTTP
-//                     //  - bật còi/đèn
-//                     //  - lưu sự kiện
-//                 }
-//                 // Sau khi báo, quay về IDLE để chờ lần sau
-//                 state = ST_IDLE;
-//             } else if (elapsed > pdMS_TO_TICKS(POST_WINDOW_MS)) {
-//                 // Hết cửa sổ quan sát mà không đạt điều kiện -> bỏ qua
-//                 state = ST_IDLE;
-//             }
-//             break;
-//         }
-
-//         default:
-//             state = ST_IDLE;
-//             break;
-//         }
-
-//         // (tuỳ chọn) cũng có thể log thưa để theo dõi:
-//         ESP_LOGI(TAG, "state=%d |acc|=%.2f |gyro|=%.0f roll=%.1f pitch=%.1f",
-//                  state, acc_norm, gyro_norm, d.angle.roll, d.angle.pitch);
-//     }
-// }
-
-// void app_main(void)
-// {
-//     // Tạo hàng đợi trước khi tạo task
-//     g_mpu_queue = xQueueCreate(QUEUE_LEN, sizeof(mpu6050_data_t));
-//     if (!g_mpu_queue) {
-//         ESP_LOGE(TAG, "xQueueCreate failed");
-//         return;
+//     } else {
+//         ESP_LOGI(TAG, "No configuration found - Starting config mode");
+//         start_config_mode();
 //     }
 
-//     // Tạo task producer (đọc cảm biến)
-//     BaseType_t ok = xTaskCreate(
-//         mpu6050_task,
-//         "mpu6050_task",
-//         4096,      // tăng nếu log nhiều
-//         NULL,
-//         5,
-//         NULL
-//     );
-//     if (ok != pdPASS) {
-//         ESP_LOGE(TAG, "xTaskCreate mpu6050_task failed");
-//         return;
-//     }
-
-//     // Tạo task consumer (xử lý trung bình)
-//     ok = xTaskCreate(
-//         handle_mpu6050_data,
-//         "mpu6050_handler",
-//         4096,
-//         NULL,
-//         4,         // priority thấp hơn producer một chút
-//         NULL
-//     );
-//     if (ok != pdPASS) {
-//         ESP_LOGE(TAG, "xTaskCreate handle_mpu6050_data failed");
-//         return;
-//     }
+//     ESP_LOGI(TAG, "=== Initialization Complete ===");
 // }
