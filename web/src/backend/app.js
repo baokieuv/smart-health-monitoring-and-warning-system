@@ -22,8 +22,8 @@ connectDB();
 
 //routes
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/doctor/patients', patientRoutes);
-app.use('/api/v1/admin/doctors', doctorRoutes);
+app.use('/api/v1/doctor', patientRoutes);
+app.use('/api/v1/admin', doctorRoutes);
 app.use('/api/v1/family', familyRoutes);
 
 // ============= ERROR HANDLERS =============

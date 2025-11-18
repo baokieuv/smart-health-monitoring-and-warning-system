@@ -55,10 +55,15 @@ exports.getPatientHealth = async (req, res) => {
         message: "ThingsBoard connection not available.",
       });
     }
+<<<<<<< HEAD
 
     const response = await fetch(
       `${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${patient.deviceId}/values/timeseries?keys=heart_rate,SpO2,temperature,alarm`,
       {
+=======
+    
+    const response = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${patient.deviceId}/values/timeseries?keys=heart_rate,SpO2,temperature,alarm`, {
+>>>>>>> 01d000b (add device management and fix tenant account)
         method: "GET",
         headers: {
           "X-Authorization": `Bearer ${token}`,

@@ -48,40 +48,16 @@ exports.login = async (req, res) => {
 		const tokens = generateTokens(user);
 		tokenStore.saveRefreshToken(tokens.refreshTokenId, user._id, tokens.refreshTokenExpiresAt);
 
+
 		let tbUsername = "";
 		let tbPass = "";
 
-		if(user.role === 'patient'){
-			const patient = await Patient.findById(user.patientId)
-				.populate({
-					path: 'doctorId',
-					model: 'User',
-					populate: {
-						path: 'doctorId',
-						model: 'Doctor'
-					}
-				})
-				.exec();
-
-			if (!patient) {
-				return res.status(404).json({
-					status: "error",
-					message: "Patient profile not found."
-				});
-			}
-
-			if (!patient.doctorId || !patient.doctorId.doctorId) {
-				return res.status(404).json({
-					status: "error",
-					message: "Doctor not assigned to this patient."
-				});
-			}
-
-			tbUsername = patient.doctorId.doctorId.cccd + "@thingsboard.local";
-			tbPass = patient.doctorId.doctorId.cccd;
+		if(user.role === 'admin'){
+			tbUsername = "sysadmin@thingsboard.org";
+			tbPass = "sysadmin";
 		}else{
-			tbUsername = user.role === 'admin' ? user.username : user.username + "@thingsboard.local";
-			tbPass = user.role === 'admin' ? user.password : user.username;
+			tbUsername = "tenant@thingsboard.org";
+			tbPass = "tenant";
 		}
 
 		// Try to connect to ThingsBoard

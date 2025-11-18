@@ -9,7 +9,7 @@ const router = express.Router();
 
 // 8. Create Patient API
 router.post(
-    '/',
+    '/patients',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -38,7 +38,7 @@ router.post(
 
 // 9. Get Patient List API
 router.get(
-    '/',
+    '/patients',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -58,7 +58,7 @@ router.get(
 
 // 10. Get Patient Detail API
 router.get(
-    '/:patient_id',
+    '/patients/:patient_id',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -71,7 +71,7 @@ router.get(
 
 // 11. Update Patient API
 router.put(
-    '/:patient_id',
+    '/patients/:patient_id',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -99,7 +99,7 @@ router.put(
 
 // 12. Get Patient Health Info API
 router.get( 
-    '/:patient_id/health',
+    '/patients/:patient_id/health',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -112,7 +112,7 @@ router.get(
 
 // 13. Delete Patient API
 router.delete(
-    '/:patient_id',
+    '/patients/:patient_id',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -121,6 +121,30 @@ router.delete(
     ],
     validateRequest,
     patientController.deletePatient
+);
+
+router.post(
+    '/patients/:patient_id/device/allocate',
+    authenticate,
+    authorizeRoles('doctor'),
+    [
+        param('patient_id')
+            .isMongoId().withMessage('Invalid Patient ID')
+    ],
+    validateRequest,
+    patientController.allocateDevice
+);
+
+router.post(
+    '/patients/:patient_id/device/recall',
+    authenticate,
+    authorizeRoles('doctor'),
+    [
+        param('patient_id')
+            .isMongoId().withMessage('Invalid Patient ID')
+    ],
+    validateRequest,
+    patientController.recallDevice
 );
 
 module.exports = router;

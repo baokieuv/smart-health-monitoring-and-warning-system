@@ -53,7 +53,7 @@ const patientSchema = new mongoose.Schema({
 
 // Indexes
 patientSchema.index({ doctorId: 1 });
-patientSchema.index({ cccd: 1 });
+// patientSchema.index({ cccd: 1 });
 
 // patientSchema.index({ status: 1 });
 

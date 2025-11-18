@@ -2,6 +2,8 @@ const { sanitizeInput } = require('../utils/validator')
 const tokenStore = require('../utils/token-store');
 const Patient = require('../models/patient.model');
 const User = require('../models/user.model');
+const Device = require('../models/device.model');
+const Doctor = require('../models/doctor.model');
 
 const THINGSBOARD_URL = "http://localhost:8080";
 
@@ -29,7 +31,7 @@ async function findAndCacheDeviceID(patient, token) {
 
         for(const device of devices){
             try{
-                const attrResponse  = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${device.id.id}/values/attributes?keys=cccd`, {
+                const attrResponse  = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${device.id.id}/values/attributes?keys=patient,doctor`, {
                     method: "GET",
                     headers: {
                         'X-Authorization': `Bearer ${token}`,
@@ -42,15 +44,36 @@ async function findAndCacheDeviceID(patient, token) {
                 }
                 // ThingsBoard returns array of {key, value} objects
                 const attributes = await attrResponse.json();
-                const cccdAttr = attributes.find(attr => attr.key == 'cccd');
+                const patientCCCD = attributes.find(attr => attr.key == 'patient');
+                const doctorCCCD = attributes.find(attr => attr.key == 'doctor')
                 
-                if(cccdAttr && cccdAttr.value == patient.cccd){
+                const patientValue = patientCCCD ? String(patientCCCD.value) : null;
+                const doctorValue  = doctorCCCD ? String(doctorCCCD.value) : null;
+
+                const normalizedPatientValue = patientValue?.padStart(patient.cccd.length, '0');
+                const normalizeDoctorCCCD = doctorValue?.padStart(patient.cccd.length, '0');
+
+                console.log(normalizeDoctorCCCD);
+                console.log(normalizedPatientValue)
+
+                const doctor = await Doctor.findOne({ cccd: normalizeDoctorCCCD });
+                
+                if(normalizedPatientValue === patient.cccd){
                     console.log(`Device found: ${device.id.id} for CCCD ${patient.cccd}`);
                     //-> gán access token 
                     await Patient.updateOne(
                         { _id: patient._id },
                         { deviceId: device.id.id }
                     );
+
+                    await Device.create({
+                        name: device.name,
+                        deviceId: device.id.id,
+                        doctorCCCD: normalizeDoctorCCCD,
+                        patientCCCD: normalizedPatientValue,
+                        doctorId: doctor._id,
+                        patientId: patient._id
+                    });
 
                     return device.id.id;
                 }
@@ -120,11 +143,6 @@ exports.createPatient = async (req, res) => {
             doctorId: req.user.id   //userId của doctor
         });
 
-        await User.updateOne(
-            { _id: user._id },
-            { patientId: newPatient._id }
-        );
-
         res.status(201).json({
             status: "success",
             message: "Patient created successfully.",
@@ -184,7 +202,6 @@ exports.getPatients = async (req, res) => {
         });
     }
 }
-
 
 // 10. Get Patient Detail API
 exports.getPatientDetail = async (req, res) => {
@@ -307,17 +324,14 @@ exports.getHealthInfo = async (req, res) => {
             });
         }
         
-        // Find device ID for this patient
-        const deviceId = await findAndCacheDeviceID(patient, token);
-
-        if (!deviceId) {
-            return res.status(404).json({
+        if(!patient.deviceId){
+            return res.status(200).json({
                 status: "error",
-                message: "Device not found for this patient on ThingsBoard."
+                message: "Patient is not allocated device"
             });
         }
 
-        const response = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=heart_rate,SpO2,temperature,alarm`, {
+        const response = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${patient.deviceId}/values/timeseries?keys=heart_rate,SpO2,temperature,alarm`, {
             method: "GET",
             headers: {
                 'X-Authorization': `Bearer ${token}`
@@ -382,23 +396,19 @@ exports.deletePatient = async (req, res) => {
             });
         }
 
-        const token = tokenStore.findThingsBoardToken(req.user.id);
-        if (token) {
-            // Try to find and delete device on ThingsBoard
-            const deviceId = await findAndCacheDeviceID(patient, token);
-            
-            if (deviceId) {
-                console.log(`Deleting device ${deviceId} from ThingsBoard...`);
-                try {
-                    await deleteDeviceFromThingsBoard(deviceId, token);
-                } catch (err) {
-                    console.error(`Failed to delete device ${deviceId}:`, err.message);
-                }
+        if(patient.deviceId){
+            const token = tokenStore.findThingsBoardToken(req.user.id);
+            console.log(`Deleting device ${patient.deviceId} from ThingsBoard...`);
+            try {
+                await deleteDeviceFromThingsBoard(patient.deviceId, token);
+            } catch (err) {
+                console.error(`Failed to delete device ${patient.deviceId}:`, err.message);
             }
         }
 
-        await User.deleteOne({ patientId: patient._id });
+        await User.deleteOne({ _id: patient.userId });
         await Patient.deleteOne({ _id: patient._id });
+        await Device.deleteOne({ deviceId: patient.deviceId });
 
         res.status(200).json({
             status: "success",
@@ -411,5 +421,120 @@ exports.deletePatient = async (req, res) => {
             status: "error",
             message: "Unexpected error occurred."
         });
+    }
+}
+
+exports.allocateDevice = async(req, res) => {
+    try{
+        const patient = await Patient.findById(req.params.patient_id);
+
+        //case not found
+        if (!patient) {
+            return res.status(404).json({
+                status: "error",
+                message: "Patient not found."
+            });
+        }
+
+        // check doctor id
+        if(patient.doctorId.toString() !== req.user.id.toString()){
+            return res.status(403).json({
+                status: "error",
+                message: "Permission denied."
+            });
+        }
+
+        if(patient.deviceId){
+            return res.status(400).json({
+                status: "error",
+                message: "Patient already has a device allocated."
+            });
+        }
+
+        const token = tokenStore.findThingsBoardToken(req.user.id);
+        if (!token) {
+            return res.status(503).json({
+                status: "error",
+                message: "ThingsBoard connection not available."
+            });
+        }
+
+        const deviceId = await findAndCacheDeviceID(patient, token);
+        if(!deviceId){
+            console.log("Patient is not allocated device");
+            return res.status(200).json({
+                status: "error",
+                message: "Patient is not allocated device"
+            })
+        }
+
+        return res.status(200).json({
+            status: "success",
+            message: "Device allocated successfully.",
+            device_id: deviceId
+        });
+
+    }catch(err){
+        console.error('Allocate device error:', err);
+        return res.status(500).json({
+            status: "error",
+            message: "Unexpected error occurred."
+        })
+    }
+}
+
+exports.recallDevice = async(req, res) => {
+    try{
+        const patient = await Patient.findById(req.params.patient_id);
+
+        //case not found
+        if (!patient) {
+            return res.status(404).json({
+                status: "error",
+                message: "Patient not found."
+            });
+        }
+
+        // check doctor id
+        if(patient.doctorId.toString() !== req.user.id.toString()){
+            return res.status(403).json({
+                status: "error",
+                message: "Permission denied."
+            });
+        }
+
+        if(!patient.deviceId){
+            return res.status(400).json({
+                status: "error",
+                message: "Patient does not have any device allocated."
+            });
+        }
+
+        const token = tokenStore.findThingsBoardToken(req.user.id);
+        console.log(`Deleting device ${patient.deviceId} from ThingsBoard...`);
+        try {
+            await deleteDeviceFromThingsBoard(patient.deviceId, token);
+        } catch (err) {
+            console.error(`Failed to delete device ${patient.deviceId}:`, err.message);
+        }
+
+        await Patient.updateOne(
+            { _id: patient._id },
+            { deviceId: null }
+        )
+
+        await Device.deleteOne({ deviceId:  patient.deviceId});
+
+        res.status(200).json({
+            status: "success",
+            message: "Device recalled successfully.",
+            device_id: patient.deviceId
+        });
+    }catch(err){
+        console.error('Recall device error:', err);
+        return res.status(500).json({
+            status: "error",
+            message: "Unexpected error occurred."
+        })
     }
 }
