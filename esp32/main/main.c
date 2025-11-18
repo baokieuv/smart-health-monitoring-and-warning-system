@@ -10,14 +10,14 @@
 
 // Application modules
 #include "config.h"
-#include "storage/nvs_stoarge.h"
-#include "wifi/wifi_manager.h"
-#include "http/http_server.h"
-#include "mqtt/mqtt_tb.h"
-#include "sensors/ds18b20/temperature.h"
-#include "sensors/max30102/heart_rate.h"
-#include "sensors/mpu6050/mpu6050_api.h"
-#include "gpio/gpio_handler.h"
+#include "nvs_stoarge.h"
+#include "wifi_manager.h"
+#include "http_server.h"
+#include "mqtt_tb.h"
+#include "temperature.h"
+#include "heart_rate.h"
+#include "mpu6050_api.h"
+#include "gpio_handler.h"
 
 static const char *TAG = "MAIN";
 static EventGroupHandle_t event_group = NULL;

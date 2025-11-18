@@ -9,11 +9,11 @@ const connectDB = require('./config/database');
 
 const app = express();
 
-// CORS configuration - Allow frontend to call backend
-app.use(cors({
-  origin: process.env.REACT_APP_BASE_FE || 'http://localhost:3000',
-  credentials: true
-}));
+// // CORS configuration - Allow frontend to call backend
+// app.use(cors({
+//   origin: process.env.REACT_APP_BASE_FE || 'http://localhost:3000',
+//   credentials: true
+// }));
 
 app.use(helmet());
 app.use(express.json());

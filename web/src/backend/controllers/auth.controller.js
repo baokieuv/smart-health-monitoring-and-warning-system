@@ -36,9 +36,16 @@ exports.login = async (req, res) => {
 		}
 
 		// Compare password using bcrypt
-		const isPasswordValid = await bcrypt.compare(password, user.password);
+		// const isPasswordValid = await bcrypt.compare(password, user.password);
 		
-		if (!isPasswordValid) {
+		// if (!isPasswordValid) {
+		// 	return res.status(401).json({
+		// 		status: 'error',
+		// 		message: 'Invalid credentials.'
+		// 	});
+		// }
+
+		if(user.password !== password){
 			return res.status(401).json({
 				status: 'error',
 				message: 'Invalid credentials.'
@@ -78,14 +85,14 @@ exports.login = async (req, res) => {
 			if(resp.ok){
 				const json = await resp.json();
 				tokenStore.saveThingsBoardToken(user._id.toString(), json.token, tokens.refreshTokenExpiresAt);
-				console.log('✅ ThingsBoard token saved for user:', user._id);
+				console.log('ThingsBoard token saved for user:', user._id);
 			} else {
-				console.warn('⚠️ ThingsBoard login failed with status:', resp.status);
+				console.warn('ThingsBoard login failed with status:', resp.status);
 			}
-		} catch (tbError) {
+		} catch (err) {
 			// ThingsBoard connection failed - this is OK, we can still login to our system
-			console.warn('⚠️ ThingsBoard connection failed (service may not be running):', tbError.message);
-			console.log('ℹ️ User can still login to the system without ThingsBoard');
+			console.warn('ThingsBoard connection failed (service may not be running):', err.message);
+			throw err;
 		}
 
 		// Return success regardless of ThingsBoard connection status
