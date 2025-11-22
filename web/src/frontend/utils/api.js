@@ -119,6 +119,11 @@ export const updateDoctorUsername = (doctorId, username) =>
 export const updateDoctorPassword = (doctorId, password) =>
   unwrap(api.put(`/api/v1/admin/doctors/${doctorId}/password`, { password }))
 
+// Doctor Profile APIs - Reuse existing APIs
+export const getDoctorProfile = (userId) => unwrap(api.get(`/api/v1/admin/user/${userId}`))
+
+export const updateDoctorProfile = (doctorId, payload) => updateDoctor(doctorId, payload)
+
 export default {
   api,
   getToken,
@@ -140,4 +145,7 @@ export default {
   getDoctorVitals,
   updateDoctorUsername,
   updateDoctorPassword,
+  getDoctorProfile,
+  updateDoctorProfile,
+  // changeDoctorPassword,
 }

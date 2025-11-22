@@ -36,21 +36,21 @@ exports.login = async (req, res) => {
 		}
 
 		// Compare password using bcrypt
-		// const isPasswordValid = await bcrypt.compare(password, user.password);
+		const isPasswordValid = await bcrypt.compare(password, user.password);
 		
-		// if (!isPasswordValid) {
-		// 	return res.status(401).json({
-		// 		status: 'error',
-		// 		message: 'Invalid credentials.'
-		// 	});
-		// }
-
-		if(user.password !== password){
+		if (!isPasswordValid) {
 			return res.status(401).json({
 				status: 'error',
 				message: 'Invalid credentials.'
 			});
 		}
+
+		// if(user.password !== password){
+		// 	return res.status(401).json({
+		// 		status: 'error',
+		// 		message: 'Invalid credentials.'
+		// 	});
+		// }
 
 		const tokens = generateTokens(user);
 		tokenStore.saveRefreshToken(tokens.refreshTokenId, user._id, tokens.refreshTokenExpiresAt);
@@ -92,7 +92,8 @@ exports.login = async (req, res) => {
 		} catch (err) {
 			// ThingsBoard connection failed - this is OK, we can still login to our system
 			console.warn('ThingsBoard connection failed (service may not be running):', err.message);
-			throw err;
+			// ignore the error with no thingsboard
+			// throw err;
 		}
 
 		// Return success regardless of ThingsBoard connection status

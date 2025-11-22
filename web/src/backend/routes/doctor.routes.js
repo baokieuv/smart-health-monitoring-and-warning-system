@@ -66,7 +66,6 @@ router.get(
 router.get(
 	'/doctors/:doctor_id',
 	authenticate,
-	authorizeRoles('admin'),
 	[
 		param('doctor_id')
 			.isMongoId().withMessage('Invalid Doctor ID')
@@ -79,7 +78,6 @@ router.get(
 router.put(
 	'/doctors/:doctor_id',
 	authenticate,
-	authorizeRoles('admin'),
 	[
 		param('doctor_id')
 			.isMongoId().withMessage('Invalid Doctor ID'),
@@ -110,7 +108,6 @@ router.put(
 router.delete(
 	'/doctors/:doctor_id',
 	authenticate,
-	authorizeRoles('admin'),
 	[
 		param('doctor_id')
 			.isMongoId().withMessage('Doctor ID must be a positive integer')
@@ -122,7 +119,6 @@ router.delete(
 router.get(
 	'/devices',
 	authenticate,
-	authorizeRoles('admin'),
 	[
 		query('page')
 			.optional()
@@ -133,6 +129,18 @@ router.get(
 	],
 	validateRequest,
 	doctorController.getListDevice
+);
+
+// Get doctor by userId (to convert userId -> doctor_id)
+router.get(
+	'/user/:user_id',
+	authenticate,
+	[
+		param('user_id')
+			.isMongoId().withMessage('Invalid User ID')
+	],
+	validateRequest,
+	doctorController.getDoctorByUserId
 );
 
 module.exports = router;

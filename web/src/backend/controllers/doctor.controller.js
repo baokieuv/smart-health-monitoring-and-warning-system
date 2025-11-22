@@ -136,7 +136,7 @@ exports.updateDoctor = async (req, res) => {
 			});
 		}
 
-		const updateFields = ['full_name', 'birthday', 'address', 'phone', 'specialization'];
+		const updateFields = ['full_name', 'email', 'birthday', 'address', 'phone', 'specialization'];
 		const updateData = {};
 
 		updateFields.forEach(field => {
@@ -265,3 +265,31 @@ exports.getListDevice = async (req, res) => {
 			});
 	}
 }
+
+// Get Doctor by User ID: User ID -> Doctor ID
+exports.getDoctorByUserId = async (req, res) => {
+	try {
+		const userId = req.params.user_id;
+		
+		const doctor = await Doctor.findOne({ userId }).lean();
+		
+		if (!doctor) {
+			return res.status(404).json({
+				status: "error",
+				message: "Doctor not found."
+			});
+		}
+		
+		res.status(200).json({
+			status: "success",
+			message: "Doctor retrieved successfully.",
+			doctor
+		});
+	} catch (error) {
+		console.error('Get doctor by userId error:', error);
+		res.status(500).json({
+			status: "error",
+			message: "Unexpected error occurred."
+		});
+	}
+};
