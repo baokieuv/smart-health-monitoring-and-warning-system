@@ -7,7 +7,7 @@ const { validateCCCD, validatePhone, validateDate } = require('../utils/validato
 
 const router = express.Router();
 
-// 3. Create Doctor API
+// create doctor API
 router.post(
 	'/doctors',
 	authenticate,
@@ -39,7 +39,7 @@ router.post(
 	doctorController.createDoctor
 );
 
-// 4. Get Doctor List API
+// get doctor list API
 router.get(
 	'/doctors',
 	authenticate,
@@ -62,7 +62,7 @@ router.get(
 	doctorController.getDoctors
 );
 
-// 5. Get Doctor Detail API
+// get doctor detail API
 router.get(
 	'/doctors/:doctor_id',
 	authenticate,
@@ -75,7 +75,7 @@ router.get(
 	doctorController.getDoctorDetail
 );
 
-// 6. Update Doctor API
+// update doctor API
 router.put(
 	'/doctors/:doctor_id',
 	authenticate,
@@ -106,7 +106,7 @@ router.put(
 	doctorController.updateDoctor
 );
 
-// 7. Delete Doctor API
+// delete doctor API
 router.delete(
 	'/doctors/:doctor_id',
 	authenticate,
@@ -119,6 +119,7 @@ router.delete(
 	doctorController.deleteDoctor
 );
 
+// get devices API
 router.get(
 	'/devices',
 	authenticate,

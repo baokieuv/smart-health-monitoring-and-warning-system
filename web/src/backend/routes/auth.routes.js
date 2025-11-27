@@ -6,6 +6,7 @@ const { validateRequest } = require('../middlewares/validate.middleware');
 
 const router = express.Router();
 
+// login API
 router.post(
 	'/login',
 	[
@@ -16,6 +17,7 @@ router.post(
 	authController.login
 );
 
+// refresh token API
 router.post(
 	'/refresh',
 	[
@@ -25,6 +27,7 @@ router.post(
 	authController.refreshToken
 );
 
+// logout API
 router.post(
 	'/logout',
 	authenticate,
@@ -35,6 +38,7 @@ router.post(
 	authController.logout
 );
 
+// change password API
 router.post(
 	'/change-password',
 	[

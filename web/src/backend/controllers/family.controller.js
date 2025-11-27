@@ -4,35 +4,9 @@ const Patient = require("../models/patient.model");
 
 const THINGSBOARD_URL = "http://localhost:8080";
 
-exports.getDetail = async (req, res) => {
-	try{
-		const patient = await Patient.findOne({userId: req.user._id});
-
-		if(!patient){
-			return res.status(404).json({
-				status: 'error',
-				message: 'User not found.'
-			});
-		}
-
-		return res.status(200).json({
-			status: 'success',
-			message: 'User retrieved successfully.',
-			data: patient
-		});
-	}catch(err){
-		console.error('Create patient error:', err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
-}
-
-// 1) Lấy thông tin cá nhân bệnh nhân
+// GET /api/v1/family/info -> get current patient's details
 exports.getPatientDetail = async (req, res) => {
 	try {
-		// const patient = await Patient.findById(req.params.patient_id);
 		const patient = await Patient.findOne({ userId: req.user.id });
 		if (!patient) {
 			return res.status(404).json({
@@ -41,6 +15,7 @@ exports.getPatientDetail = async (req, res) => {
 			});
 		}
 
+		console.log("Patient info retrieved successfully: ", patient._id);
 		return res.status(200).json({
 			status: "success",
 			message: "Patient info retrieved successfully.",
@@ -55,7 +30,7 @@ exports.getPatientDetail = async (req, res) => {
 	}
 };
 
-// 2) Lấy thông tin sức khỏe bệnh nhân
+// GET /api/v1/family/health -> get current patient's health info
 exports.getPatientHealth = async (req, res) => {
 	try {
 		const patient = await Patient.findOne({ userId: req.user.id });
@@ -81,6 +56,7 @@ exports.getPatientHealth = async (req, res) => {
 			});
 		}
 
+		// get attributes from ThingsBoard
 		const response = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${patient.deviceId}/values/timeseries?keys=heart_rate,SpO2,temperature,alarm`, {
 			method: "GET",
 			headers: {
@@ -106,19 +82,16 @@ exports.getPatientHealth = async (req, res) => {
 		);
 
 		const payload = {
-			heart_rate: healthInfo.heart_rate
-				? parseFloat(healthInfo.heart_rate)
-				: null,
+			heart_rate: healthInfo.heart_rate ? parseFloat(healthInfo.heart_rate) : null,
 			SpO2: healthInfo.SpO2 ? parseFloat(healthInfo.SpO2) : null,
-			temperature: healthInfo.temperature
-				? parseFloat(healthInfo.temperature)
-				: null,
+			temperature: healthInfo.temperature ? parseFloat(healthInfo.temperature) : null,
 			last_measurement: new Date().toISOString(),
 			alarm_status: healthInfo.alarm || null,
 		};
 
 		return res.status(200).json({
 			status: "success",
+			message: "Patient health info retrieved successfully.",
 			patient_id: patient._id,
 			health_info: payload,
 		});

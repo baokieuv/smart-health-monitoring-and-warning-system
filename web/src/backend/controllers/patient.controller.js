@@ -16,6 +16,7 @@ async function findAndCacheDeviceID(patient, token) {
     console.log('Searching for device for CCCD:', patient.cccd);
 
     try{
+        // 1. Get all devices
         const response = await fetch(`${THINGSBOARD_URL}/api/tenant/devices?pageSize=1000&page=0`, {
             method: "GET",
             headers: {
@@ -30,6 +31,7 @@ async function findAndCacheDeviceID(patient, token) {
         const deviceData = await response.json();
         const devices = deviceData.data || [];
 
+        // 2. Check each device has same attributes or not
         for(const device of devices){
             try{
                 const attrResponse  = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${device.id.id}/values/attributes?keys=patient,doctor`, {
@@ -111,6 +113,7 @@ async function deleteDeviceFromThingsBoard(deviceId, token) {
     }
 }
 
+// GET /api/v1/doctor/info -> get current doctor details
 exports.getDetail = async (req, res) => {
     try{
         const doctor = await Doctor.findOne({userId: req.user.id});
@@ -122,6 +125,7 @@ exports.getDetail = async (req, res) => {
             });
         }
 
+        console.log("User retrieved successfully: ", doctor._id);
         return res.status(200).json({
             status: 'success',
             message: 'User retrieved successfully.',
@@ -136,6 +140,7 @@ exports.getDetail = async (req, res) => {
     }
 }
 
+// PUT /api/v1/doctor/info -> update current doctor details
 exports.updateDetail = async (req, res) => {
     try{
         const doctor = await Doctor.findOne({userId: req.user.id});
@@ -155,19 +160,13 @@ exports.updateDetail = async (req, res) => {
             }
         });
 
-        if (Object.keys(updateData).length === 0) {
-            return res.status(400).json({
-                status: "error",
-                message: "No valid fields to update."
-            });
-        }
-
         const result = await Doctor.findByIdAndUpdate(
             doctor._id,
             { $set: updateData },
             { new: true, runValidators: true }
         );
 
+        console.log("Doctor information updated successfully: ", doctor._id);
         return res.status(200).json({
             status: "success",
             message: "Doctor information updated successfully.",
@@ -183,7 +182,7 @@ exports.updateDetail = async (req, res) => {
     }
 }
 
-// 8. Create Patient API
+// POST /api/v1/doctor/patients -> create a new patient
 exports.createPatient = async (req, res) => {
     try {
         const patientData = {
@@ -204,6 +203,7 @@ exports.createPatient = async (req, res) => {
             });
         }
 
+        // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(patientData.phone, salt);
 
@@ -219,6 +219,7 @@ exports.createPatient = async (req, res) => {
             doctorId: req.user.id   //userId của doctor
         });
 
+        console.log("Patient created successfully: ", newPatient._id);
         return res.status(201).json({
             status: "success",
             message: "Patient created successfully.",
@@ -233,8 +234,7 @@ exports.createPatient = async (req, res) => {
     }
 }
 
-// 9. Get Patient List API
-
+// GET /api/v1/doctor/patients -> get list patients by doctorId
 exports.getPatients = async (req, res) => {
     try {
         const { page = 1, limit = 10, search } = req.query;
@@ -259,6 +259,7 @@ exports.getPatients = async (req, res) => {
 
         const total_pages = Math.ceil(total / limitInt) || 1;
 
+        console.log("Patients retrieved successfully");
         return res.status(200).json({
             status: "success",
             message: "Patients retrieved successfully.",
@@ -279,7 +280,7 @@ exports.getPatients = async (req, res) => {
     }
 }
 
-// 10. Get Patient Detail API
+// GET /api/v1/doctor/patients/{patient_id} -> get patient's details
 exports.getPatientDetail = async (req, res) => {
     try {
         const patient = await Patient.findById(req.params.patient_id);
@@ -299,6 +300,7 @@ exports.getPatientDetail = async (req, res) => {
             });
         }
 
+        console.log("Patient retrieved successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
             message: "Patient retrieved successfully.",
@@ -313,7 +315,7 @@ exports.getPatientDetail = async (req, res) => {
     }
 }
 
-// 11. Update Patient API
+// PUT /api/v1/doctor/patients/{patient_id} -> update patient's detail
 exports.updatePatient = async (req, res) => {
     try {
         const patient = await Patient.findById(req.params.patient_id);
@@ -345,19 +347,13 @@ exports.updatePatient = async (req, res) => {
             }
         });
 
-        if (Object.keys(updateData).length === 0) {
-            return res.status(400).json({
-                status: "error",
-                message: "No valid fields to update."
-            });
-        }
-
         const result = await Patient.findByIdAndUpdate(
             patient._id,
             { $set: updateData },
             { new: true, runValidators: true }
         );
 
+        console.log("Patient information updated successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
             message: "Patient information updated successfully.",
@@ -372,7 +368,7 @@ exports.updatePatient = async (req, res) => {
     }
 }
 
-// 12. Get Patient Health Info API
+// GET /api/v1/doctor/patients/{patient_id}/health -> get patient's health info
 exports.getHealthInfo = async (req, res) => {
     try {
         const patient = await Patient.findById(req.params.patient_id);
@@ -392,6 +388,13 @@ exports.getHealthInfo = async (req, res) => {
             });
         }
 
+        if(!patient.deviceId){
+            return res.status(400).json({
+                status: "error",
+                message: "Patient is not allocated device."
+            });
+        }
+
         const token = tokenStore.findThingsBoardToken(req.user.id);
         if (!token) {
             return res.status(503).json({
@@ -399,14 +402,8 @@ exports.getHealthInfo = async (req, res) => {
                 message: "ThingsBoard connection not available."
             });
         }
-        
-        if(!patient.deviceId){
-            return res.status(200).json({
-                status: "error",
-                message: "Patient is not allocated device"
-            });
-        }
 
+        // get attributes from ThingsBoard
         const response = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${patient.deviceId}/values/timeseries?keys=heart_rate,SpO2,temperature,alarm`, {
             method: "GET",
             headers: {
@@ -437,8 +434,10 @@ exports.getHealthInfo = async (req, res) => {
             alarm_status: healthInfo.alarm || null,
         };
 
+        console.log("Get patient health successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
+            message: "Get patient health successfully.",
             patient_id: patient._id,
             health_info: payload
         });
@@ -451,7 +450,7 @@ exports.getHealthInfo = async (req, res) => {
     }
 }
 
-// 13. Delete Patient API
+// DELETE /api/v1/doctor/patients/{patient_id} -> delete a patient
 exports.deletePatient = async (req, res) => {
     try {
         const patient = await Patient.findById(req.params.patient_id);
@@ -486,6 +485,7 @@ exports.deletePatient = async (req, res) => {
         await Patient.deleteOne({ _id: patient._id });
         await Device.deleteOne({ deviceId: patient.deviceId });
 
+        console.log("Patient deleted successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
             message: "Patient deleted successfully.",
@@ -500,6 +500,7 @@ exports.deletePatient = async (req, res) => {
     }
 }
 
+// POST /api/v1/doctor/patients/{patient_id}/allocate-device -> allocate new device for a patient
 exports.allocateDevice = async(req, res) => {
     try{
         const patient = await Patient.findById(req.params.patient_id);
@@ -537,13 +538,14 @@ exports.allocateDevice = async(req, res) => {
 
         const deviceId = await findAndCacheDeviceID(patient, token);
         if(!deviceId){
-            console.log("Patient is not allocated device");
+            console.log("There is not any existed device for this patient");
             return res.status(400).json({
                 status: "error",
-                message: "Patient is not allocated device"
+                message: "There is not any existed device for this patient."
             })
         }
 
+        console.log("Device allocated successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
             message: "Device allocated successfully.",
@@ -559,6 +561,7 @@ exports.allocateDevice = async(req, res) => {
     }
 }
 
+// POST /api/v1/doctor/patients/{patient_id}/recall-device -> recall device
 exports.recallDevice = async(req, res) => {
     try{
         const patient = await Patient.findById(req.params.patient_id);
@@ -601,6 +604,7 @@ exports.recallDevice = async(req, res) => {
 
         await Device.deleteOne({ deviceId:  patient.deviceId});
 
+        console.log("Device recalled successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
             message: "Device recalled successfully.",

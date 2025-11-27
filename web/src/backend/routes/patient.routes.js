@@ -7,6 +7,7 @@ const { validateCCCD, validatePhone, validateDate } = require('../utils/validato
 
 const router = express.Router();
 
+// get current doctor details API
 router.get(
     '/info',
     authenticate,
@@ -15,6 +16,7 @@ router.get(
     patientController.getDetail
 );
 
+// update current doctor details API
 router.put(
     '/info',
     authenticate,
@@ -43,7 +45,7 @@ router.put(
     patientController.updateDetail
 );
 
-// 8. Create Patient API
+// create a new patient API
 router.post(
     '/patients',
     authenticate,
@@ -72,7 +74,7 @@ router.post(
     patientController.createPatient
 );
 
-// 9. Get Patient List API
+// get patient list API
 router.get(
     '/patients',
     authenticate,
@@ -92,7 +94,7 @@ router.get(
     patientController.getPatients
 );
 
-// 10. Get Patient Detail API
+// get patient detail API
 router.get(
     '/patients/:patient_id',
     authenticate,
@@ -105,7 +107,7 @@ router.get(
     patientController.getPatientDetail
 );
 
-// 11. Update Patient API
+// update patient API
 router.put(
     '/patients/:patient_id',
     authenticate,
@@ -133,7 +135,7 @@ router.put(
     patientController.updatePatient
 );
 
-// 12. Get Patient Health Info API
+// get patient health info API
 router.get( 
     '/patients/:patient_id/health',
     authenticate,
@@ -146,7 +148,7 @@ router.get(
     patientController.getHealthInfo
 );
 
-// 13. Delete Patient API
+// delete patient API
 router.delete(
     '/patients/:patient_id',
     authenticate,
@@ -159,8 +161,9 @@ router.delete(
     patientController.deletePatient
 );
 
+// allocate device for patient API
 router.post(
-    '/patients/:patient_id/device/allocate',
+    '/patients/:patient_id/allocate-device',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -171,8 +174,9 @@ router.post(
     patientController.allocateDevice
 );
 
+// recall device from patient API
 router.post(
-    '/patients/:patient_id/device/recall',
+    '/patients/:patient_id/recall-device',
     authenticate,
     authorizeRoles('doctor'),
     [

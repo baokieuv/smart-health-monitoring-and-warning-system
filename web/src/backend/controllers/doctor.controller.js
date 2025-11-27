@@ -4,7 +4,7 @@ const Doctor = require('../models/doctor.model');
 const User = require('../models/user.model');
 const Device = require('../models/device.model');
 
-// 3. Create Doctor API
+// POST /api/v1/admin/doctors -> create a new doctor
 exports.createDoctor = async (req, res) => {
 	try {
 		const doctorData = {
@@ -40,6 +40,7 @@ exports.createDoctor = async (req, res) => {
 			userId: user._id
 		});
 
+		console.log("Doctor created successfully: ", doctor._id);
 		return res.status(201).json({
 			status: "success",
 			message: "Doctor created successfully.",
@@ -54,7 +55,7 @@ exports.createDoctor = async (req, res) => {
 	}
 };
 
-// 4. Get Doctor List API
+// GET /api/v1/admin/doctors -> get list doctors
 exports.getDoctors = async (req, res) => {
 	try {
 		const { page = 1, limit = 10, search = '', specialization = '' } = req.query;
@@ -82,6 +83,7 @@ exports.getDoctors = async (req, res) => {
 
 		const total_pages = Math.ceil(total / limitInt) || 1;
 
+		console.log("Doctor retrieved successfully");
 		return res.status(200).json({
 			status: "success",
 			message: "Doctor retrieved successfully.",
@@ -102,7 +104,7 @@ exports.getDoctors = async (req, res) => {
 	}
 };
 
-// 5. Get Doctor Detail API
+// GET /api/v1/admin/doctors/{doctor_id} -> get doctor's details
 exports.getDoctorDetail = async (req, res) => {
 	try {
 		const doctor = await Doctor.findById(req.params.doctor_id);
@@ -114,6 +116,7 @@ exports.getDoctorDetail = async (req, res) => {
 			});
 		}
 
+		console.log("Doctor retrieved successfully: ", doctor._id);
 		return res.status(200).json({
 			status: "success",
 			message: "Doctor retrieved successfully.",
@@ -128,7 +131,7 @@ exports.getDoctorDetail = async (req, res) => {
 	}
 };
 
-// 6. Update Doctor API -> ko update cccd (mỗi người là duy nhất)
+// PUT /api/v1/admin/doctors/{doctor_id} -> update doctor's detail
 exports.updateDoctor = async (req, res) => {
 	try {
 		const doctor = await Doctor.findById(req.params.doctor_id);
@@ -149,19 +152,13 @@ exports.updateDoctor = async (req, res) => {
 			}
 		});
 
-		if (Object.keys(updateData).length === 0) {
-			return res.status(400).json({
-				status: "error",
-				message: "No valid fields to update."
-			});
-		}
-
 		const result = await Doctor.findByIdAndUpdate(
 			doctor._id,
 			{ $set: updateData },
 			{ new: true, runValidators: true }
 		);
 
+		console.log("Doctor information updated successfully: ", doctor._id);
 		return res.status(200).json({
 			status: "success",
 			message: "Doctor information updated successfully.",
@@ -176,7 +173,7 @@ exports.updateDoctor = async (req, res) => {
 	}
 };
 
-// 7. Delete Doctor API
+// DELETE /api/v1/admin/doctors/{doctor_id} -> delete a doctor
 exports.deleteDoctor = async (req, res) => {
 	try {
 		const doctor = await Doctor.findById(req.params.doctor_id);
@@ -194,6 +191,7 @@ exports.deleteDoctor = async (req, res) => {
 		await User.deleteOne({ doctorId: doctor._id });
 		await Doctor.deleteOne({ _id: doctor._id });
 		
+		console.log("Doctor deleted successfully: ", doctor._id);
 		return res.status(200).json({
 			status: "success",
 			message: "Doctor deleted successfully.",
@@ -208,6 +206,7 @@ exports.deleteDoctor = async (req, res) => {
 	}
 };
 
+// GET /api/v1/admin/devices -> get list devices
 exports.getListDevice = async (req, res) => {
 	try{
 		const { page = 1, limit = 10 } = req.query;
@@ -250,6 +249,7 @@ exports.getListDevice = async (req, res) => {
 			} : null,
 		}));
 
+		console.log("Devices retrieved successfully");
 		return res.status(200).json({
 				status: "success",
 				message: "Devices retrieved successfully.",
