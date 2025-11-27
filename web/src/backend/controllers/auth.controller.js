@@ -220,18 +220,21 @@ exports.changePassword = async (req, res) => {
 			});
 		}
 
-		if(user.password !== userData.oldPassword){
-			return res.status(400).json({
+		const isPasswordValid = await bcrypt.compare(userData.oldPassword, user.password);
+		
+		if (!isPasswordValid) {
+			return res.status(401).json({
 				status: 'error',
 				message: 'Invalid credentials.'
 			});
 		}
 
-		user.password = userData.newPassword;
+		const salt = await bcrypt.genSalt(10);
+		const hashedPassword = await bcrypt.hash(userData.newPassword, salt);
 
 		await User.updateOne(
 			{_id: user._id},
-			{ $set: { password: userData.newPassword } }
+			{ $set: { password: hashedPassword } }
 		);
 
 		return res.status(200).json({
