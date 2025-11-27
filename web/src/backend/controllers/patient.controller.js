@@ -113,7 +113,7 @@ async function deleteDeviceFromThingsBoard(deviceId, token) {
 
 exports.getDetail = async (req, res) => {
     try{
-        const doctor = await Doctor.findOne({userId: req.user._id});
+        const doctor = await Doctor.findOne({userId: req.user.id});
 
         if(!doctor){
             return res.status(404).json({
@@ -127,6 +127,53 @@ exports.getDetail = async (req, res) => {
             message: 'User retrieved successfully.',
             data: doctor
         });
+    }catch(err){
+        console.error('Create patient error:', err);
+        return res.status(500).json({
+            status: "error",
+            message: "Unexpected error occurred."
+        });
+    }
+}
+
+exports.updateDetail = async (req, res) => {
+    try{
+        const doctor = await Doctor.findOne({userId: req.user.id});
+
+        if(!doctor){
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found.'
+            });
+        }
+        const updateFields = ['full_name', 'email', 'birthday', 'address', 'phone', 'specialization'];
+        const updateData = {};
+
+        updateFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updateData[field] = field === 'birthday' ? req.body[field] : sanitizeInput(req.body[field]);
+            }
+        });
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                status: "error",
+                message: "No valid fields to update."
+            });
+        }
+
+        const result = await Doctor.findByIdAndUpdate(
+            doctor._id,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        return res.status(200).json({
+            status: "success",
+            message: "Doctor information updated successfully.",
+            doctor: result
+        });
+        
     }catch(err){
         console.error('Create patient error:', err);
         return res.status(500).json({

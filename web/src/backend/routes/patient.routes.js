@@ -8,11 +8,39 @@ const { validateCCCD, validatePhone, validateDate } = require('../utils/validato
 const router = express.Router();
 
 router.get(
-    '/',
+    '/info',
     authenticate,
     authorizeRoles('doctor'),
     validateRequest,
     patientController.getDetail
+);
+
+router.put(
+    '/info',
+    authenticate,
+    authorizeRoles('doctor'),
+    [
+		body('full_name')
+			.optional()
+			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
+		body('email')
+			.optional()
+			.isEmail().withMessage('Invalid email format'),
+		body('birthday')
+			.optional()
+			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
+		body('address')
+			.optional()
+			.isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
+		body('phone')
+			.optional()
+			.custom(validatePhone).withMessage('Invalid phone format'),
+		body('specialization')
+			.optional()
+			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters')
+	],
+    validateRequest,
+    patientController.updateDetail
 );
 
 // 8. Create Patient API

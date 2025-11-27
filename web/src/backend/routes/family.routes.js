@@ -5,14 +5,6 @@ const familyController = require('../controllers/family.controller');
 
 const router = express.Router();
 
-router.get(
-    '/',
-    authenticate,
-    authorizeRoles('patient'),
-    validateRequest,
-    familyController.getDetail
-);
-
 // GET /api/v1/family/info
 router.get(
     "/info", 
