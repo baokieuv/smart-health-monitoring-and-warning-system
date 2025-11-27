@@ -1,4 +1,5 @@
-const { sanitizeInput } = require('../utils/validator')
+const bcrypt = require('bcryptjs');
+const { sanitizeInput } = require('../utils/validator');
 const tokenStore = require('../utils/token-store');
 const Patient = require('../models/patient.model');
 const User = require('../models/user.model');
@@ -110,6 +111,31 @@ async function deleteDeviceFromThingsBoard(deviceId, token) {
     }
 }
 
+exports.getDetail = async (req, res) => {
+    try{
+        const doctor = await Doctor.findOne({userId: req.user._id});
+
+        if(!doctor){
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found.'
+            });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'User retrieved successfully.',
+            data: doctor
+        });
+    }catch(err){
+        console.error('Create patient error:', err);
+        return res.status(500).json({
+            status: "error",
+            message: "Unexpected error occurred."
+        });
+    }
+}
+
 // 8. Create Patient API
 exports.createPatient = async (req, res) => {
     try {
@@ -131,10 +157,13 @@ exports.createPatient = async (req, res) => {
             });
         }
 
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(patientData.phone, salt);
+
         //Add new patient
         const user = await User.create({
             username: patientData.cccd,
-            password: patientData.phone,
+            password: hashedPassword,
             role: "patient"
         });
         const newPatient = await Patient.create({
@@ -143,14 +172,14 @@ exports.createPatient = async (req, res) => {
             doctorId: req.user.id   //userId của doctor
         });
 
-        res.status(201).json({
+        return res.status(201).json({
             status: "success",
             message: "Patient created successfully.",
             patient: newPatient
         });
-    } catch (error) {
-        console.error('Create patient error:', error);
-        res.status(500).json({
+    } catch (err) {
+        console.error('Create patient error:', err);
+        return res.status(500).json({
             status: "error",
             message: "Unexpected error occurred."
         });
@@ -183,7 +212,7 @@ exports.getPatients = async (req, res) => {
 
         const total_pages = Math.ceil(total / limitInt) || 1;
 
-        res.status(200).json({
+        return res.status(200).json({
             status: "success",
             message: "Patients retrieved successfully.",
             data: {
@@ -194,9 +223,9 @@ exports.getPatients = async (req, res) => {
                 patients
             }
         });
-    } catch (error) {
-        console.error('Get patients error:', error);
-        res.status(500).json({
+    } catch (err) {
+        console.error('Get patients error:', err);
+        return res.status(500).json({
             status: "error",
             message: "Unexpected error occurred."
         });
@@ -223,14 +252,14 @@ exports.getPatientDetail = async (req, res) => {
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status: "success",
             message: "Patient retrieved successfully.",
             patient: patient
         });
-    } catch (error) {
-        console.error('Get patient detail error:', error);
-        res.status(500).json({
+    } catch (err) {
+        console.error('Get patient detail error:', err);
+        return res.status(500).json({
             status: "error",
             message: "Unexpected error occurred."
         });
@@ -282,14 +311,14 @@ exports.updatePatient = async (req, res) => {
             { new: true, runValidators: true }
         );
 
-        res.status(200).json({
+        return res.status(200).json({
             status: "success",
             message: "Patient information updated successfully.",
             patient: result
         });
-    } catch (error) {
-        console.error('Update patient error:', error);
-        res.status(500).json({
+    } catch (err) {
+        console.error('Update patient error:', err);
+        return res.status(500).json({
             status: "error",
             message: "Unexpected error occurred."
         });
@@ -361,14 +390,14 @@ exports.getHealthInfo = async (req, res) => {
             alarm_status: healthInfo.alarm || null,
         };
 
-        res.status(200).json({
+        return res.status(200).json({
             status: "success",
             patient_id: patient._id,
             health_info: payload
         });
-    } catch (error) {
-        console.error('Get patient health error:', error);
-        res.status(500).json({
+    } catch (err) {
+        console.error('Get patient health error:', err);
+        return res.status(500).json({
             status: "error",
             message: "Unexpected error occurred."
         });
@@ -410,14 +439,14 @@ exports.deletePatient = async (req, res) => {
         await Patient.deleteOne({ _id: patient._id });
         await Device.deleteOne({ deviceId: patient.deviceId });
 
-        res.status(200).json({
+        return res.status(200).json({
             status: "success",
             message: "Patient deleted successfully.",
             deleted_patient_id: patient._id
         });
-    } catch (error) {
-        console.error('Delete patient error:', error);
-        res.status(500).json({
+    } catch (err) {
+        console.error('Delete patient error:', err);
+        return res.status(500).json({
             status: "error",
             message: "Unexpected error occurred."
         });
@@ -462,7 +491,7 @@ exports.allocateDevice = async(req, res) => {
         const deviceId = await findAndCacheDeviceID(patient, token);
         if(!deviceId){
             console.log("Patient is not allocated device");
-            return res.status(200).json({
+            return res.status(400).json({
                 status: "error",
                 message: "Patient is not allocated device"
             })
@@ -525,7 +554,7 @@ exports.recallDevice = async(req, res) => {
 
         await Device.deleteOne({ deviceId:  patient.deviceId});
 
-        res.status(200).json({
+        return res.status(200).json({
             status: "success",
             message: "Device recalled successfully.",
             device_id: patient.deviceId

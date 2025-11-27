@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const { sanitizeInput } = require('../utils/validator');
 const Doctor = require('../models/doctor.model');
 const User = require('../models/user.model');
@@ -25,9 +26,12 @@ exports.createDoctor = async (req, res) => {
 			});
 		}
 
+		const salt = await bcrypt.genSalt(10);
+		const pashedPassword = await bcrypt.hash(doctorData.phone, salt);
+
 		const user = await User.create({
 			username: doctorData.cccd,
-			password: doctorData.phone,
+			password: pashedPassword,
 			role: "doctor",
 		});
 
@@ -36,14 +40,14 @@ exports.createDoctor = async (req, res) => {
 			userId: user._id
 		});
 
-		res.status(201).json({
+		return res.status(201).json({
 			status: "success",
 			message: "Doctor created successfully.",
 			doctor: doctor
 		});
-	} catch (error) {
-		console.error('Create doctor error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Create doctor error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
@@ -78,7 +82,7 @@ exports.getDoctors = async (req, res) => {
 
 		const total_pages = Math.ceil(total / limitInt) || 1;
 
-		res.status(200).json({
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor retrieved successfully.",
 			data: {
@@ -89,9 +93,9 @@ exports.getDoctors = async (req, res) => {
 				doctors
 			}
 		});
-	} catch (error) {
-		console.error('Get doctors error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Get doctors error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
@@ -110,14 +114,14 @@ exports.getDoctorDetail = async (req, res) => {
 			});
 		}
 
-		res.status(200).json({
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor retrieved successfully.",
 			doctor
 		});
-	} catch (error) {
-		console.error('Get doctor detail error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Get doctor detail error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
@@ -158,14 +162,14 @@ exports.updateDoctor = async (req, res) => {
 			{ new: true, runValidators: true }
 		);
 
-		res.status(200).json({
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor information updated successfully.",
 			doctor: result
 		});
-	} catch (error) {
-		console.error('Update doctor error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Update doctor error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
@@ -190,14 +194,14 @@ exports.deleteDoctor = async (req, res) => {
 		await User.deleteOne({ doctorId: doctor._id });
 		await Doctor.deleteOne({ _id: doctor._id });
 		
-		res.status(200).json({
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor deleted successfully.",
 			deleted_doctor_id: doctor._id
 		});
-	} catch (error) {
-		console.error('Delete doctor error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Delete doctor error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});

@@ -7,6 +7,14 @@ const { validateCCCD, validatePhone, validateDate } = require('../utils/validato
 
 const router = express.Router();
 
+router.get(
+    '/',
+    authenticate,
+    authorizeRoles('doctor'),
+    validateRequest,
+    patientController.getDetail
+);
+
 // 8. Create Patient API
 router.post(
     '/patients',

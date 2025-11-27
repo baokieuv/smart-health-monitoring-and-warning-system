@@ -35,4 +35,15 @@ router.post(
 	authController.logout
 );
 
+router.post(
+	'/change-password',
+	[
+		body('username').notEmpty().withMessage('Username is required'),
+		body('oldPassword').notEmpty().withMessage('Old password is required'),
+		body('newPassword').notEmpty().withMessage('New password is required')
+	],
+	validateRequest,
+	authController.changePassword	
+);
+
 module.exports = router;

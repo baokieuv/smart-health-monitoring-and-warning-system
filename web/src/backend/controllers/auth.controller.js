@@ -3,6 +3,7 @@ const tokenStore = require('../utils/token-store');
 const { generateTokens, verifyRefreshToken } = require('../utils/token');
 const User = require('../models/user.model');
 const Patient = require('../models/patient.model');
+const { sanitizeInput } = require('../utils/validator');
 
 const THINGSBOARD_URL = "http://localhost:8080";
 
@@ -108,8 +109,8 @@ exports.login = async (req, res) => {
 				refresh_token_expires_at: tokens.refreshTokenExpiresAt
 			}
 		});
-	} catch (error) {
-		console.error('Login error:', error);
+	} catch (err) {
+		console.error('Login error:', err);
 		return res.status(500).json({
 			status: 'error',
 			message: 'Unexpected error occurred.'
@@ -162,9 +163,9 @@ exports.refreshToken = async (req, res) => {
 				refresh_token_expires_at: tokens.refreshTokenExpiresAt
 			}
 		});
-	} catch (error) {
-		console.error('Refresh token error:', error);
-		const status = error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError' ? 401 : 500;
+	} catch (err) {
+		console.error('Refresh token error:', err);
+		const status = err.name === 'TokenExpiredError' || err.name === 'JsonWebTokenError' ? 401 : 500;
 		return res.status(status).json({
 			status: 'error',
 			message: status === 401 ? 'Refresh token is invalid or expired.' : 'Unexpected error occurred.'
@@ -193,11 +194,60 @@ exports.logout = (req, res) => {
 			status: 'success',
 			message: 'Logged out successfully.'
 		});
-	} catch (error) {
-		console.error('Logout error:', error);
+	} catch (err) {
+		console.error('Logout error:', err);
 		return res.status(500).json({
 			status: 'error',
 			message: 'Unexpected error occurred.'
 		});
 	}
 };
+
+exports.changePassword = async (req, res) => {
+	try{
+		const userData = {
+			username: sanitizeInput(req.body.username),
+			oldPassword: sanitizeInput(req.body.oldPassword),
+			newPassword: sanitizeInput(req.body.newPassword)
+		}
+
+		const user = await User.findOne({username: userData.username});
+
+		if(!user){
+			return res.status(404).json({
+				status: 'error',
+				message: 'User not found'
+			});
+		}
+
+		if(user.password !== userData.oldPassword){
+			return res.status(400).json({
+				status: 'error',
+				message: 'Invalid credentials.'
+			});
+		}
+
+		user.password = userData.newPassword;
+
+		await User.updateOne(
+			{_id: user._id},
+			{ $set: { password: userData.newPassword } }
+		);
+
+		return res.status(200).json({
+			status: 'success',
+			message: 'Password updated successfully.',
+			data: {
+				id: user._id,
+				username: user.username
+			}
+		})
+
+	}catch(err){
+		console.error('Logout error:', err);
+		return res.status(500).json({
+			status: 'error',
+			message: 'Unexpected error occurred.'
+		});
+	}
+}
