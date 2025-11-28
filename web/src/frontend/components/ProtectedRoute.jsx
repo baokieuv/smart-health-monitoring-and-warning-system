@@ -4,7 +4,7 @@ import routers from '../utils/routers'
 
 /**
  * ProtectedRoute - Bảo vệ routes theo role
- * @param {string} requiredRole - Role cần thiết để truy cập ('admin' hoặc 'user')
+ * @param {string} requiredRole - Role cần thiết để truy cập ('admin' hoặc 'doctor')
  */
 export default function ProtectedRoute({ requiredRole }) {
   const token = getToken()
@@ -15,15 +15,15 @@ export default function ProtectedRoute({ requiredRole }) {
     return <Navigate to={routers.Login} replace />
   }
 
-  // Đã đăng nhập nhưng không đúng role
+  // Kiểm tra role
   if (requiredRole && userRole !== requiredRole) {
-    // Admin cố vào route user -> redirect về admin
+    // Admin cố vào route doctor -> redirect về admin
     if (userRole === 'admin') {
       return <Navigate to={routers.AdminInfo} replace />
     }
-    // User cố vào route admin -> redirect về user
-    if (userRole === 'user') {
-      return <Navigate to={routers.Patient} replace />
+    // Doctor cố vào route admin -> redirect về doctor home
+    if (userRole === 'doctor') {
+      return <Navigate to={routers.Home} replace />
     }
     // Fallback: redirect về login
     return <Navigate to={routers.Login} replace />

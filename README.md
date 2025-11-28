@@ -4,11 +4,13 @@
 
 Hiện nay, việc theo dõi sức khỏe bệnh nhân chủ yếu do nhân viên y tế thực hiện **thủ công** hoặc thông qua **thiết bị cục bộ**.  
 Hạn chế:
-- Chưa có hệ thống tập trung để tự động **cảnh báo và giám sát nhiều bệnh nhân cùng lúc**  
-- **Người nhà** khó tiếp cận và theo dõi tình trạng sức khỏe bệnh nhân theo thời gian thực  
+
+- Chưa có hệ thống tập trung để tự động **cảnh báo và giám sát nhiều bệnh nhân cùng lúc**
+- **Người nhà** khó tiếp cận và theo dõi tình trạng sức khỏe bệnh nhân theo thời gian thực
 - **Phản ứng chậm** trong các tình huống khẩn cấp (ngã, tụt nhịp tim, thiếu oxy, v.v.)
 
 Vì vậy, cần xây dựng một **hệ thống giám sát sức khỏe thông minh** có khả năng:
+
 - Theo dõi liên tục
 - Cảnh báo tức thời
 - Truy cập dữ liệu từ xa
@@ -18,23 +20,27 @@ Vì vậy, cần xây dựng một **hệ thống giám sát sức khỏe thông
 ## II. Giải pháp đề xuất
 
 ### Mục tiêu chính:
-- Trang bị **thiết bị đeo IoT** cho bệnh nhân để thu thập các chỉ số: nhịp tim, SpO₂, nhiệt độ, và phát hiện ngã  
-- **Tự động cảnh báo** khi phát hiện bất thường qua hệ thống MQTT/ThingsBoard  
-- **Truyền dữ liệu theo thời gian thực** về **máy chủ trung tâm (Raspberry Pi hoặc cloud)**  
+
+- Trang bị **thiết bị đeo IoT** cho bệnh nhân để thu thập các chỉ số: nhịp tim, SpO₂, nhiệt độ, và phát hiện ngã
+- **Tự động cảnh báo** khi phát hiện bất thường qua hệ thống MQTT/ThingsBoard
+- **Truyền dữ liệu theo thời gian thực** về **máy chủ trung tâm (Raspberry Pi hoặc cloud)**
 - **Giao diện giám sát** dành cho:
-  - **Bác sĩ/y tá**: theo dõi toàn bộ bệnh nhân, nhận cảnh báo, can thiệp kịp thời  
-  - **Người nhà**: xem thông tin bệnh nhân cụ thể thông qua CCCD  
-  - **Dashboard** ThingsBoard hoặc web/app riêng  
+  - **Bác sĩ/y tá**: theo dõi toàn bộ bệnh nhân, nhận cảnh báo, can thiệp kịp thời
+  - **Người nhà**: xem thông tin bệnh nhân cụ thể thông qua CCCD
+  - **Dashboard** ThingsBoard hoặc web/app riêng
 
 ---
+
 ## III. Chi tiết hệ thống
+
 ### 1. Thiết bị cho bệnh nhân
 
-- Thu thập dữ liệu từ các cảm biến sinh học  
-- Kết nối Wi-Fi và gửi dữ liệu định kỳ qua MQTT  
+- Thu thập dữ liệu sức khỏe từ các cảm biến sinh học
+- Kết nối Wi-Fi và gửi dữ liệu định kỳ lên **ThingsBoard** qua giao thức MQTT
 - Mã nguồn được phát triển trên **ESP-IDF**
 
 **Ví dụ payload gửi lên ThingsBoard:**
+
 ```json
 {
   "cccd": "1234567890987",
@@ -62,58 +68,12 @@ Vì vậy, cần xây dựng một **hệ thống giám sát sức khỏe thông
 - Cảnh báo thời gian thực
 - Có thể tích hợp API từ ThingsBoard hoặc dùng dashboard sẵn có
 
-## IV. Hướng dẫn sử dụng hệ thống
-### 1. Thiết bị
-
-#### Cài đặt môi trường
-- Cài đặt **ESP-IDF**: [Hướng dẫn cài đặt ESP-IDF chính thức](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/)
-- Cài đặt **Python 3.8+**
-- Tạo tài khoản **ThingsBoard** và tạo **Device**: [Hướng dẫn sử dụng ThingsBoard](https://docs.google.com/document/d/1lUEHkdseESF9-TEnLqJxWDx3g02dIIZYxRGIfbPn5dw/edit?usp=sharing)
-- Lấy **Access Token** của thiết bị
-
-#### Clone dự án
+### Clone dự án
 
 ```bash
 git clone https://github.com/baokieuv/smart-health-monitoring-and-warning-system
-cd esp32
 ```
 
+## Cài đặt
 
-#### Add dependencies
-```bash
-idf.py add-dependency "espressif/onewire_bus^1.0.4"
-idf.py add-dependency "espressif/ds18b20^0.2.0"
-idf.py add-dependency "espressif/mpu6050^1.2.0"
-```
-
-#### Build và Flash lên ESP32
-```bash
-idf.py set-target esp32
-idf.py build
-idf.py -p <COM port> flash monitor
-```
-
----
-### Clone web
-
-Install dependencies
-```bash
-npm install
-```
-
-Run
-```bash
-npm start
-```
-
-Server is running at: `http://localhost:3000`
-
-### Tài khoản demo
-
-- **Admin**: 
-  - Username: `admin`
-  - Password: `1`
-  
-- **User**: 
-  - Username: `user`
-  - Password: `1`
+> Chi tiết hướng dẫn cài đặt sẽ được trình bày trong các thư mục con

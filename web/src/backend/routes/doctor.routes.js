@@ -7,9 +7,9 @@ const { validateCCCD, validatePhone, validateDate } = require('../utils/validato
 
 const router = express.Router();
 
-// 3. Create Doctor API
+// create doctor API
 router.post(
-	'/',
+	'/doctors',
 	authenticate,
 	authorizeRoles('admin'),
 	[
@@ -39,9 +39,9 @@ router.post(
 	doctorController.createDoctor
 );
 
-// 4. Get Doctor List API
+// get doctor list API
 router.get(
-	'/',
+	'/doctors',
 	authenticate,
 	authorizeRoles('admin'),
 	[
@@ -62,64 +62,78 @@ router.get(
 	doctorController.getDoctors
 );
 
-// 5. Get Doctor Detail API
+// get doctor detail API
 router.get(
-	'/:doctor_id',
+	'/doctors/:doctor_id',
 	authenticate,
 	authorizeRoles('admin'),
 	[
 		param('doctor_id')
-			.isInt({ min: 1 }).withMessage('Doctor ID must be a positive integer')
+			.isMongoId().withMessage('Invalid Doctor ID')
 	],
 	validateRequest,
 	doctorController.getDoctorDetail
 );
 
-// 6. Update Doctor API
+// update doctor API
 router.put(
-	'/:doctor_id',
+	'/doctors/:doctor_id',
 	authenticate,
 	authorizeRoles('admin'),
 	[
 		param('doctor_id')
-			.isInt({ min: 1 }).withMessage('Doctor ID must be a positive integer'),
-		body('cccd')
-			.notEmpty().withMessage('CCCD is required')
-			.custom(validateCCCD).withMessage('Invalid CCCD format'),
+			.isMongoId().withMessage('Invalid Doctor ID'),
 		body('full_name')
-			.notEmpty().withMessage('Full name is required')
+			.optional()
 			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
 		body('email')
 			.optional()
 			.isEmail().withMessage('Invalid email format'),
 		body('birthday')
-			.notEmpty().withMessage('Birthday is required')
+			.optional()
 			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
 		body('address')
-			.notEmpty().withMessage('Address is required')
+			.optional()
 			.isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
 		body('phone')
-			.notEmpty().withMessage('Phone is required')
+			.optional()
 			.custom(validatePhone).withMessage('Invalid phone format'),
 		body('specialization')
-			.notEmpty().withMessage('Specialization is required')
+			.optional()
 			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters')
 	],
 	validateRequest,
 	doctorController.updateDoctor
 );
 
-// 7. Delete Doctor API
+// delete doctor API
 router.delete(
-	'/:doctor_id',
+	'/doctors/:doctor_id',
 	authenticate,
 	authorizeRoles('admin'),
 	[
 		param('doctor_id')
-			.isInt({ min: 1 }).withMessage('Doctor ID must be a positive integer')
+			.isMongoId().withMessage('Doctor ID must be a positive integer')
 	],
 	validateRequest,
 	doctorController.deleteDoctor
+);
+
+// get devices API
+router.get(
+	'/devices',
+	authenticate,
+	authorizeRoles('admin'),
+	[
+		query('page')
+			.optional()
+			.isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+		query('limit')
+			.optional()
+			.isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
+	],
+	validateRequest,
+	doctorController.getListDevice
 );
 
 module.exports = router;

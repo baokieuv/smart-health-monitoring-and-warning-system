@@ -1,84 +1,105 @@
-const patients = require("../data/patients");
 const { sanitizeInput } = require("../utils/validator");
 const tokenStore = require("../utils/token-store");
+const Patient = require("../models/patient.model");
 
 const THINGSBOARD_URL = "http://localhost:8080";
 
-// 1) Lấy thông tin cá nhân bệnh nhân
-exports.getPatientInfo = (req, res) => {
-  try {
-    const patientId = parseInt(req.params.patient_id, 10);
+// GET /api/v1/family/info -> get current patient's details
+exports.getPatientDetail = async (req, res) => {
+	try {
+		const patient = await Patient.findOne({ userId: req.user.id });
+		if (!patient) {
+			return res.status(404).json({
+				status: "error",
+				message: "Patient not found.",
+			});
+		}
 
-    if (Number.isNaN(patientId)) {
-      return res.status(400).json({
-        status: "error",
-        message: "Invalid patient_id. It must be a number.",
-      });
-    }
-
-    const patient = patients.find((p) => p.id === patientId);
-    if (!patient) {
-      return res.status(404).json({
-        status: "error",
-        message: "Patient not found.",
-      });
-    }
-
-    const { heart_rate, temperature, ...personalInfo } = patient;
-
-    return res.status(200).json({
-      status: "success",
-      message: "Patient info retrieved successfully.",
-      data: personalInfo,
-    });
-  } catch (error) {
-    console.error("Get patient info error:", error);
-    return res.status(500).json({
-      status: "error",
-      message: "Unexpected error occurred.",
-    });
-  }
+		console.log("Patient info retrieved successfully: ", patient._id);
+		return res.status(200).json({
+			status: "success",
+			message: "Patient info retrieved successfully.",
+			patient: patient,
+		});
+	} catch (err) {
+		console.error("Get patient info error:", err);
+		return res.status(500).json({
+			status: "error",
+			message: "Unexpected error occurred.",
+		});
+	}
 };
 
-// 2) Lấy thông tin sức khỏe bệnh nhân
-// 2) Lấy thông tin sức khỏe bệnh nhân (tạm trả về dữ liệu fix)
-exports.getPatientHealth = (req, res) => {
-  try {
-    const patientId = parseInt(req.params.patient_id, 10);
+// GET /api/v1/family/health -> get current patient's health info
+exports.getPatientHealth = async (req, res) => {
+	try {
+		const patient = await Patient.findOne({ userId: req.user.id });
+		if (!patient) {
+			return res.status(404).json({
+				status: "error",
+				message: "Patient not found.",
+			});
+		}
 
-    if (Number.isNaN(patientId)) {
-      return res.status(400).json({
-        status: "error",
-        message: "Invalid patient_id. It must be a number.",
-      });
-    }
+		if (!patient.deviceId) {
+			return res.status(404).json({
+				status: "error",
+				message: "Device not found for this patient on ThingsBoard.",
+			});
+		}
 
-    const patient = patients.find((p) => p.id === patientId);
-    if (!patient) {
-      return res.status(404).json({
-        status: "error",
-        message: "Patient not found.",
-      });
-    }
+		const token = tokenStore.findThingsBoardToken(req.user.id);
+		if (!token) {
+			return res.status(503).json({
+				status: "error",
+				message: "ThingsBoard connection not available.",
+			});
+		}
 
-    // DỮ LIỆU FIX TẠM
-    const health = {
-      heart_rate: 78,
-      temperature: 37.2,
-      ts: new Date().toISOString(),
-      source: "mock",
-    };
+		// get attributes from ThingsBoard
+		const response = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${patient.deviceId}/values/timeseries?keys=heart_rate,SpO2,temperature,alarm`, {
+			method: "GET",
+			headers: {
+				"X-Authorization": `Bearer ${token}`,
+			},
+		}
+		);
 
-    return res.status(200).json({
-      status: "success",
-      message: "Patient health retrieved successfully.",
-      data: health,
-    });
-  } catch (error) {
-    console.error("Get patient health error:", error);
-    return res.status(500).json({
-      status: "error",
-      message: "Unexpected error occurred.",
-    });
-  }
+		if (!response.ok) {
+			throw new Error(`ThingsBoard telemetry fetch failed: ${response.status}`);
+		}
+
+		const telemetryData = await response.json();
+
+		const healthInfo = Object.fromEntries(
+			Object.entries(telemetryData).map(([key, values]) => {
+				const latest =
+					Array.isArray(values) && values.length > 0
+						? values[values.length - 1].value
+						: null;
+				return [key, latest];
+			})
+		);
+
+		const payload = {
+			heart_rate: healthInfo.heart_rate ? parseFloat(healthInfo.heart_rate) : null,
+			SpO2: healthInfo.SpO2 ? parseFloat(healthInfo.SpO2) : null,
+			temperature: healthInfo.temperature ? parseFloat(healthInfo.temperature) : null,
+			last_measurement: new Date().toISOString(),
+			alarm_status: healthInfo.alarm || null,
+		};
+
+		return res.status(200).json({
+			status: "success",
+			message: "Patient health info retrieved successfully.",
+			patient_id: patient._id,
+			health_info: payload,
+		});
+	} catch (err) {
+		console.error("Get patient health error:", err);
+		return res.status(500).json({
+			status: "error",
+			message: "Unexpected error occurred.",
+		});
+	}
 };

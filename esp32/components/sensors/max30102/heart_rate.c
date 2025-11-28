@@ -1,6 +1,6 @@
 #include "heart_rate.h"
 #include "config.h"
-#include "sensors/max30102/max30102_api.h"
+#include "max30102_api.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"

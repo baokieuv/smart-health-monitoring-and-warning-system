@@ -1,4 +1,4 @@
-#include "wifi/wifi_manager.h"
+#include "wifi_manager.h"
 #include "config.h"
 #include "esp_wifi.h"
 #include "esp_netif.h"

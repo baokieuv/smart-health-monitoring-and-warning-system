@@ -1,141 +1,24 @@
-const doctors = require('../data/doctors');
+const bcrypt = require('bcryptjs');
 const { sanitizeInput } = require('../utils/validator');
-const tokenStore = require('../utils/token-store');
+const Doctor = require('../models/doctor.model');
+const User = require('../models/user.model');
+const Device = require('../models/device.model');
 
-const THINGSBOARD_URL = "http://localhost:8080";
-const ADMIN_ID = 'admin';
-
-async function createTenantAccount(userId, email, name, phone, systoken){
-	try{
-
-	    const tenantRes = await fetch(`${THINGSBOARD_URL}/api/tenant`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Authorization": `Bearer ${systoken}`
-            },
-            body: JSON.stringify({
-                title: `doctor${userId}`
-            })
-        });
-        if (!tenantRes.ok) {
-            const err = await tenantRes.text();
-            throw new Error(`Failed to create tenant: ${tenantRes.status} - ${err}`);
-        }
-		const tenant = await tenantRes.json();
-
-		const payload = {
-			authority: 'TENANT_ADMIN',
-			tenantId: { 
-				id: tenant.id.id,
-				entityType: 'TENANT'
-			},
-			email: email + "@thingsboard.local",
-			firstName: name,
-			phone: phone,
-		};
-
-		const res = await fetch(`${THINGSBOARD_URL}/api/user?sendActivationMail=false`, {
-			method: "POST",
-			body: JSON.stringify(payload),
-			headers: {
-				"Content-Type": "application/json",
-				"X-Authorization": `Bearer ${systoken}`
-			}
-		});
-
-		if(!res.ok){
-			const errorText = await res.text();
-			throw new Error(`ThingsBoard API error: ${res.status} - ${errorText}`);
-		}
-
-		const data = await res.json();
-		console.log('Tenant Admin created successfully:', data);
-
-		const doctorIndex = doctors.findIndex(doc => doc.id == userId);
-		console.log(doctorIndex);
-		doctors[doctorIndex] = {
-			...doctors[doctorIndex],
-			tenantid: data.id.id
-		}
-
-		console.log(doctors[doctorIndex])
-		const tokenRes = await fetch(`${THINGSBOARD_URL}/api/user/${data.id.id}/activationLink`, {
-            method: "GET",
-            headers: {
-                "X-Authorization": `Bearer ${systoken}`
-            }
-        });
-
-		if (!tokenRes.ok) {
-            const err = await tokenRes.text();
-            throw new Error(`Failed to get activation token: ${tokenRes.status} - ${err}`);
-        }
-
-		const activationLink = await tokenRes.text();
-        const activationToken = new URL(activationLink).searchParams.get('activateToken');
-
-		console.log(activationLink);
-		console.log(activationToken);
-		const activateRes = await fetch(`${THINGSBOARD_URL}/api/noauth/activate?sendActivationMail=false`, {
-            method: "POST",
-			headers: {
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify({
-				activateToken: activationToken,
-				password: phone
-			})
-        });
-
-        if (!activateRes.ok) {
-            const err = await activateRes.text();
-            throw new Error(`Failed to activate user: ${activateRes.status} - ${err}`);
-        }
-
-		return data;
-	}catch(err){
-		console.error('Failed to create tenant admin:', err.response?.data || err.message);
-		throw err;
-	}
-}
-
-async function deleteTenantAccount(userId, systoken){
-	try{
-		const res = await fetch(`${THINGSBOARD_URL}/api/user/${userId}`, {
-			method: "DELETE",
-			headers:{
-				"X-Authorization": `Bearer ${systoken}`
-			}
-		});
-
-		if (!res.ok) {
-			const errorText = await res.text();
-			throw new Error(`ThingsBoard API error: ${res.status} - ${errorText}`);
-		}
-
-		console.log(`Tenant account ${userId} deleted successfully`);
-		return true;
-	}catch(err){
-		throw err;
-	}
-}
-
-// 3. Create Doctor API
+// POST /api/v1/admin/doctors -> create a new doctor
 exports.createDoctor = async (req, res) => {
 	try {
 		const doctorData = {
 			cccd: sanitizeInput(req.body.cccd),
 			full_name: sanitizeInput(req.body.full_name),
 			email: sanitizeInput(req.body.email),
-			password: sanitizeInput(req.body.phone),
 			birthday: req.body.birthday,
 			address: sanitizeInput(req.body.address),
 			phone: sanitizeInput(req.body.phone),
 			specialization: sanitizeInput(req.body.specialization)
 		};
 
-		const duplicateDoctor = doctors.find(doctor => doctor.cccd === doctorData.cccd);
+		const duplicateDoctor = await Doctor.findOne({cccd: doctorData.cccd});
+
 		if (duplicateDoctor) {
 			return res.status(409).json({
 				status: "error",
@@ -143,72 +26,65 @@ exports.createDoctor = async (req, res) => {
 			});
 		}
 
-		const newId = doctors.length > 0 ? Math.max(...doctors.map(doc => doc.id)) + 1 : 1;
-		const newDoctor = { id: newId, ...doctorData };
+		const salt = await bcrypt.genSalt(10);
+		const pashedPassword = await bcrypt.hash(doctorData.phone, salt);
 
-		doctors.push(newDoctor);
+		const user = await User.create({
+			username: doctorData.cccd,
+			password: pashedPassword,
+			role: "doctor",
+		});
 
-		//create a new tenant account on thingsboard
-		const systoken = tokenStore.findThingsBoardToken(ADMIN_ID);
+		const doctor = await Doctor.create({
+			...doctorData,
+			userId: user._id
+		});
 
-		if(systoken){
-			try{
-				await createTenantAccount(newId.toString(),
-					doctorData.cccd,
-					doctorData.full_name,
-					doctorData.phone,
-					systoken
-				);
-			}catch(err){
-				console.error('ThingsBoard tenant creation failed:', err.message);
-			}
-		}
-
-		const { password, ...doctorResponse } = newDoctor;
-
-		res.status(201).json({
+		console.log("Doctor created successfully: ", doctor._id);
+		return res.status(201).json({
 			status: "success",
 			message: "Doctor created successfully.",
-			doctor: doctorResponse
+			doctor: doctor
 		});
-	} catch (error) {
-		console.error('Create doctor error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Create doctor error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
 	}
 };
 
-// 4. Get Doctor List API
-exports.getDoctors = (req, res) => {
+// GET /api/v1/admin/doctors -> get list doctors
+exports.getDoctors = async (req, res) => {
 	try {
 		const { page = 1, limit = 10, search = '', specialization = '' } = req.query;
-
-		let filteredDoctors = [...doctors];
+		let query = {};
 
 		if (search) {
-			const searchLower = sanitizeInput(search).toLowerCase();
-			filteredDoctors = filteredDoctors.filter(doctor =>
-				doctor.full_name.toLowerCase().includes(searchLower)
-			);
+			const searchRegex = new RegExp(sanitizeInput(search), 'i');
+			query.full_name = searchRegex;
 		}
 
 		if (specialization) {
-			const specialLower = sanitizeInput(specialization).toLowerCase();
-			filteredDoctors = filteredDoctors.filter(doctor =>
-				doctor.specialization.toLowerCase().includes(specialLower)
-			);
+			const searchRegex = new RegExp(sanitizeInput(specialization), 'i');
+			query.specialization = searchRegex;
 		}
 
 		const pageInt = parseInt(page);
 		const limitInt = parseInt(limit);
-		const total = filteredDoctors.length;
-		const total_pages = Math.ceil(total / limitInt) || 1;
-		const startIndex = (pageInt - 1) * limitInt;
-		const paginatedDoctors = filteredDoctors.slice(startIndex, startIndex + limitInt);
+		const skip = (pageInt - 1) * limitInt;
 
-		res.status(200).json({
+		const total = await Doctor.countDocuments(query);
+		const doctors = await Doctor.find(query)
+            .skip(skip)
+            .limit(limitInt)
+            .lean();
+
+		const total_pages = Math.ceil(total / limitInt) || 1;
+
+		console.log("Doctor retrieved successfully");
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor retrieved successfully.",
 			data: {
@@ -216,23 +92,22 @@ exports.getDoctors = (req, res) => {
 				page: pageInt,
 				limit: limitInt,
 				total_pages,
-				doctors: paginatedDoctors
+				doctors
 			}
 		});
-	} catch (error) {
-		console.error('Get doctors error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Get doctors error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
 	}
 };
 
-// 5. Get Doctor Detail API
-exports.getDoctorDetail = (req, res) => {
+// GET /api/v1/admin/doctors/{doctor_id} -> get doctor's details
+exports.getDoctorDetail = async (req, res) => {
 	try {
-		const doctorId = parseInt(req.params.doctor_id);
-		const doctor = doctors.find(doc => doc.id === doctorId);
+		const doctor = await Doctor.findById(req.params.doctor_id);
 
 		if (!doctor) {
 			return res.status(404).json({
@@ -241,123 +116,156 @@ exports.getDoctorDetail = (req, res) => {
 			});
 		}
 
-		res.status(200).json({
+		console.log("Doctor retrieved successfully: ", doctor._id);
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor retrieved successfully.",
 			doctor
 		});
-	} catch (error) {
-		console.error('Get doctor detail error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Get doctor detail error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
 	}
 };
 
-// 6. Update Doctor API
-exports.updateDoctor = (req, res) => {
+// PUT /api/v1/admin/doctors/{doctor_id} -> update doctor's detail
+exports.updateDoctor = async (req, res) => {
 	try {
-		const doctorId = parseInt(req.params.doctor_id);
-		const doctorIndex = doctors.findIndex(doc => doc.id === doctorId);
+		const doctor = await Doctor.findById(req.params.doctor_id);
 
-		if (doctorIndex === -1) {
+		if(!doctor){
 			return res.status(404).json({
 				status: "error",
 				message: "Doctor not found."
 			});
 		}
 
-		const updateFields = ['cccd', 'full_name', 'birthday', 'address', 'phone', 'specialization'];
+		const updateFields = ['full_name', 'email', 'birthday', 'address', 'phone', 'specialization'];
 		const updateData = {};
 
 		updateFields.forEach(field => {
 			if (req.body[field] !== undefined) {
-				updateData[field] = sanitizeInput(req.body[field]);
+				updateData[field] = field === 'birthday' ? req.body[field] : sanitizeInput(req.body[field]);
 			}
 		});
 
-		if (Object.keys(updateData).length === 0) {
-			return res.status(400).json({
-				status: "error",
-				message: "Invalid field values."
-			});
-		}
+		const result = await Doctor.findByIdAndUpdate(
+			doctor._id,
+			{ $set: updateData },
+			{ new: true, runValidators: true }
+		);
 
-		if (updateData.cccd && updateData.cccd !== doctors[doctorIndex].cccd) {
-			const duplicateCCCD = doctors.find(doc => doc.cccd === updateData.cccd);
-			if (duplicateCCCD) {
-				return res.status(400).json({
-					status: "error",
-					message: "Invalid field values."
-				});
-			}
-		}
-
-		if (updateData.phone && updateData.phone !== doctors[doctorIndex].phone) {
-			const duplicatePhone = doctors.find(doc => doc.phone === updateData.phone);
-			if (duplicatePhone) {
-				return res.status(400).json({
-					status: "error",
-					message: "Invalid field values."
-				});
-			}
-		}
-
-		doctors[doctorIndex] = {
-			...doctors[doctorIndex],
-			...updateData
-		};
-
-		res.status(200).json({
+		console.log("Doctor information updated successfully: ", doctor._id);
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor information updated successfully.",
-			doctor: doctors[doctorIndex]
+			doctor: result
 		});
-	} catch (error) {
-		console.error('Update doctor error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Update doctor error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
 	}
 };
 
-// 7. Delete Doctor API
+// DELETE /api/v1/admin/doctors/{doctor_id} -> delete a doctor
 exports.deleteDoctor = async (req, res) => {
 	try {
-		const doctorId = parseInt(req.params.doctor_id);
-		const doctorIndex = doctors.findIndex(doc => doc.id === doctorId);
+		const doctor = await Doctor.findById(req.params.doctor_id);
 
-		if (doctorIndex === -1) {
+		if (!doctor) {
 			return res.status(404).json({
 				status: "error",
 				message: "Doctor not found."
 			});
 		}
 
-		//Delete tenant account on thingsboard
-		const systoken = tokenStore.findThingsBoardToken(ADMIN_ID);
-		if(systoken){
-			try{
-				await deleteTenantAccount(doctors[doctorIndex].tenantid, systoken);
-			}catch(err){
-				console.error('ThingsBoard tenant deletion failed:', err.message);
-			}
-		}
+		// Xóa danh sách device của doctor
+		await Device.deleteMany({ doctorId: doctor._id });
 
-		doctors.splice(doctorIndex, 1);
+		await User.deleteOne({ doctorId: doctor._id });
+		await Doctor.deleteOne({ _id: doctor._id });
 		
-		res.status(200).json({
+		console.log("Doctor deleted successfully: ", doctor._id);
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor deleted successfully.",
-			deleted_doctor_id: doctorId
+			deleted_doctor_id: doctor._id
 		});
-	} catch (error) {
-		console.error('Delete doctor error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Delete doctor error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
 	}
 };
+
+// GET /api/v1/admin/devices -> get list devices
+exports.getListDevice = async (req, res) => {
+	try{
+		const { page = 1, limit = 10 } = req.query;
+
+		const pageInt = parseInt(page);
+		const limitInt = parseInt(limit);
+		const skip = (pageInt - 1) * limitInt;
+
+		const total = await Device.countDocuments();
+		const total_pages = Math.ceil(total / limitInt) || 1;
+
+		const devices = await Device.find()
+			.populate({
+				path: 'doctorId',
+				select: '_id full_name cccd phone specialization'
+			})
+			.populate({
+				path: 'patientId',
+				select: '_id full_name cccd phone room'
+			})
+			.skip(skip).limit(limitInt).lean();
+
+		const formattedDevices = devices.map(device => ({
+			device_id: device._id,
+			device_name: device.name,
+			thingsboard_device_id: device.deviceId,
+			doctor: device.doctorId  ? {
+				id: device.doctorId._id,
+				name: device.doctorId.full_name,
+				cccd: device.doctorId.cccd,
+				phone: device.doctorId.phone,
+				specialization: device.doctorId.specialization
+			} : null,
+			patient: device.patientId ? {
+				id: device.patientId._id,
+				name: device.patientId.full_name,
+				cccd: device.patientId.cccd,
+				phone: device.patientId.phone,
+				room: device.patientId.room
+			} : null,
+		}));
+
+		console.log("Devices retrieved successfully");
+		return res.status(200).json({
+				status: "success",
+				message: "Devices retrieved successfully.",
+				data: {
+					total,
+					page: pageInt,
+					limit: limitInt,
+					total_pages,
+					devices: formattedDevices
+				}
+			});
+	}catch(err){
+		console.error('Get list device error:', err);
+		return res.status(500).json({
+				status: "error",
+				message: "Unexpected error occurred."
+			});
+	}
+}

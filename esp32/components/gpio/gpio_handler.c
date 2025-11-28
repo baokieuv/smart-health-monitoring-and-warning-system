@@ -1,4 +1,4 @@
-#include "gpio/gpio_handler.h"
+#include "gpio_handler.h"
 #include "config.h"
 #include "driver/gpio.h"
 #include "esp_log.h"

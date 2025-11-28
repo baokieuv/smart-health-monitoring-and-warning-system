@@ -1,39 +1,42 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
+import { getDoctorProfile, updateDoctorProfile} from '../../utils/api'
 import './profilePage.scss'
 
 const ProfilePage = () => {
-  // const navigate = useNavigate()
-  const { userId } = useParams() // Lấy userId từ URL
+  const { userId } = useParams()
   const [isEditing, setIsEditing] = useState(false)
   const [doctor, setDoctor] = useState(null)
   const [formData, setFormData] = useState({})
   const [showPasswordChange, setShowPasswordChange] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
+    current_password: '',
+    new_password: '',
     confirmPassword: ''
   })
 
   useEffect(() => {
-    // TODO: Fetch doctor data by userId from API
-    // Temporary mock data
-    const mockDoctor = {
-      id: userId,
-      name: 'BS. Nguyễn Văn Minh',
-      dateOfBirth: '1985-05-15',
-      address: 'Số 123, Đường ABC, Quận XYZ',
-      department: 'Khoa Nội',
-      position: 'Bác sĩ',
-      education: 'Bác sĩ Nội khoa - Đại học Y Hà Nội',
-      phone: '0912345678',
-      email: 'nguyenvanminh@hospital.com',
-      joinDate: '2010-08-01',
-      specialization: 'Tim mạch',
-      experience: '15 năm'
+    const fetchDoctorProfile = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        // First, get doctor by userId to find the doctor_id
+        const response = await getDoctorProfile(userId)
+        setDoctor(response.doctor)
+        setFormData(response.doctor)
+      } catch (err) {
+        console.error('Error fetching doctor profile:', err)
+        setError('Không thể tải thông tin profile. Vui lòng thử lại.')
+      } finally {
+        setLoading(false)
+      }
     }
-    setDoctor(mockDoctor)
-    setFormData(mockDoctor)
+    
+    if (userId) {
+      fetchDoctorProfile()
+    }
   }, [userId])
 
   const handleInputChange = (e) => {
@@ -52,30 +55,57 @@ const ProfilePage = () => {
     }))
   }
 
-  const handleSave = () => {
-    // TODO: Call API to update doctor info
-    console.log('Saving doctor info:', formData)
-    setDoctor(formData)
-    setIsEditing(false)
-    alert('Cập nhật thông tin thành công!')
+  const handleSave = async () => {
+    try {
+      // Prepare update payload with only changed fields
+      const updatePayload = {}
+      const fieldsToCheck = ['full_name', 'email', 'birthday', 'address', 'phone', 'specialization']
+      
+      fieldsToCheck.forEach(field => {
+        if (formData[field] !== doctor[field]) {
+          updatePayload[field] = formData[field]
+        }
+      })
+      
+      if (Object.keys(updatePayload).length === 0) {
+        alert('Không có thay đổi nào để lưu.')
+        setIsEditing(false)
+        return
+      }
+      
+      // Use doctor._id (doctor_id) instead of userId
+      const response = await updateDoctorProfile(doctor._id, updatePayload)
+      setDoctor(response.doctor)
+      setFormData(response.doctor)
+      setIsEditing(false)
+      alert('Cập nhật thông tin thành công!')
+    } catch (err) {
+      console.error('Error updating profile:', err)
+      alert('Lỗi khi cập nhật thông tin. Vui lòng thử lại.')
+    }
   }
 
   const handlePasswordUpdate = () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
+    if (passwordData.new_password !== passwordData.confirmPassword) {
       alert('Mật khẩu mới không khớp!')
       return
     }
-    if (passwordData.newPassword.length < 6) {
+    if (passwordData.new_password.length < 6) {
       alert('Mật khẩu phải có ít nhất 6 ký tự!')
       return
     }
-    // TODO: Call API to change password
-    console.log('Changing password')
-    alert('Đổi mật khẩu thành công!')
+    
+    // TODO: Implement change password API later
+    console.log('Change password will be implemented later', {
+      doctorId: doctor._id,
+      current_password: passwordData.current_password,
+      new_password: passwordData.new_password
+    })
+    alert('Chức năng đổi mật khẩu sẽ được cập nhật sau!')
     setShowPasswordChange(false)
     setPasswordData({
-      currentPassword: '',
-      newPassword: '',
+      current_password: '',
+      new_password: '',
       confirmPassword: ''
     })
   }
@@ -85,8 +115,16 @@ const ProfilePage = () => {
     setIsEditing(false)
   }
 
-  if (!doctor) {
+  if (loading) {
     return <div className="loading">Đang tải thông tin...</div>
+  }
+
+  if (error) {
+    return <div className="error-message">{error}</div>
+  }
+
+  if (!doctor) {
+    return <div className="loading">Không tìm thấy thông tin doctor.</div>
   }
 
   return (
@@ -117,16 +155,20 @@ const ProfilePage = () => {
           <h3>📋 Personal Information</h3>
           <div className="info-grid">
             <div className="info-item">
+              <label>CCCD:</label>
+              <span>{doctor.cccd}</span>
+            </div>
+            <div className="info-item">
               <label>Full Name:</label>
               {isEditing ? (
                 <input
                   type="text"
-                  name="name"
-                  value={formData.name}
+                  name="full_name"
+                  value={formData.full_name || ''}
                   onChange={handleInputChange}
                 />
               ) : (
-                <span>{doctor.name}</span>
+                <span>{doctor.full_name}</span>
               )}
             </div>
             <div className="info-item">
@@ -134,25 +176,12 @@ const ProfilePage = () => {
               {isEditing ? (
                 <input
                   type="date"
-                  name="dateOfBirth"
-                  value={formData.dateOfBirth}
+                  name="birthday"
+                  value={formData.birthday ? formData.birthday.split('T')[0] : ''}
                   onChange={handleInputChange}
                 />
               ) : (
-                <span>{new Date(doctor.dateOfBirth).toLocaleDateString('vi-VN')}</span>
-              )}
-            </div>
-            <div className="info-item">
-              <label>Address:</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                />
-              ) : (
-                <span>{doctor.address}</span>
+                <span>{doctor.birthday ? new Date(doctor.birthday).toLocaleDateString('vi-VN') : 'N/A'}</span>
               )}
             </div>
             <div className="info-item">
@@ -161,7 +190,7 @@ const ProfilePage = () => {
                 <input
                   type="tel"
                   name="phone"
-                  value={formData.phone}
+                  value={formData.phone || ''}
                   onChange={handleInputChange}
                 />
               ) : (
@@ -174,11 +203,24 @@ const ProfilePage = () => {
                 <input
                   type="email"
                   name="email"
-                  value={formData.email}
+                  value={formData.email || ''}
                   onChange={handleInputChange}
                 />
               ) : (
                 <span>{doctor.email}</span>
+              )}
+            </div>
+            <div className="info-item">
+              <label>Address:</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address || ''}
+                  onChange={handleInputChange}
+                />
+              ) : (
+                <span>{doctor.address || 'N/A'}</span>
               )}
             </div>
           </div>
@@ -189,91 +231,16 @@ const ProfilePage = () => {
           <h3>🏥 Work Information</h3>
           <div className="info-grid">
             <div className="info-item">
-              <label>Department:</label>
-              {isEditing ? (
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleInputChange}
-                >
-                  <option value="Khoa Nội">Khoa Nội</option>
-                  <option value="Khoa Ngoại">Khoa Ngoại</option>
-                  <option value="Khoa Nhi">Khoa Nhi</option>
-                  <option value="Khoa Sản">Khoa Sản</option>
-                  <option value="Khoa Chấn thương">Khoa Chấn thương</option>
-                  <option value="Khoa Tim mạch">Khoa Tim mạch</option>
-                </select>
-              ) : (
-                <span>{doctor.department}</span>
-              )}
-            </div>
-            <div className="info-item">
               <label>Specialization:</label>
               {isEditing ? (
                 <input
                   type="text"
                   name="specialization"
-                  value={formData.specialization}
+                  value={formData.specialization || ''}
                   onChange={handleInputChange}
                 />
               ) : (
                 <span>{doctor.specialization}</span>
-              )}
-            </div>
-            <div className="info-item">
-              <label>Position:</label>
-              {isEditing ? (
-                <select
-                  name="position"
-                  value={formData.position}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Chọn vị trí</option>
-                  <option value="Bác sĩ">Bác sĩ</option>
-                  <option value="Trưởng khoa">Trưởng khoa</option>
-                  <option value="Điều dưỡng">Điều dưỡng</option>
-                </select>
-              ) : (
-                <span>{doctor.position}</span>
-              )}
-            </div>
-            <div className="info-item">
-              <label>Education:</label>
-              {isEditing ? (
-                <textarea
-                  name="education"
-                  value={formData.education}
-                  onChange={handleInputChange}
-                  rows="2"
-                />
-              ) : (
-                <span>{doctor.education}</span>
-              )}
-            </div>
-            <div className="info-item">
-              <label>Experience:</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="experience"
-                  value={formData.experience}
-                  onChange={handleInputChange}
-                />
-              ) : (
-                <span>{doctor.experience}</span>
-              )}
-            </div>
-            <div className="info-item">
-              <label>Starting Date:</label>
-              {isEditing ? (
-                <input
-                  type="date"
-                  name="joinDate"
-                  value={formData.joinDate}
-                  onChange={handleInputChange}
-                />
-              ) : (
-                <span>{new Date(doctor.joinDate).toLocaleDateString('vi-VN')}</span>
               )}
             </div>
           </div>
@@ -295,8 +262,8 @@ const ProfilePage = () => {
                 <label>Current Password:</label>
                 <input
                   type="password"
-                  name="currentPassword"
-                  value={passwordData.currentPassword}
+                  name="current_password"
+                  value={passwordData.current_password}
                   onChange={handlePasswordChange}
                   placeholder="Nhập mật khẩu hiện tại"
                 />
@@ -305,8 +272,8 @@ const ProfilePage = () => {
                 <label>New Password:</label>
                 <input
                   type="password"
-                  name="newPassword"
-                  value={passwordData.newPassword}
+                  name="new_password"
+                  value={passwordData.new_password}
                   onChange={handlePasswordChange}
                   placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
                 />
@@ -330,8 +297,8 @@ const ProfilePage = () => {
                   onClick={() => {
                     setShowPasswordChange(false)
                     setPasswordData({
-                      currentPassword: '',
-                      newPassword: '',
+                      current_password: '',
+                      new_password: '',
                       confirmPassword: ''
                     })
                   }}

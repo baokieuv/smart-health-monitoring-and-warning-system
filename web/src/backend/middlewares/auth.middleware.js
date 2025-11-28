@@ -13,7 +13,7 @@ exports.authenticate = (req, res, next) => {
         const token = authHeader.slice(7);
         const payload = verifyAccessToken(token);
         req.user = {
-            id: payload.sub,
+            id: payload.id,
             username: payload.username,
             role: payload.role
         };

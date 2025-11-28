@@ -1,4 +1,0 @@
-[wokwi]
-version = 1
-firmware = "build/iot_project.bin"
-elf = "build/iot_project.elf"

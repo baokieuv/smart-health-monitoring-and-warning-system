@@ -1,5 +1,5 @@
-#include "provisioning/provisioning.h"
-#include "storage/nvs_stoarge.h"
+#include "provisioning.h"
+#include "nvs_stoarge.h"
 #include "config.h"
 #include "esp_http_client.h"
 #include "esp_log.h"
