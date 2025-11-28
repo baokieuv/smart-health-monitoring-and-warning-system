@@ -88,6 +88,26 @@ static esp_err_t ssd1306_write_data(uint8_t *data, size_t len)
     return ret;
 }
 
+/*
+| Lệnh (Command)                         | Ý nghĩa                                                                                       |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `DISPLAY_OFF (0xAE)`                   | Tắt màn hình khi khởi tạo, tránh nháy dữ liệu rác.                                            |
+| `SET_MEMORY_ADDR_MODE (0x20)` + `0x00` | Chọn chế độ địa chỉ bộ nhớ, ở đây là **Horizontal addressing mode**, giúp ghi data theo hàng. |
+| `SET_COLUMN_RANGE (0x21)`              | Chọn cột bắt đầu và kết thúc (0-127).                                                         |
+| `SET_PAGE_RANGE (0x22)`                | Chọn page bắt đầu và kết thúc (0-7) → 8 page cho 64 pixel chiều cao.                          |
+| `A8` + `3F`                            | Set multiplex ratio = số dòng hiển thị (64).                                                  |
+| `D3 00`                                | Display offset = 0.                                                                           |
+| `A1`                                   | Segment remap (lật cột, nếu muốn hiển thị từ phải sang trái).                                 |
+| `C8`                                   | COM output scan direction (lật dòng).                                                         |
+| `DA 12`                                | COM pins hardware configuration → đúng layout cho 128x64.                                     |
+| `81 7F`                                | Set contrast.                                                                                 |
+| `A4`                                   | Display RAM content.                                                                          |
+| `A6`                                   | Normal display (không đảo màu).                                                               |
+| `D5 80`                                | Display clock divide ratio.                                                                   |
+| `8D 14`                                | Enable charge pump (cấp điện áp cho OLED).                                                    |
+| `DISPLAY_ON (0xAF)`                    | Bật màn hình sau khi cấu hình xong.                                                           |
+*/
+
 static esp_err_t ssd1306_init(void)
 {
     vTaskDelay(pdMS_TO_TICKS(100));
