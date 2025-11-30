@@ -49,25 +49,25 @@
 #define HEART_READ_DELAY_MS 2000
 #define MQTT_SEND_DELAY_MS 5000
 
-//MPU6050 Configuration
-#define I2C_PORT       I2C_NUM_0
-#define I2C_SDA        GPIO_NUM_21
-#define I2C_SCL        GPIO_NUM_22
-#define I2C_FREQ       100000
-#define MPU_ADDR       0x68
-#define MPU_PERIOD_MS  200               // chu kỳ đọc cảm biến
-#define QUEUE_LEN      16                // số phần tử tối đa trong hàng đợi
+// MPU6050 Configuration
+#define I2C_PORT I2C_NUM_0
+#define I2C_SDA GPIO_NUM_41
+#define I2C_SCL GPIO_NUM_42
+#define I2C_FREQ 100000
+#define MPU_ADDR 0x68
+#define MPU_PERIOD_MS 200 // chu kỳ đọc cảm biến
+#define QUEUE_LEN 16      // số phần tử tối đa trong hàng đợi
 
 // ==== Tham số phát hiện (tinh chỉnh theo thực nghiệm) ====
-#define FF_G_THRESH          0.35f               // ngưỡng free-fall (g)
-#define FF_MIN_TIME_MS       120                 // free-fall tối thiểu (ms)
-#define FF_MAX_TIME_MS       1000                // free-fall tối đa trước impact (ms)
-#define IMPACT_G_THRESH      1.0f                // ngưỡng va đập (g)
-#define IMPACT_TIMEOUT_MS    300                 // phải có impact sau FF trong khoảng này
-#define POST_INACT_DPS       10.0f               // gyro rất nhỏ (dps)
-#define POST_ANGLE_DEG       45.0f               // tư thế sau ngã (deg)
-#define POST_WINDOW_MS       1500                // thời gian quan sát sau impact (ms)
-#define REPORT_COOLDOWN_MS   3000                // tránh báo lặp
+#define FF_G_THRESH 0.35f       // ngưỡng free-fall (g)
+#define FF_MIN_TIME_MS 120      // free-fall tối thiểu (ms)
+#define FF_MAX_TIME_MS 1000     // free-fall tối đa trước impact (ms)
+#define IMPACT_G_THRESH 1.0f    // ngưỡng va đập (g)
+#define IMPACT_TIMEOUT_MS 300   // phải có impact sau FF trong khoảng này
+#define POST_INACT_DPS 10.0f    // gyro rất nhỏ (dps)
+#define POST_ANGLE_DEG 45.0f    // tư thế sau ngã (deg)
+#define POST_WINDOW_MS 1500     // thời gian quan sát sau impact (ms)
+#define REPORT_COOLDOWN_MS 3000 // tránh báo lặp
 
 // Event Group Bits
 #define WIFI_CONNECTED_BIT BIT0

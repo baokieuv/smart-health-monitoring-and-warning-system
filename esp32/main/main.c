@@ -11,8 +11,7 @@
 #include "freertos/task.h"
 #include <string.h>
 #include <stdio.h>
-#include "display/oled_display.h"
-
+#include <math.h>
 // Application modules
 #include "config.h"
 #include "nvs_stoarge.h"
@@ -23,6 +22,9 @@
 #include "heart_rate.h"
 #include "mpu6050_api.h"
 #include "gpio_handler.h"
+#include "oled_display.h"
+#include "u8g2.h"
+#include "u8g2_esp32_hal.h"
 
 static const char *TAG = "MAIN";
 static EventGroupHandle_t event_group = NULL;
@@ -433,37 +435,95 @@ static void handle_mpu6050_data(void *param)
     }
 }
 
+void fake_sensor_task(void *param)
+{
+    QueueHandle_t queue = (QueueHandle_t)param;
+    display_data_t fake_data;
+    int count = 0;
+
+    while (1)
+    {
+        fake_data.heart_rate = 60 + (count % 40);            // 60-100
+        fake_data.spo2 = 90 + (count % 10);                  // 90-99
+        fake_data.temperature = 36.5 + ((count % 20) * 0.1); // 36.5 - 38.5
+
+        xQueueSend(queue, &fake_data, 0);
+
+        count++;
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
 void app_main(void)
 {
-    g_mpu_queue = xQueueCreate(QUEUE_LEN, sizeof(mpu6050_data_t));
-    if (!g_mpu_queue)
-    {
-        ESP_LOGE(TAG, "xQueueCreate failed");
-        return;
-    }
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = 41,
+        .scl_io_num = 42,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 100000,
+    };
+    ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &conf));
+    ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, conf.mode, 0, 0, 0));
 
-    esp_err_t err = mpu6050_init(I2C_PORT, I2C_SDA, I2C_SCL, I2C_FREQ);
+    esp_err_t err;
 
+    // g_mpu_queue = xQueueCreate(QUEUE_LEN, sizeof(mpu6050_data_t));
+    // if (!g_mpu_queue)
+    // {
+    //     ESP_LOGE(TAG, "xQueueCreate failed");
+    //     return;
+    // }
+
+    // err = mpu6050_init(I2C_PORT);
+
+    // if (err != ESP_OK)
+    // {
+    //     ESP_LOGE(TAG, "mpu6050_init failed: %s", esp_err_to_name(err));
+    //     return;
+    // }
+    // ESP_LOGI(TAG, "MPU6050 init OK, starting task...");
+
+    // // Tạo task producer (đọc cảm biến)
+    // if (xTaskCreate(mpu6050_task, "mpu6050_task", 4096, NULL, 5, NULL) != pdPASS)
+    // {
+    //     ESP_LOGE(TAG, "xTaskCreate mpu6050_task failed");
+    //     return;
+    // }
+
+    // // Tạo task consumer (xử lý ngã)
+    // if (xTaskCreate(handle_mpu6050_data, "mpu6050_handler", 4096, NULL, 4, NULL) != pdPASS)
+    // {
+    //     ESP_LOGE(TAG, "xTaskCreate handle_mpu6050_data failed");
+    //     return;
+    // }
+
+    u8g2_esp32_hal_t u8g2_esp32_hal = U8G2_ESP32_HAL_DEFAULT;
+    u8g2_esp32_hal.bus.i2c.sda = 41;
+    u8g2_esp32_hal.bus.i2c.scl = 42;
+    u8g2_esp32_hal_init(u8g2_esp32_hal);
+
+    err = oled_display_init(u8g2_esp32_i2c_byte_cb, u8g2_esp32_gpio_and_delay_cb);
     if (err != ESP_OK)
     {
-        ESP_LOGE(TAG, "mpu6050_init failed: %s", esp_err_to_name(err));
+        ESP_LOGE(TAG, "oled_display_init failed: %s", esp_err_to_name(err));
         return;
     }
-    ESP_LOGI(TAG, "MPU6050 init OK, starting task...");
+    ESP_LOGI(TAG, "OLED display init OK");
 
-    // Tạo task producer (đọc cảm biến)
-    if (xTaskCreate(mpu6050_task, "mpu6050_task", 4096, NULL, 5, NULL) != pdPASS)
-    {
-        ESP_LOGE(TAG, "xTaskCreate mpu6050_task failed");
-        return;
-    }
+    // // Tạo task hiển thị OLED
+    // if (xTaskCreate(oled_display_task, "oled_display", 4096, NULL, 3, NULL) != pdPASS)
+    // {
+    //     ESP_LOGE(TAG, "xTaskCreate oled_display_task failed");
+    //     return;
+    // }
 
-    // Tạo task consumer (xử lý ngã)
-    if (xTaskCreate(handle_mpu6050_data, "mpu6050_handler", 4096, NULL, 4, NULL) != pdPASS)
-    {
-        ESP_LOGE(TAG, "xTaskCreate handle_mpu6050_data failed");
-        return;
-    }
+    // test
+    QueueHandle_t g_oled_queue = xQueueCreate(QUEUE_LEN, sizeof(display_data_t));
+
+    xTaskCreate(oled_display_task, "oled_display_task", 4096, (void *)g_oled_queue, 3, NULL);
+    xTaskCreate(fake_sensor_task, "fake_sensor_task", 2048, (void *)g_oled_queue, 3, NULL);
 }
 
 // void app_main(void) {

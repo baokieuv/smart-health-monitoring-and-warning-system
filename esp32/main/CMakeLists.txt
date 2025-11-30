@@ -13,7 +13,8 @@ idf_component_register(
         "../components/sensors/ds18b20/temperature.c"
         "../components/sensors/mpu6050/mpu6050_api.c"
         "../components/gpio/gpio_handler.c"
-
+        "../components/display/oled_display.c"
+        "../components/_button/button.cc"
     INCLUDE_DIRS 
         "."
         "../components/storage"
@@ -25,4 +26,6 @@ idf_component_register(
         "../components/sensors/max30102"
         "../components/sensors/mpu6050"
         "../components/gpio"
+        "../components/display"
+        "../components/_button"
 )
