@@ -7,9 +7,47 @@ const { validateCCCD, validatePhone, validateDate } = require('../utils/validato
 
 const router = express.Router();
 
-// 8. Create Patient API
+// get current doctor details API
+router.get(
+    '/info',
+    authenticate,
+    authorizeRoles('doctor'),
+    validateRequest,
+    patientController.getDetail
+);
+
+// update current doctor details API
+router.put(
+    '/info',
+    authenticate,
+    authorizeRoles('doctor'),
+    [
+		body('full_name')
+			.optional()
+			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
+		body('email')
+			.optional()
+			.isEmail().withMessage('Invalid email format'),
+		body('birthday')
+			.optional()
+			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
+		body('address')
+			.optional()
+			.isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
+		body('phone')
+			.optional()
+			.custom(validatePhone).withMessage('Invalid phone format'),
+		body('specialization')
+			.optional()
+			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters')
+	],
+    validateRequest,
+    patientController.updateDetail
+);
+
+// create a new patient API
 router.post(
-    '/',
+    '/patients',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -36,9 +74,9 @@ router.post(
     patientController.createPatient
 );
 
-// 9. Get Patient List API
+// get patient list API
 router.get(
-    '/',
+    '/patients',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -56,9 +94,9 @@ router.get(
     patientController.getPatients
 );
 
-// 10. Get Patient Detail API
+// get patient detail API
 router.get(
-    '/:patient_id',
+    '/patients/:patient_id',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -69,9 +107,9 @@ router.get(
     patientController.getPatientDetail
 );
 
-// 11. Update Patient API
+// update patient API
 router.put(
-    '/:patient_id',
+    '/patients/:patient_id',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -97,9 +135,9 @@ router.put(
     patientController.updatePatient
 );
 
-// 12. Get Patient Health Info API
+// get patient health info API
 router.get( 
-    '/:patient_id/health',
+    '/patients/:patient_id/health',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -110,9 +148,9 @@ router.get(
     patientController.getHealthInfo
 );
 
-// 13. Delete Patient API
+// delete patient API
 router.delete(
-    '/:patient_id',
+    '/patients/:patient_id',
     authenticate,
     authorizeRoles('doctor'),
     [
@@ -121,6 +159,32 @@ router.delete(
     ],
     validateRequest,
     patientController.deletePatient
+);
+
+// allocate device for patient API
+router.post(
+    '/patients/:patient_id/allocate-device',
+    authenticate,
+    authorizeRoles('doctor'),
+    [
+        param('patient_id')
+            .isMongoId().withMessage('Invalid Patient ID')
+    ],
+    validateRequest,
+    patientController.allocateDevice
+);
+
+// recall device from patient API
+router.post(
+    '/patients/:patient_id/recall-device',
+    authenticate,
+    authorizeRoles('doctor'),
+    [
+        param('patient_id')
+            .isMongoId().withMessage('Invalid Patient ID')
+    ],
+    validateRequest,
+    patientController.recallDevice
 );
 
 module.exports = router;

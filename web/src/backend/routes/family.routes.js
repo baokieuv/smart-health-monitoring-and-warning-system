@@ -5,7 +5,7 @@ const familyController = require('../controllers/family.controller');
 
 const router = express.Router();
 
-// GET /api/v1/family/info
+// get current patient's details
 router.get(
     "/info", 
     authenticate,
@@ -13,7 +13,7 @@ router.get(
     validateRequest,
     familyController.getPatientDetail);
 
-// GET /api/v1/family//health
+// get current patient's health info
 router.get(
     "/health", 
     authenticate,

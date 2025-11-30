@@ -1,4 +1,4 @@
-#include "mqtt/mqtt_tb.h"
+#include "mqtt_tb.h"
 #include "config.h"
 #include "mqtt_client.h"
 #include "esp_log.h"

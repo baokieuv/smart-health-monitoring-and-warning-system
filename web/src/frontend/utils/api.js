@@ -1,14 +1,23 @@
 import axios from 'axios'
 
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:2007'
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000'
 const ACCESS_TOKEN_KEY = 'access_token'
+const REFRESH_TOKEN_KEY = 'refresh_token'
 const USER_INFO_KEY = 'user_info'
 
 export const getToken = () => localStorage.getItem(ACCESS_TOKEN_KEY)
 export const setToken = (token) => {
   if (token) localStorage.setItem(ACCESS_TOKEN_KEY, token)
 }
-export const clearToken = () => localStorage.removeItem(ACCESS_TOKEN_KEY)
+export const clearToken = () => {
+  localStorage.removeItem(ACCESS_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+}
+
+export const getRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY)
+export const setRefreshToken = (token) => {
+  if (token) localStorage.setItem(REFRESH_TOKEN_KEY, token)
+}
 
 export const getUserInfo = () => {
   const userInfo = localStorage.getItem(USER_INFO_KEY)
@@ -60,9 +69,17 @@ api.interceptors.response.use(
 
 // Auth
 export const login = (payload) =>
-  unwrap(api.post('/api/v1/login/', payload))
+  unwrap(api.post('/api/v1/auth/login', payload))
 
-export const logout = () => unwrap(api.post('/api/v1/logout/'))
+export const logout = () => {
+  const refreshToken = getRefreshToken()
+  return unwrap(api.post('/api/v1/auth/logout', { refresh_token: refreshToken }))
+}
+
+export const refreshAccessToken = () => {
+  const refreshToken = getRefreshToken()
+  return unwrap(api.post('/api/v1/auth/refresh', { refresh_token: refreshToken }))
+}
 
 // Admin - Doctors
 export const createDoctor = (payload) =>
@@ -102,6 +119,11 @@ export const updateDoctorUsername = (doctorId, username) =>
 export const updateDoctorPassword = (doctorId, password) =>
   unwrap(api.put(`/api/v1/admin/doctors/${doctorId}/password`, { password }))
 
+// Doctor Profile APIs - Reuse existing APIs
+export const getDoctorProfile = (userId) => unwrap(api.get(`/api/v1/admin/user/${userId}`))
+
+export const updateDoctorProfile = (doctorId, payload) => updateDoctor(doctorId, payload)
+
 export default {
   api,
   getToken,
@@ -123,4 +145,7 @@ export default {
   getDoctorVitals,
   updateDoctorUsername,
   updateDoctorPassword,
+  getDoctorProfile,
+  updateDoctorProfile,
+  // changeDoctorPassword,
 }

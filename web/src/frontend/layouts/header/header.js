@@ -28,14 +28,16 @@ const Header = () => {
           <Link to="/" className="nav-link">Dashboard</Link>
           {userInfo && (
             <>
-              {userInfo.role === 'user' && (
-                <Link to={routers.ProfilePage(userInfo.id)} className="nav-link">
-                  👨‍⚕️ Profile
+              {userInfo.role === 'doctor' && (
+                <Link to={routers.ProfilePage(userInfo.id)} className="nav-link user-info" data-discover="true">
+                  👨‍⚕️ {userInfo.username || userInfo.name || 'Doctor'}
                 </Link>
               )}
-              <span className="nav-link user-info">
-                {userInfo.role === 'admin' ? '👤' : '👨‍⚕️'} {userInfo.name}
-              </span>
+              {/* {userInfo.role !== 'doctor' && (
+                <span className="nav-link user-info">
+                  {userInfo.role === 'admin' ? '👤' : '👨‍⚕️'} {userInfo.username || userInfo.name}
+                </span>
+              )} */}
               <button onClick={handleLogout} className="nav-link logout-btn">
                 🚪 Logout
               </button>

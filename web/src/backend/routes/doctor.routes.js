@@ -7,9 +7,9 @@ const { validateCCCD, validatePhone, validateDate } = require('../utils/validato
 
 const router = express.Router();
 
-// 3. Create Doctor API
+// create doctor API
 router.post(
-	'/',
+	'/doctors',
 	authenticate,
 	authorizeRoles('admin'),
 	[
@@ -39,9 +39,9 @@ router.post(
 	doctorController.createDoctor
 );
 
-// 4. Get Doctor List API
+// get doctor list API
 router.get(
-	'/',
+	'/doctors',
 	authenticate,
 	authorizeRoles('admin'),
 	[
@@ -62,9 +62,9 @@ router.get(
 	doctorController.getDoctors
 );
 
-// 5. Get Doctor Detail API
+// get doctor detail API
 router.get(
-	'/:doctor_id',
+	'/doctors/:doctor_id',
 	authenticate,
 	authorizeRoles('admin'),
 	[
@@ -75,9 +75,9 @@ router.get(
 	doctorController.getDoctorDetail
 );
 
-// 6. Update Doctor API
+// update doctor API
 router.put(
-	'/:doctor_id',
+	'/doctors/:doctor_id',
 	authenticate,
 	authorizeRoles('admin'),
 	[
@@ -106,9 +106,9 @@ router.put(
 	doctorController.updateDoctor
 );
 
-// 7. Delete Doctor API
+// delete doctor API
 router.delete(
-	'/:doctor_id',
+	'/doctors/:doctor_id',
 	authenticate,
 	authorizeRoles('admin'),
 	[
@@ -117,6 +117,23 @@ router.delete(
 	],
 	validateRequest,
 	doctorController.deleteDoctor
+);
+
+// get devices API
+router.get(
+	'/devices',
+	authenticate,
+	authorizeRoles('admin'),
+	[
+		query('page')
+			.optional()
+			.isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+		query('limit')
+			.optional()
+			.isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
+	],
+	validateRequest,
+	doctorController.getListDevice
 );
 
 module.exports = router;

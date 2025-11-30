@@ -1,8 +1,44 @@
 dependencies:
+  espressif/ds18b20:
+    component_hash: 9792f38a20eb2fe7435cba349e3b4b7085381f05400233aacd849ced69e2207f
+    dependencies:
+    - name: espressif/onewire_bus
+      registry_url: https://components.espressif.com
+      require: private
+      version: ^1.0.0
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.2.0
   idf:
     source:
       type: idf
-    version: 5.5.1
-manifest_hash: 4af82d28f21e781ac5cab45e9ab0ade6531a1957a0a7b72eb790ca1129a40d8f
-target: esp32s3
+    version: 5.3.0
+  lvgl/lvgl:
+    component_hash: 17e68bfd21f0edf4c3ee838e2273da840bf3930e5dbc3bfa6c1190c3aed41f9f
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 9.4.0
+  mpu6050:
+    dependencies: []
+    source:
+      path: D:\Embedded\ESP\esp\v5.3\esp-idf\components\mpu6050
+      type: local
+    version: 1.2.0
+  onewire_bus:
+    dependencies: []
+    source:
+      path: D:\Embedded\ESP\esp\v5.3\esp-idf\components\onewire_bus
+      type: local
+    version: 1.0.4
+direct_dependencies:
+- espressif/ds18b20
+- espressif/mpu6050
+- espressif/onewire_bus
+- idf
+- lvgl/lvgl
+manifest_hash: d33cacffc965a6772a69e4ca15730a0af6f827da59a7211d3d582ed761e7cf02
+target: esp32
 version: 2.0.0

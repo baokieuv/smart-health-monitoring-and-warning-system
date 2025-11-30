@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { setToken, setUserInfo } from '../utils/api'
+import { setToken, setRefreshToken, setUserInfo, login } from '../utils/api'
 import routers from '../utils/routers'
 
 export default function LoginPage() {
@@ -10,62 +10,77 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
-  const DEMO_ACCOUNTS = [
-    {
-      username: 'admin',
-      password: '1',
-      role: 'admin',
-      name: 'Admin Nguyễn Văn A',
-      id: '1',
-    },
-    {
-      username: 'user',
-      password: '1',
-      role: 'user',
-      name: 'BS. Trần Thị B',
-      id: '2',
-    },
-  ]
-
   const onSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    
+    // Validation
+    if (!username.trim() || !password.trim()) {
+      setError('Vui lòng nhập đầy đủ thông tin')
+      return
+    }
+    
     setLoading(true)
     
-    const demoUser = DEMO_ACCOUNTS.find(
-      (acc) => acc.username === username && acc.password === password
-    )
-    
-    if (demoUser) {
-     
-      const token = `demo-token-${demoUser.id}`
+    try {
+      // Call real API
+      const response = await login({
+        username: username.trim(),
+        password: password
+      })
       
-      const userInfo = {
-        id: demoUser.id,
-        name: demoUser.name,
-        role: demoUser.role,
-        username: demoUser.username,
-      }
+      console.log('Login response:', response)
       
-      // Lưu vào localStorage
-      setToken(token)
-      setUserInfo(userInfo)
-      
-      setTimeout(() => {
-        setLoading(false)
-        // Route based on role
-        if (demoUser.role === 'admin') {
-          navigate(routers.AdminInfo)
-        } else {
-          navigate(routers.Home)
+      if (response.status === 'success' && response.data) {
+        const { user, access_token, refresh_token } = response.data
+        
+        // Lưu tokens và user info vào localStorage
+        setToken(access_token)
+        setRefreshToken(refresh_token)
+        
+        const userInfo = {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          name: user.full_name || user.username
         }
-      }, 500)
-    } else {
-      // Sai username hoặc password
-      setTimeout(() => {
-        setLoading(false)
-        setError('Tên đăng nhập hoặc mật khẩu không đúng')
-      }, 500)
+        
+        setUserInfo(userInfo)
+        
+        // Route based on role
+        if (user.role === 'admin') {
+          navigate(routers.AdminInfo, { replace: true })
+        } else {
+          // doctor or any other role
+          navigate(routers.Home, { replace: true })
+        }
+      } else {
+        setError('Đăng nhập thất bại. Vui lòng thử lại.')
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      
+      // Handle different error types
+      if (err.response) {
+        const status = err.response.status
+        const message = err.response.data?.message
+        
+        if (status === 401) {
+          setError('Tên đăng nhập hoặc mật khẩu không đúng')
+        } else if (status === 400) {
+          setError(message || 'Thông tin đăng nhập không hợp lệ')
+        } else if (status === 500) {
+          setError('Lỗi hệ thống. Vui lòng thử lại sau.')
+        } else {
+          setError(message || 'Đăng nhập thất bại. Vui lòng thử lại.')
+        }
+      } else if (err.request) {
+        setError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối.')
+      } else {
+        setError('Đã có lỗi xảy ra. Vui lòng thử lại.')
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -93,9 +108,10 @@ export default function LoginPage() {
           />
         </div>
         <div style={{ color: '#999', fontSize: 12, marginBottom: 12, padding: 10, background: '#f9f9f9', borderRadius: 6 }}>
-          <div style={{ marginBottom: 4 }}><strong>Demo accounts:</strong></div>
-          <div>👤 Admin: admin / 1</div>
-          <div>👨‍⚕️ User (Bác sĩ): user / 1</div>
+          <div style={{ marginBottom: 4 }}><strong>Tài khoản test:</strong></div>
+          <div>👤 Admin: <code>admin</code> / <code>admin123</code></div>
+          <div>👨‍⚕️ Bác sĩ 1: <code>doctor01</code> / <code>1234</code></div>
+          <div>👨‍⚕️ Bác sĩ 2: <code>doctor02</code> / <code>1234</code></div>
         </div>
         {error && (
           <div style={{ color: '#e5484d', marginBottom: 12, fontSize: 13, textAlign: 'center' }}>

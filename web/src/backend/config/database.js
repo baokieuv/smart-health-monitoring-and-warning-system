@@ -6,7 +6,7 @@ const db = process.env.MONGODB_URI;
 const connectDB = async () => {
     try {
         if (!db) {
-            throw new Error('MONGODB_URI not found in .env file');
+            throw new Error("MONGODB_URI not found in .env file");
         }
         
         console.log("Connecting to MongoDB Atlas...");

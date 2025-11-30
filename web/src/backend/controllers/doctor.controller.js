@@ -1,127 +1,16 @@
+const bcrypt = require('bcryptjs');
 const { sanitizeInput } = require('../utils/validator');
-const tokenStore = require('../utils/token-store');
 const Doctor = require('../models/doctor.model');
 const User = require('../models/user.model');
+const Device = require('../models/device.model');
 
-const THINGSBOARD_URL = "http://localhost:8080";
-
-async function createTenantAccount(doctor, email, name, password, systoken){
-	try{
-
-	    const createTenantResp = await fetch(`${THINGSBOARD_URL}/api/tenant`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Authorization": `Bearer ${systoken}`
-            },
-            body: JSON.stringify({
-                title: `${name} - ${password}`
-            })
-        });
-        if (!createTenantResp.ok) {
-            const err = await createTenantResp.text();
-            throw new Error(`Failed to create tenant: ${createTenantResp.status} - ${err}`);
-        }
-
-		const tenantJSON = await createTenantResp.json();
-
-		const payload = {
-			authority: 'TENANT_ADMIN',
-			tenantId: { 
-				id: tenantJSON.id.id,
-				entityType: 'TENANT'
-			},
-			email: email,
-			firstName: name
-		};
-
-		const activeAccountResp = await fetch(`${THINGSBOARD_URL}/api/user?sendActivationMail=false`, {
-			method: "POST",
-			body: JSON.stringify(payload),
-			headers: {
-				"Content-Type": "application/json",
-				"X-Authorization": `Bearer ${systoken}`
-			}
-		});
-
-		if(!activeAccountResp.ok){
-			const err = await activeAccountResp.text();
-			throw new Error(`ThingsBoard API error: ${activeAccountResp.status} - ${err}`);
-		}
-
-		const data = await activeAccountResp.json();
-		await Doctor.updateOne(
-			{ _id: doctor._id },
-			{tenantAccountID: data.id.id}
-		);
-		
-		const tokenResp = await fetch(`${THINGSBOARD_URL}/api/user/${data.id.id}/activationLink`, {
-            method: "GET",
-            headers: {
-                "X-Authorization": `Bearer ${systoken}`
-            }
-        });
-
-		if (!tokenResp.ok) {
-            const err = await tokenResp.text();
-            throw new Error(`Failed to get activation token: ${tokenResp.status} - ${err}`);
-        }
-
-		const activationLink = await tokenResp.text();
-        const activationToken = new URL(activationLink).searchParams.get('activateToken');
-
-		const activateResp = await fetch(`${THINGSBOARD_URL}/api/noauth/activate?sendActivationMail=false`, {
-            method: "POST",
-			headers: {
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify({
-				activateToken: activationToken,
-				password: password
-			})
-        });
-
-        if (!activateResp.ok) {
-            const err = await activateResp.text();
-            throw new Error(`Failed to activate user: ${activateResp.status} - ${err}`);
-        }
-
-		return data;
-	}catch(err){
-		console.error('Failed to create tenant admin:', err.response?.data || err.message);
-		throw err;
-	}
-}
-
-async function deleteTenantAccount(userId, systoken){
-	try{
-		const res = await fetch(`${THINGSBOARD_URL}/api/user/${userId}`, {
-			method: "DELETE",
-			headers:{
-				"X-Authorization": `Bearer ${systoken}`
-			}
-		});
-
-		if (!res.ok) {
-			const err = await res.text();
-			throw new Error(`ThingsBoard API error: ${res.status} - ${err}`);
-		}
-
-		console.log(`Tenant account ${userId} deleted successfully`);
-		return true;
-	}catch(err){
-		throw err;
-	}
-}
-
-// 3. Create Doctor API
+// POST /api/v1/admin/doctors -> create a new doctor
 exports.createDoctor = async (req, res) => {
 	try {
 		const doctorData = {
 			cccd: sanitizeInput(req.body.cccd),
 			full_name: sanitizeInput(req.body.full_name),
 			email: sanitizeInput(req.body.email),
-			password: sanitizeInput(req.body.phone),
 			birthday: req.body.birthday,
 			address: sanitizeInput(req.body.address),
 			phone: sanitizeInput(req.body.phone),
@@ -137,9 +26,12 @@ exports.createDoctor = async (req, res) => {
 			});
 		}
 
+		const salt = await bcrypt.genSalt(10);
+		const pashedPassword = await bcrypt.hash(doctorData.phone, salt);
+
 		const user = await User.create({
 			username: doctorData.cccd,
-			password: doctorData.phone,
+			password: pashedPassword,
 			role: "doctor",
 		});
 
@@ -148,45 +40,22 @@ exports.createDoctor = async (req, res) => {
 			userId: user._id
 		});
 
-		await User.updateOne(
-			{ _id: user._id},
-			{ doctorId: doctor._id }
-		);
-
-		//create a new tenant account on thingsboard
-		const systoken = tokenStore.findThingsBoardToken(req.user.id);
-
-		if(systoken){
-			try{
-				await createTenantAccount(
-					doctor,								//object doctor
-					doctor.cccd + "@thingsboard.local",	//email
-					doctor.full_name,					//name
-					doctor.cccd,						//password
-					systoken							//token thingsboard
-				);
-			}catch(err){
-				console.error('ThingsBoard tenant creation failed:', err.message);
-			}
-		}else{
-			console.log("Doesn't have sysadmin account");
-		}
-
-		res.status(201).json({
+		console.log("Doctor created successfully: ", doctor._id);
+		return res.status(201).json({
 			status: "success",
 			message: "Doctor created successfully.",
 			doctor: doctor
 		});
-	} catch (error) {
-		console.error('Create doctor error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Create doctor error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
 	}
 };
 
-// 4. Get Doctor List API
+// GET /api/v1/admin/doctors -> get list doctors
 exports.getDoctors = async (req, res) => {
 	try {
 		const { page = 1, limit = 10, search = '', specialization = '' } = req.query;
@@ -214,7 +83,8 @@ exports.getDoctors = async (req, res) => {
 
 		const total_pages = Math.ceil(total / limitInt) || 1;
 
-		res.status(200).json({
+		console.log("Doctor retrieved successfully");
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor retrieved successfully.",
 			data: {
@@ -225,16 +95,16 @@ exports.getDoctors = async (req, res) => {
 				doctors
 			}
 		});
-	} catch (error) {
-		console.error('Get doctors error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Get doctors error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
 	}
 };
 
-// 5. Get Doctor Detail API
+// GET /api/v1/admin/doctors/{doctor_id} -> get doctor's details
 exports.getDoctorDetail = async (req, res) => {
 	try {
 		const doctor = await Doctor.findById(req.params.doctor_id);
@@ -246,21 +116,22 @@ exports.getDoctorDetail = async (req, res) => {
 			});
 		}
 
-		res.status(200).json({
+		console.log("Doctor retrieved successfully: ", doctor._id);
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor retrieved successfully.",
 			doctor
 		});
-	} catch (error) {
-		console.error('Get doctor detail error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Get doctor detail error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
 	}
 };
 
-// 6. Update Doctor API -> ko update cccd (mỗi người là duy nhất)
+// PUT /api/v1/admin/doctors/{doctor_id} -> update doctor's detail
 exports.updateDoctor = async (req, res) => {
 	try {
 		const doctor = await Doctor.findById(req.params.doctor_id);
@@ -272,21 +143,14 @@ exports.updateDoctor = async (req, res) => {
 			});
 		}
 
-		const updateFields = ['full_name', 'birthday', 'address', 'phone', 'specialization'];
+		const updateFields = ['full_name', 'email', 'birthday', 'address', 'phone', 'specialization'];
 		const updateData = {};
 
 		updateFields.forEach(field => {
 			if (req.body[field] !== undefined) {
-				updateData[field] = sanitizeInput(req.body[field]);
+				updateData[field] = field === 'birthday' ? req.body[field] : sanitizeInput(req.body[field]);
 			}
 		});
-
-		if (Object.keys(updateData).length === 0) {
-			return res.status(400).json({
-				status: "error",
-				message: "No valid fields to update."
-			});
-		}
 
 		const result = await Doctor.findByIdAndUpdate(
 			doctor._id,
@@ -294,21 +158,22 @@ exports.updateDoctor = async (req, res) => {
 			{ new: true, runValidators: true }
 		);
 
-		res.status(200).json({
+		console.log("Doctor information updated successfully: ", doctor._id);
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor information updated successfully.",
 			doctor: result
 		});
-	} catch (error) {
-		console.error('Update doctor error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Update doctor error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
 	}
 };
 
-// 7. Delete Doctor API
+// DELETE /api/v1/admin/doctors/{doctor_id} -> delete a doctor
 exports.deleteDoctor = async (req, res) => {
 	try {
 		const doctor = await Doctor.findById(req.params.doctor_id);
@@ -320,29 +185,87 @@ exports.deleteDoctor = async (req, res) => {
 			});
 		}
 
-		//Delete tenant account on thingsboard
-		const systoken = tokenStore.findThingsBoardToken(req.user.id);
-		if(systoken && doctor.tenantAccountID){
-			try{
-				await deleteTenantAccount(doctor.tenantAccountID, systoken);
-			}catch(err){
-				console.error('ThingsBoard tenant deletion failed:', err.message);
-			}
-		}
+		// Xóa danh sách device của doctor
+		await Device.deleteMany({ doctorId: doctor._id });
 
 		await User.deleteOne({ doctorId: doctor._id });
 		await Doctor.deleteOne({ _id: doctor._id });
 		
-		res.status(200).json({
+		console.log("Doctor deleted successfully: ", doctor._id);
+		return res.status(200).json({
 			status: "success",
 			message: "Doctor deleted successfully.",
 			deleted_doctor_id: doctor._id
 		});
-	} catch (error) {
-		console.error('Delete doctor error:', error);
-		res.status(500).json({
+	} catch (err) {
+		console.error('Delete doctor error:', err);
+		return res.status(500).json({
 			status: "error",
 			message: "Unexpected error occurred."
 		});
 	}
 };
+
+// GET /api/v1/admin/devices -> get list devices
+exports.getListDevice = async (req, res) => {
+	try{
+		const { page = 1, limit = 10 } = req.query;
+
+		const pageInt = parseInt(page);
+		const limitInt = parseInt(limit);
+		const skip = (pageInt - 1) * limitInt;
+
+		const total = await Device.countDocuments();
+		const total_pages = Math.ceil(total / limitInt) || 1;
+
+		const devices = await Device.find()
+			.populate({
+				path: 'doctorId',
+				select: '_id full_name cccd phone specialization'
+			})
+			.populate({
+				path: 'patientId',
+				select: '_id full_name cccd phone room'
+			})
+			.skip(skip).limit(limitInt).lean();
+
+		const formattedDevices = devices.map(device => ({
+			device_id: device._id,
+			device_name: device.name,
+			thingsboard_device_id: device.deviceId,
+			doctor: device.doctorId  ? {
+				id: device.doctorId._id,
+				name: device.doctorId.full_name,
+				cccd: device.doctorId.cccd,
+				phone: device.doctorId.phone,
+				specialization: device.doctorId.specialization
+			} : null,
+			patient: device.patientId ? {
+				id: device.patientId._id,
+				name: device.patientId.full_name,
+				cccd: device.patientId.cccd,
+				phone: device.patientId.phone,
+				room: device.patientId.room
+			} : null,
+		}));
+
+		console.log("Devices retrieved successfully");
+		return res.status(200).json({
+				status: "success",
+				message: "Devices retrieved successfully.",
+				data: {
+					total,
+					page: pageInt,
+					limit: limitInt,
+					total_pages,
+					devices: formattedDevices
+				}
+			});
+	}catch(err){
+		console.error('Get list device error:', err);
+		return res.status(500).json({
+				status: "error",
+				message: "Unexpected error occurred."
+			});
+	}
+}

@@ -43,18 +43,13 @@ const doctorSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  tenantAccountID: {
-    type: String,
-    trim: true,
-    default: null
-  }
 }, {
   timestamps: true
 });
 
 // Indexes
-doctorSchema.index({ userId: 1 });
-doctorSchema.index({ cccd: 1 });
+// doctorSchema.index({ userId: 1 });
+// doctorSchema.index({ cccd: 1 });
 doctorSchema.index({ full_name: 1 });
 // doctorSchema.index({ name: 1 });
 

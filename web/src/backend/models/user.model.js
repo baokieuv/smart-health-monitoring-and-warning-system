@@ -23,21 +23,11 @@ const userSchema = new mongoose.Schema({
     default: 'patient'
     // Role để phân quyền: admin hoặc doctor hoặc patient
   },
-  doctorId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Doctor',
-    default: null
-  },
-  patientId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Patient',
-    default: null
-  }
 }, {
   timestamps: true
 });
 
 // Indexes
-userSchema.index({ username: 1 });
+// userSchema.index({ username: 1 });
 
 module.exports = mongoose.model('User', userSchema);
