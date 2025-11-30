@@ -29,6 +29,7 @@ const routers = {
   AdminRoomCreate: '/admin/rooms/create',
   AdminRoomDetailPath: '/admin/rooms/:code',
   AdminRoomDetail: (code = ':code') => `/admin/rooms/${code}`,
+  AdminDevices: '/admin/devices',
 }
 
 export default routers
