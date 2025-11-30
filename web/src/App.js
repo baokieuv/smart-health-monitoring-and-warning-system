@@ -24,6 +24,7 @@ import DoctorForm from './frontend/pages/admin/doctors/DoctorForm';
 import DoctorDetail from './frontend/pages/admin/doctors/DoctorDetail';
 import AdminRoomList from './frontend/pages/admin/rooms/AdminRoomList';
 import AdminRoomForm from './frontend/pages/admin/rooms/AdminRoomForm';
+import DeviceList from './frontend/pages/admin/devices/DeviceList';
 
 // Family access pages
 import FamilyAccessPage from './frontend/pages/familyAccess/FamilyAccessPage';
@@ -110,6 +111,7 @@ function App() {
             <Route path={routers.AdminRooms} element={<AdminRoomList />} />
             <Route path={routers.AdminRoomCreate} element={<AdminRoomForm />} />
             <Route path={routers.AdminRoomDetailPath} element={<AdminRoomForm />} />
+            <Route path={routers.AdminDevices} element={<DeviceList />} />
           </Route>
         </Route>
 

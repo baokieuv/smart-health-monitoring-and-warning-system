@@ -71,8 +71,7 @@ export default function AdminShell() {
             <SidebarItem icon="ℹ️" label="Information" to={routers.AdminInfo} />
             <SidebarItem icon="👨‍⚕️" label="Doctors List" to={routers.AdminDoctors} />
             <SidebarItem icon="🏥" label="Rooms List" to={routers.AdminRooms} />
-            <SidebarItem icon="💼" label="Jobs" to="#" />
-            <SidebarItem icon="📝" label="Notes" to="#" />
+            <SidebarItem icon="📱" label="Device Management" to={routers.AdminDevices} />
             {getToken() && (
               <SidebarItem icon="🚪" label="Logout" onClick={logout} />
             )}
