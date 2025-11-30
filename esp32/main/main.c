@@ -25,6 +25,7 @@
 #include "oled_display.h"
 #include "u8g2.h"
 #include "u8g2_esp32_hal.h"
+#include "sys_button.h"
 
 static const char *TAG = "MAIN";
 static EventGroupHandle_t event_group = NULL;
@@ -435,6 +436,84 @@ static void handle_mpu6050_data(void *param)
     }
 }
 
+#define BUTTON_GPIO_NUM GPIO_NUM_0
+
+typedef enum
+{
+    APP_MODE_STA,
+    APP_MODE_AP
+} app_mode_t;
+
+static app_mode_t g_app_mode = APP_MODE_AP;
+
+static void switch_to_ap_mode(void)
+{
+    ESP_LOGI(TAG, "Switching to AP Mode...");
+
+    wifi_stop();
+    wifi_start_ap_mode();
+    http_server_start();
+
+    g_app_mode = APP_MODE_AP;
+}
+
+static void switch_to_sta_mode(void)
+{
+    ESP_LOGI(TAG, "Switching to STA Mode...");
+
+    http_server_stop();
+    wifi_stop();
+
+    char ssid[32], pass[64];
+    if (nvs_load_wifi_config(ssid, pass, 0, 0) == ESP_OK)
+    {
+        wifi_start_station_mode(ssid, pass);
+    }
+    else
+    {
+        wifi_start_station_mode("Duy Anh", "12345689");
+    }
+
+    g_app_mode = APP_MODE_STA;
+}
+
+static void app_button_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
+{
+    if (base != APP_BUTTON_EVENT)
+        return;
+    switch (id)
+    {
+    case BUTTON_EVENT_SINGLE_CLICK:
+        ESP_LOGI(TAG, "Single click detected");
+        if (g_app_mode == APP_MODE_STA)
+        {
+            switch_to_ap_mode();
+        }
+        else
+        {
+            switch_to_sta_mode();
+        }
+        break;
+
+    case BUTTON_EVENT_DOUBLE_CLICK:
+        ESP_LOGI(TAG, "Double click detected");
+
+    case BUTTON_EVENT_LONG_PRESS:
+        ESP_LOGI(TAG, "Long press detected");
+        if (g_app_mode == APP_MODE_AP)
+        {
+            http_server_toggle_view_mode();
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Only available in AP mode");
+        }
+
+    default:
+        break;
+    }
+}
+
 void fake_sensor_task(void *param)
 {
     QueueHandle_t queue = (QueueHandle_t)param;
@@ -456,6 +535,14 @@ void fake_sensor_task(void *param)
 
 void app_main(void)
 {
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
         .sda_io_num = 41,
@@ -512,18 +599,25 @@ void app_main(void)
     }
     ESP_LOGI(TAG, "OLED display init OK");
 
-    // // Tạo task hiển thị OLED
-    // if (xTaskCreate(oled_display_task, "oled_display", 4096, NULL, 3, NULL) != pdPASS)
-    // {
-    //     ESP_LOGE(TAG, "xTaskCreate oled_display_task failed");
-    //     return;
-    // }
-
-    // test
+    // test OLED
     QueueHandle_t g_oled_queue = xQueueCreate(QUEUE_LEN, sizeof(display_data_t));
 
     xTaskCreate(oled_display_task, "oled_display_task", 4096, (void *)g_oled_queue, 3, NULL);
     xTaskCreate(fake_sensor_task, "fake_sensor_task", 2048, (void *)g_oled_queue, 3, NULL);
+
+    // test switch wifi mode
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    event_group = xEventGroupCreate();
+    wifi_manager_init(event_group);
+
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(APP_BUTTON_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        app_button_event_handler,
+                                                        NULL, NULL));
+
+    sys_button_init(BUTTON_GPIO_NUM);
+    switch_to_sta_mode();
 }
 
 // void app_main(void) {

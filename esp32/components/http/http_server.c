@@ -13,23 +13,34 @@ static httpd_handle_t server = NULL;
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 
-static esp_err_t root_handler(httpd_req_t* req) {
-    esp_err_t err = httpd_resp_set_type(req, "text/html");
-    if (err == ESP_OK) {
-        err = httpd_resp_send(req, (char*)index_html_start, 
-                             index_html_end - index_html_start);
+static http_view_mode_t s_current_view_mode = HTTP_VIEW_USER;
+
+static esp_err_t root_handler(httpd_req_t *req)
+{
+    if (s_current_view_mode == HTTP_VIEW_USER)
+    {
+        httpd_resp_set_type(req, "text/html");
+        return httpd_resp_send(req, (const char *)index_html_start,
+                               index_html_end - index_html_start);
     }
-    return err;
+    else
+    {
+        const char *doctor_page = "<h1>Doctor View</h1><p>This is a placeholder for the doctor view page.</p>";
+        httpd_resp_set_type(req, "text/html");
+        return httpd_resp_send(req, doctor_page, strlen(doctor_page));
+    }
 }
 
-static esp_err_t save_handler(httpd_req_t* req) {
+static esp_err_t save_handler(httpd_req_t *req)
+{
     char *buffer = NULL;
     cJSON *root = NULL;
     esp_err_t ret = ESP_FAIL;
 
     // Allocate buffer for request data
     buffer = malloc(req->content_len + 1);
-    if (!buffer) {
+    if (!buffer)
+    {
         ESP_LOGE(TAG, "Failed to allocate memory for request");
         httpd_resp_send_500(req);
         return ESP_ERR_NO_MEM;
@@ -37,7 +48,8 @@ static esp_err_t save_handler(httpd_req_t* req) {
 
     // Receive request data
     int received = httpd_req_recv(req, buffer, req->content_len);
-    if (received <= 0) {
+    if (received <= 0)
+    {
         ESP_LOGE(TAG, "Failed to receive request data");
         httpd_resp_send_500(req);
         goto cleanup;
@@ -46,7 +58,8 @@ static esp_err_t save_handler(httpd_req_t* req) {
 
     // Parse JSON
     root = cJSON_Parse(buffer);
-    if (!root) {
+    if (!root)
+    {
         ESP_LOGE(TAG, "Failed to parse JSON");
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
         goto cleanup;
@@ -61,19 +74,21 @@ static esp_err_t save_handler(httpd_req_t* req) {
     // Validate fields
     if (!doctorID || !patientID || !ssid || !pass ||
         !cJSON_IsString(doctorID) || !cJSON_IsString(patientID) ||
-        !cJSON_IsString(ssid) || !cJSON_IsString(pass)) {
+        !cJSON_IsString(ssid) || !cJSON_IsString(pass))
+    {
         ESP_LOGE(TAG, "Invalid or missing fields in JSON");
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing required fields");
         goto cleanup;
     }
 
-    ESP_LOGI(TAG, "Received config - PatientID: %s, SSID: %s", 
+    ESP_LOGI(TAG, "Received config - PatientID: %s, SSID: %s",
              patientID->valuestring, ssid->valuestring);
 
     // Save WiFi configuration
-    esp_err_t err = nvs_save_wifi_config(ssid->valuestring, pass->valuestring, 
-                                          patientID->valuestring);
-    if (err != ESP_OK) {
+    esp_err_t err = nvs_save_wifi_config(ssid->valuestring, pass->valuestring,
+                                         patientID->valuestring);
+    if (err != ESP_OK)
+    {
         ESP_LOGE(TAG, "Failed to save WiFi config");
         httpd_resp_send_500(req);
         goto cleanup;
@@ -81,14 +96,17 @@ static esp_err_t save_handler(httpd_req_t* req) {
 
     // Send provisioning request
     err = provisioning_send_request(doctorID->valuestring);
-    if (err == ESP_OK) {
-        httpd_resp_sendstr(req, 
-            "<h3>Configuration saved successfully. Device will restart...</h3>");
+    if (err == ESP_OK)
+    {
+        httpd_resp_sendstr(req,
+                           "<h3>Configuration saved successfully. Device will restart...</h3>");
         ret = ESP_OK;
-    } else {
-        httpd_resp_sendstr(req, 
-            "<h3>Config saved but provisioning failed. Device will restart...</h3>");
-        ret = ESP_OK;  // Still restart even if provisioning failed
+    }
+    else
+    {
+        httpd_resp_sendstr(req,
+                           "<h3>Config saved but provisioning failed. Device will restart...</h3>");
+        ret = ESP_OK; // Still restart even if provisioning failed
     }
 
     // Schedule restart
@@ -96,13 +114,17 @@ static esp_err_t save_handler(httpd_req_t* req) {
     esp_restart();
 
 cleanup:
-    if (buffer) free(buffer);
-    if (root) cJSON_Delete(root);
+    if (buffer)
+        free(buffer);
+    if (root)
+        cJSON_Delete(root);
     return ret;
 }
 
-esp_err_t http_server_start(void) {
-    if (server != NULL) {
+esp_err_t http_server_start(void)
+{
+    if (server != NULL)
+    {
         ESP_LOGW(TAG, "HTTP server already running");
         return ESP_OK;
     }
@@ -112,7 +134,8 @@ esp_err_t http_server_start(void) {
 
     ESP_LOGI(TAG, "Starting HTTP server...");
     esp_err_t err = httpd_start(&server, &config);
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         ESP_LOGE(TAG, "Failed to start HTTP server: %s", esp_err_to_name(err));
         return err;
     }
@@ -133,13 +156,17 @@ esp_err_t http_server_start(void) {
     };
 
     err = httpd_register_uri_handler(server, &uri_root);
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
         err = httpd_register_uri_handler(server, &uri_save);
     }
 
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
         ESP_LOGI(TAG, "HTTP server started successfully");
-    } else {
+    }
+    else
+    {
         ESP_LOGE(TAG, "Failed to register URI handlers");
         httpd_stop(server);
         server = NULL;
@@ -148,8 +175,10 @@ esp_err_t http_server_start(void) {
     return err;
 }
 
-esp_err_t http_server_stop(void) {
-    if (server == NULL) {
+esp_err_t http_server_stop(void)
+{
+    if (server == NULL)
+    {
         return ESP_OK;
     }
 
@@ -157,15 +186,33 @@ esp_err_t http_server_stop(void) {
     esp_err_t err = httpd_stop(server);
     server = NULL;
 
-    if (err == ESP_OK) {
+    if (err == ESP_OK)
+    {
         ESP_LOGI(TAG, "HTTP server stopped");
-    } else {
+    }
+    else
+    {
         ESP_LOGE(TAG, "Failed to stop HTTP server: %s", esp_err_to_name(err));
     }
 
     return err;
 }
 
-uint8_t http_server_is_running(void) {
+uint8_t http_server_is_running(void)
+{
     return server != NULL;
+}
+
+void http_server_toggle_view_mode(void)
+{
+    if (s_current_view_mode == HTTP_VIEW_USER)
+    {
+        s_current_view_mode = HTTP_VIEW_DOCTOR;
+        ESP_LOGI(TAG, "Switched to DOCTOR view mode");
+    }
+    else
+    {
+        s_current_view_mode = HTTP_VIEW_USER;
+        ESP_LOGI(TAG, "Switched to USER view mode");
+    }
 }

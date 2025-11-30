@@ -14,7 +14,7 @@ idf_component_register(
         "../components/sensors/mpu6050/mpu6050_api.c"
         "../components/gpio/gpio_handler.c"
         "../components/display/oled_display.c"
-        "../components/_button/button.cc"
+        "../components/sys_button/sys_button.c"
     INCLUDE_DIRS 
         "."
         "../components/storage"
@@ -27,5 +27,5 @@ idf_component_register(
         "../components/sensors/mpu6050"
         "../components/gpio"
         "../components/display"
-        "../components/_button"
+        "../components/sys_button"
 )
