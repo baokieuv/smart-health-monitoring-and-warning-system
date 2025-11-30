@@ -103,6 +103,7 @@ function App() {
         
         {/* Admin Routes - Protected for 'admin' role */}
         <Route element={<ProtectedRoute requiredRole="admin" />}>
+          <Route path={routers.ProfilePagePath} element={<SimpleLayout><ProfilePage /></SimpleLayout>} />
           <Route element={<AdminShell />}>
             <Route path={routers.AdminInfo} element={<AdminInfo />} />
             <Route path={routers.AdminDoctors} element={<DoctorList />} />

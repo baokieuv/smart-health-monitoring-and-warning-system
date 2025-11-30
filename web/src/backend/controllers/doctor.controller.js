@@ -22,12 +22,22 @@ exports.createDoctor = async (req, res) => {
 		if (duplicateDoctor) {
 			return res.status(409).json({
 				status: "error",
-				message: "User already exists."
+				message: "Doctor with this CCCD already exists."
 			});
 		}
 
+		// Check if user with this cccd already exists
+		const existingUser = await User.findOne({username: doctorData.cccd});
+		if (existingUser) {
+			return res.status(409).json({
+				status: "error",
+				message: "User with this CCCD already exists."
+			});
+		}
+
+		// Hash password using CCCD as default password
 		const salt = await bcrypt.genSalt(10);
-		const pashedPassword = await bcrypt.hash(doctorData.phone, salt);
+		const pashedPassword = await bcrypt.hash(doctorData.cccd, salt);
 
 		const user = await User.create({
 			username: doctorData.cccd,
@@ -104,6 +114,87 @@ exports.getDoctors = async (req, res) => {
 	}
 };
 
+// GET /api/v1/admin/user/{user_id} -> get doctor by userId
+exports.getDoctorByUserId = async (req, res) => {
+	try {
+		const doctor = await Doctor.findOne({ userId: req.params.user_id });
+
+		if (!doctor) {
+			return res.status(404).json({
+				status: "error",
+				message: "Doctor not found."
+			});
+		}
+
+		console.log("Doctor retrieved successfully by userId: ", doctor._id);
+		return res.status(200).json({
+			status: "success",
+			message: "Doctor retrieved successfully.",
+			doctor
+		});
+	} catch (err) {
+		console.error('Get doctor by userId error:', err);
+		return res.status(500).json({
+			status: "error",
+			message: "Unexpected error occurred."
+		});
+	}
+};
+
+// PUT /api/v1/admin/user/{user_id}/profile -> update doctor profile by userId (doctor only)
+exports.updateDoctorProfile = async (req, res) => {
+	try {
+		const doctor = await Doctor.findOne({ userId: req.params.user_id });
+
+		if (!doctor) {
+			return res.status(404).json({
+				status: "error",
+				message: "Doctor not found."
+			});
+		}
+
+		// Verify the logged-in user is updating their own profile
+		if (req.user.id !== req.params.user_id) {
+			return res.status(403).json({
+				status: "error",
+				message: "You can only update your own profile."
+			});
+		}
+
+		const updateFields = ['full_name', 'email', 'birthday', 'address', 'phone', 'specialization'];
+		const updateData = {};
+
+		updateFields.forEach(field => {
+			if (req.body[field] !== undefined) {
+				if (field === 'birthday') {
+					updateData[field] = req.body[field];
+				} else {
+					updateData[field] = sanitizeInput(req.body[field]);
+				}
+			}
+		});
+
+		const result = await Doctor.findByIdAndUpdate(
+			doctor._id,
+			{ $set: updateData },
+			{ new: true, runValidators: true }
+		);
+
+		console.log("Doctor profile updated successfully: ", doctor._id);
+		return res.status(200).json({
+			status: "success",
+			message: "Profile updated successfully.",
+			doctor: result
+		});
+	} catch (err) {
+		console.error('Update doctor profile error:', err);
+		return res.status(500).json({
+			status: "error",
+			message: "Unexpected error occurred."
+		});
+	}
+};
+
 // GET /api/v1/admin/doctors/{doctor_id} -> get doctor's details
 exports.getDoctorDetail = async (req, res) => {
 	try {
@@ -148,7 +239,11 @@ exports.updateDoctor = async (req, res) => {
 
 		updateFields.forEach(field => {
 			if (req.body[field] !== undefined) {
-				updateData[field] = field === 'birthday' ? req.body[field] : sanitizeInput(req.body[field]);
+				if (field === 'birthday') {
+					updateData[field] = req.body[field];
+				} else {
+					updateData[field] = sanitizeInput(req.body[field]);
+				}
 			}
 		});
 

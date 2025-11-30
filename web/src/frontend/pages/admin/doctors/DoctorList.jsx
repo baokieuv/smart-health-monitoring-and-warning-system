@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { getDoctorList, getDoctorSpecializations } from '../../../utils/api'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { getDoctorList, getDoctorSpecializations, getToken, createDoctor } from '../../../utils/api'
 import routers from '../../../utils/routers'
 import Pagination from '../../../components/Pagination'
+import AddDoctorModal from './AddDoctorModal'
 
 export default function DoctorList() {
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [data, setData] = useState({ doctors: [], page: 1, limit: 10, total: 0, total_pages: 0 })
   const [positionOptions, setPositionOptions] = useState(['Bác sĩ', 'Trưởng khoa', 'Điều dưỡng'])
   const [retryAfterSec, setRetryAfterSec] = useState(null)
+  const [showAddModal, setShowAddModal] = useState(false)
 
   const page = Number(params.get('page') || 1)
   const limit = Number(params.get('limit') || 10)
@@ -18,29 +21,46 @@ export default function DoctorList() {
   const specialization = params.get('specialization') || ''
 
   const load = async () => {
+    // Check if user is authenticated
+    const token = getToken()
+    if (!token) {
+      console.error('No access token found')
+      setError('Bạn chưa đăng nhập. Vui lòng đăng nhập.')
+      setTimeout(() => navigate(routers.Login), 2000)
+      return
+    }
+    
     setLoading(true)
     setError('')
     try {
       const res = await getDoctorList({ page, limit, search, specialization })
-      if (res?.status === 'success') setData(res.data)
-      else {
+      console.log('API Response:', res) // Debug log
+      if (res?.status === 'success' && res?.data) {
+        setData(res.data)
+        // Extract unique specializations from real data
+        const uniq = Array.from(new Set(res.data.doctors?.map((d) => d.specialization).filter(Boolean)))
+        if (uniq.length) setPositionOptions(uniq)
+      } else {
+        console.log('Using mock data - no valid response')
         setData(mockDoctors(page, limit, search, specialization))
       }
-      try {
-        const sp = await getDoctorSpecializations()
-        if (Array.isArray(sp?.data)) setPositionOptions(sp.data)
-      } catch (e) {
-        const uniq = Array.from(new Set(res?.data?.doctors?.map((d) => d.specialization).filter(Boolean)))
-        if (uniq.length) setPositionOptions(uniq)
-      }
     } catch (e) {
-      if (e?.response?.status === 429) {
+      console.error('Load doctors error:', e)
+      
+      // Handle authentication error
+      if (e?.response?.status === 401 || e?.response?.status === 403) {
+        setError('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.')
+        // Don't use mock data for auth errors - show error instead
+        setData({ doctors: [], page: 1, limit: 10, total: 0, total_pages: 0 })
+      } else if (e?.response?.status === 429) {
         const sec = e.rateLimit?.retryAfter || 30
         setRetryAfterSec(sec)
         setError(`Bạn thao tác quá nhanh. Vui lòng thử lại sau ${sec} giây.`)
-      } else {
         setData(mockDoctors(page, limit, search, specialization))
-        // setError('Đang hiển thị dữ liệu demo')
+      } else {
+        console.log('Using mock data - error occurred')
+        setError('Không thể kết nối server. Hiển thị dữ liệu demo.')
+        setData(mockDoctors(page, limit, search, specialization))
       }
     } finally {
       setLoading(false)
@@ -61,9 +81,34 @@ export default function DoctorList() {
     setParams(next, { replace: true })
   }
 
+  const handleAddDoctor = async (doctorData) => {
+    try {
+      console.log('Creating doctor with data:', doctorData)
+      const res = await createDoctor(doctorData)
+      console.log('Create doctor response:', res)
+      if (res?.status === 'success') {
+        setShowAddModal(false)
+        load() // Reload list
+        alert('Thêm bác sĩ thành công!')
+      }
+    } catch (e) {
+      console.error('Add doctor error:', e)
+      console.error('Error status:', e?.response?.status)
+      console.error('Error data:', e?.response?.data)
+      const msg = e?.response?.data?.message || 'Không thể thêm bác sĩ'
+      alert(msg)
+      throw e // Let modal handle error
+    }
+  }
+
   return (
     <div>
-      <h2 style={{ marginTop: 0, marginBottom: 20, color: '#333' }}>Doctors List</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h2 style={{ margin: 0, color: '#333' }}>Doctors List</h2>
+        <button className="btn primary" onClick={() => setShowAddModal(true)}>
+          ➕ Add Doctor
+        </button>
+      </div>
       
       <div className="toolbar">
         <div className="filters">
@@ -77,27 +122,32 @@ export default function DoctorList() {
       </div>
 
       <div className="card">
+        {/* Debug info
+        <div style={{ padding: '8px', background: '#f0f0f0', fontSize: '12px', marginBottom: '8px' }}>
+          Total: {data.total} | Doctors count: {data.doctors?.length || 0} | Page: {data.page}/{data.total_pages}
+        </div> */}
+        
         <table className="table">
           <thead>
             <tr>
               <th>No.</th>
               <th>Full Name</th>
-              <th>Department</th>
+              <th>Device ID</th>
               <th>Position</th>
               <th>Phone</th>
               <th style={{ width: 120 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {data.doctors?.map((d) => (
-              <tr key={d.id}>
-                <td>{d.id}</td>
+            {data.doctors?.map((d, index) => (
+              <tr key={d._id || d.id}>
+                <td>{(page - 1) * limit + index + 1}</td>
                 <td>{d.full_name}</td>
-                <td>{d.department || 'Chưa có'}</td>
+                <td>{d.device_id || 'Chưa có'}</td>
                 <td>{d.position || d.specialization}</td>
                 <td>{d.phone}</td>
                 <td>
-                  <Link className="btn ghost" to={routers.AdminDoctorDetail(d.id)} style={{ padding: '6px 12px', fontSize: 14 }}>👁️ View</Link>
+                  <Link className="btn ghost" to={routers.AdminDoctorDetail(d._id || d.id)} style={{ padding: '6px 12px', fontSize: 14 }}>👁️ View</Link>
                 </td>
               </tr>
             ))}
@@ -123,13 +173,32 @@ export default function DoctorList() {
           )}
         </div>
       )}
+
+      {showAddModal && (
+        <AddDoctorModal
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleAddDoctor}
+        />
+      )}
     </div>
   )
 }
 
 function mockDoctors(page = 1, limit = 10, search = '', specialization = '') {
+  const mockMongoIds = [
+    '60d5ec49f1b2c72b8c8e4a1a',
+    '60d5ec49f1b2c72b8c8e4a1b', 
+    '60d5ec49f1b2c72b8c8e4a1c',
+    '60d5ec49f1b2c72b8c8e4a1d',
+    '60d5ec49f1b2c72b8c8e4a1e',
+    '60d5ec49f1b2c72b8c8e4a1f',
+    '60d5ec49f1b2c72b8c8e4a20',
+    '60d5ec49f1b2c72b8c8e4a21'
+  ]
   const all = Array.from({ length: 8 }).map((_, i) => ({
+    _id: mockMongoIds[i],
     id: i + 1,
+    userId: mockMongoIds[i],
     full_name: `Bác sĩ Demo ${i + 1}`,
     birthday: `198${(i % 10)}-0${(i % 9) + 1}-1${(i % 9)}`,
     address: `Số ${i + 10}, Đường Demo, Quận ${(i % 10) + 1}`,

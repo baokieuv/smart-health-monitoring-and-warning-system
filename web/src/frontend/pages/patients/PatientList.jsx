@@ -1,28 +1,50 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { getPatientList, createPatient } from '../../utils/api'
 // import routers from '../../utils/routers'
 import './PatientList.css'
 
 export default function PatientList() {
   const [patients, setPatients] = useState([])
-  const [filter, setFilter] = useState('all') // all, normal, warning
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [showAddModal, setShowAddModal] = useState(false)
   const [rooms, setRooms] = useState([])
 
   useEffect(() => {
     loadPatients()
     loadRooms()
-  }, [])
+  }, [page])
 
-  const loadPatients = () => {
-    // TODO: Fetch from API
-    setPatients([
-      { id: 1, name: 'Nguyễn Văn A', cccd: '123456789', gender: 'Nam', age: 45, status: 'normal', phone: '0912345678', room: 'A301' },
-      { id: 2, name: 'Trần Thị B', cccd: '987654321', gender: 'Nữ', age: 52, status: 'warning', phone: '0923456789', room: 'A302' },
-      { id: 3, name: 'Lê Văn C', cccd: '456789123', gender: 'Nam', age: 38, status: 'warning', phone: '0934567890', room: 'B201' },
-      { id: 4, name: 'Phạm Thị D', cccd: '321654987', gender: 'Nữ', age: 61, status: 'normal', phone: '0945678901', room: 'A301' },
-      { id: 5, name: 'Hoàng Văn E', cccd: '654321789', gender: 'Nam', age: 29, status: 'warning', phone: '0956789012', room: 'B202' },
-    ])
+  const loadPatients = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await getPatientList({ page, limit: 10 })
+      console.log('Patient list response:', res)
+      console.log('Patients array:', res?.data?.patients)
+      console.log('Total patients:', res?.data?.total)
+      
+      if (res?.status === 'success' && res?.data) {
+        const patientsList = res.data.patients || []
+        console.log('Setting patients:', patientsList)
+        setPatients(patientsList)
+        setTotalPages(res.data.total_pages || 1)
+        
+        // Show message if no patients
+        if (patientsList.length === 0) {
+          console.log('No patients found for this doctor')
+        }
+      }
+    } catch (e) {
+      console.error('Load patients error:', e)
+      console.error('Error response:', e?.response)
+      setError('Không thể tải danh sách bệnh nhân: ' + (e?.response?.data?.message || e.message))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const loadRooms = () => {
@@ -36,17 +58,35 @@ export default function PatientList() {
     ])
   }
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      normal: { text: '✅ Bình thường', class: 'status-normal' },
-      warning: { text: '⚠️ Cảnh báo', class: 'status-warning' }
+  const calculateAge = (birthday) => {
+    if (!birthday) return '-'
+    const birthDate = new Date(birthday)
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
     }
-    return badges[status] || badges.normal
+    return age
   }
 
-  const filteredPatients = filter === 'all' 
-    ? patients 
-    : patients.filter(p => p.status === filter)
+  const handleAddPatient = async (patientData) => {
+    try {
+      console.log('Creating patient with data:', patientData)
+      const res = await createPatient(patientData)
+      console.log('Create patient response:', res)
+      if (res?.status === 'success') {
+        setShowAddModal(false)
+        loadPatients()
+        alert('Thêm bệnh nhân thành công!')
+      }
+    } catch (e) {
+      console.error('Add patient error:', e)
+      const msg = e?.response?.data?.message || 'Không thể thêm bệnh nhân'
+      alert(msg)
+      throw e
+    }
+  }
 
   return (
     <div className="patient-list-container">
@@ -54,28 +94,14 @@ export default function PatientList() {
         <h2>📋 Patients List</h2>
         <div className="header-actions">
           <button className="btn-add" onClick={() => setShowAddModal(true)}>+ Add Patient</button>
-          <div className="filter-buttons">
-            <button 
-              className={filter === 'all' ? 'active' : ''} 
-              onClick={() => setFilter('all')}
-            >
-              All ({patients.length})
-            </button>
-            <button 
-              className={filter === 'normal' ? 'active' : ''} 
-              onClick={() => setFilter('normal')}
-            >
-              Normal ({patients.filter(p => p.status === 'normal').length})
-            </button>
-            <button 
-              className={filter === 'warning' ? 'active' : ''} 
-              onClick={() => setFilter('warning')}
-            >
-              Warning ({patients.filter(p => p.status === 'warning').length})
-            </button>
+          <div style={{ color: '#666', fontSize: '14px' }}>
+            Total: {patients.length} patients
           </div>
         </div>
       </div>
+
+      {loading && <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>Đang tải...</div>}
+      {error && <div style={{ padding: '20px', color: '#e5484d' }}>{error}</div>}
 
       <div className="table-container">
         <table className="patient-table">
@@ -84,30 +110,26 @@ export default function PatientList() {
               <th>No.</th>
               <th>Full Name</th>
               <th>CCCD</th>
-              <th>Gender</th>
+              <th>Birthday</th>
               <th>Age</th>
-              <th>Status</th>
-              <th>Emergency Contact</th>
+              <th>Phone</th>
+              <th>Address</th>
               <th>Room</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredPatients.map((patient, index) => {
-              const badge = getStatusBadge(patient.status)
+            {patients.map((patient, index) => {
+              const age = calculateAge(patient.birthday)
               return (
-                <tr key={patient.id} className={`row-${patient.status}`}>
-                  <td>{index + 1}</td>
-                  <td><strong>{patient.name}</strong></td>
+                <tr key={patient._id}>
+                  <td>{(page - 1) * 10 + index + 1}</td>
+                  <td><strong>{patient.full_name}</strong></td>
                   <td>{patient.cccd}</td>
-                  <td>{patient.gender}</td>
-                  <td>{patient.age}</td>
-                  <td>
-                    <span className={`badge ${badge.class}`}>
-                      {badge.text}
-                    </span>
-                  </td>
+                  <td>{patient.birthday ? new Date(patient.birthday).toLocaleDateString('vi-VN') : '-'}</td>
+                  <td>{age}</td>
                   <td>{patient.phone}</td>
+                  <td>{patient.address}</td>
                   <td>
                     <Link to={`/rooms/${patient.room}`} className="room-link">
                       {patient.room}
@@ -115,7 +137,7 @@ export default function PatientList() {
                   </td>
                   <td>
                     <Link 
-                      to={`/patients/${patient.id}`} 
+                      to={`/patients/${patient._id}`} 
                       className="btn-view"
                     >
                       👁️ View
@@ -124,20 +146,43 @@ export default function PatientList() {
                 </tr>
               )
             })}
+            {patients.length === 0 && !loading && (
+              <tr>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+                  Không có bệnh nhân nào
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+          <button 
+            onClick={() => setPage(p => Math.max(1, p - 1))} 
+            disabled={page === 1}
+            style={{ padding: '8px 16px' }}
+          >
+            Previous
+          </button>
+          <span style={{ padding: '8px 16px' }}>Page {page} of {totalPages}</span>
+          <button 
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
+            disabled={page === totalPages}
+            style={{ padding: '8px 16px' }}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Add Patient Modal */}
       {showAddModal && (
         <AddPatientModal
           rooms={rooms}
           onClose={() => setShowAddModal(false)}
-          onSuccess={() => {
-            setShowAddModal(false)
-            loadPatients()
-            loadRooms()
-          }}
+          onSubmit={handleAddPatient}
         />
       )}
     </div>
@@ -145,15 +190,15 @@ export default function PatientList() {
 }
 
 // Add Patient Modal Component
-function AddPatientModal({ rooms, onClose, onSuccess }) {
+function AddPatientModal({ rooms, onClose, onSubmit }) {
+  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    name: '',
     cccd: '',
-    gender: 'Nam',
-    age: '',
+    full_name: '',
+    birthday: '',
+    address: '',
     phone: '',
-    room: '',
-    status: 'normal'
+    room: ''
   })
 
   const handleChange = (e) => {
@@ -164,8 +209,17 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (!formData.room) {
-      alert('Vui lòng chọn phòng cho bệnh nhân')
+    // Validation
+    if (!formData.cccd || formData.cccd.length !== 12) {
+      alert('CCCD phải có 12 số')
+      return
+    }
+    if (!formData.full_name || !formData.birthday || !formData.address || !formData.phone || !formData.room) {
+      alert('Vui lòng điền đầy đủ các trường bắt buộc')
+      return
+    }
+    if (!/^0\d{9}$/.test(formData.phone)) {
+      alert('Số điện thoại phải có 10 số và bắt đầu bằng 0')
       return
     }
 
@@ -175,13 +229,13 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
       return
     }
 
+    setLoading(true)
     try {
-      // TODO: Call API to create patient and assign room
-      // await createPatient(formData)
-      alert(`Thêm bệnh nhân thành công và đã gán vào phòng ${formData.room}`)
-      onSuccess()
+      await onSubmit(formData)
     } catch (error) {
-      alert('Thêm bệnh nhân thất bại')
+      console.error('Submit error:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -193,62 +247,63 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
         <h3>➕ Add Patient</h3>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
+            <label>CCCD: <span className="required">*</span></label>
+            <input
+              type="text"
+              name="cccd"
+              value={formData.cccd}
+              onChange={handleChange}
+              required
+              maxLength={12}
+              placeholder="12 số CCCD"
+            />
+          </div>
+
+          <div className="form-group">
             <label>Full Name: <span className="required">*</span></label>
             <input
               type="text"
-              name="name"
-              value={formData.name}
+              name="full_name"
+              value={formData.full_name}
               onChange={handleChange}
               required
               placeholder="Nhập họ tên bệnh nhân"
             />
           </div>
           
-          <div className="form-row">
-            <div className="form-group">
-              <label>CCCD: <span className="required">*</span></label>
-              <input
-                type="text"
-                name="cccd"
-                value={formData.cccd}
-                onChange={handleChange}
-                required
-                placeholder="Số CCCD"
-              />
-            </div>
-            
-            <div className="form-group">
-              <label>Gender:</label>
-              <select name="gender" value={formData.gender} onChange={handleChange}>
-                <option value="Nam">Nam</option>
-                <option value="Nữ">Nữ</option>
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label>Age: <span className="required">*</span></label>
-              <input
-                type="number"
-                name="age"
-                value={formData.age}
-                onChange={handleChange}
-                required
-                min="1"
-                max="120"
-                placeholder="Tuổi"
-              />
-            </div>
-          </div>
-          
           <div className="form-group">
-            <label>Emergency Contact Phone: <span className="required">*</span></label>
+            <label>Birthday: <span className="required">*</span></label>
+            <input
+              type="date"
+              name="birthday"
+              value={formData.birthday}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Phone: <span className="required">*</span></label>
             <input
               type="tel"
               name="phone"
               value={formData.phone}
               onChange={handleChange}
               required
-              placeholder="Số điện thoại người nhà"
+              maxLength={10}
+              placeholder="Số điện thoại (0xxxxxxxxx)"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Address: <span className="required">*</span></label>
+            <input
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              required
+              placeholder="Địa chỉ đầy đủ"
             />
           </div>
           
@@ -267,17 +322,13 @@ function AddPatientModal({ rooms, onClose, onSuccess }) {
             )}
           </div>
           
-          <div className="form-group">
-            <label>Status:</label>
-            <select name="status" value={formData.status} onChange={handleChange}>
-              <option value="normal">Bình thường</option>
-              <option value="warning">Cảnh báo</option>
-            </select>
-          </div>
-          
           <div className="modal-actions">
-            <button type="submit" className="btn-primary">Add</button>
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Đang thêm...' : 'Add Patient'}
+            </button>
+            <button type="button" className="btn-secondary" onClick={onClose} disabled={loading}>
+              Cancel
+            </button>
           </div>
         </form>
       </div>

@@ -62,6 +62,49 @@ router.get(
 	doctorController.getDoctors
 );
 
+// get doctor by user_id API (for profile page)
+router.get(
+	'/user/:user_id',
+	authenticate,
+	[
+		param('user_id')
+			.isMongoId().withMessage('Invalid User ID')
+	],
+	validateRequest,
+	doctorController.getDoctorByUserId
+);
+
+// update doctor profile by user_id (doctor can update own profile)
+router.put(
+	'/user/:user_id/profile',
+	authenticate,
+	authorizeRoles('doctor'),
+	[
+		param('user_id')
+			.isMongoId().withMessage('Invalid User ID'),
+		body('full_name')
+			.optional()
+			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
+		body('email')
+			.optional()
+			.isEmail().withMessage('Invalid email format'),
+		body('birthday')
+			.optional()
+			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
+		body('address')
+			.optional()
+			.isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
+		body('phone')
+			.optional()
+			.custom(validatePhone).withMessage('Invalid phone format'),
+		body('specialization')
+			.optional()
+			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters')
+	],
+	validateRequest,
+	doctorController.updateDoctorProfile
+);
+
 // get doctor detail API
 router.get(
 	'/doctors/:doctor_id',
@@ -75,7 +118,7 @@ router.get(
 	doctorController.getDoctorDetail
 );
 
-// update doctor API
+// update doctor API (admin only from admin panel)
 router.put(
 	'/doctors/:doctor_id',
 	authenticate,
@@ -100,7 +143,10 @@ router.put(
 			.custom(validatePhone).withMessage('Invalid phone format'),
 		body('specialization')
 			.optional()
-			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters')
+			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters'),
+		body('device_id')
+			.optional()
+			.isString().withMessage('Device ID must be a string')
 	],
 	validateRequest,
 	doctorController.updateDoctor

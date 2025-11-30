@@ -28,12 +28,12 @@ const DeviceList = () => {
       const deviceData = response.data?.data?.devices || []
       setDevices(deviceData)
       
-      // Calculate stats
-      const inUse = deviceData.filter(d => d.doctor && d.patient).length
+      // Calculate stats - device is in use if it has both doctorId and patientId
+      const connected = deviceData.filter(d => d.doctor && d.patient).length
       setStats({
         total: deviceData.length,
-        inUse: inUse,
-        available: deviceData.length - inUse
+        inUse: connected,
+        available: 0 // Remove available count
       })
     } catch (err) {
       console.error('Error fetching devices:', err)
@@ -73,15 +73,7 @@ const DeviceList = () => {
           <div className="stat-icon">✅</div>
           <div className="stat-info">
             <h3>{stats.inUse}</h3>
-            <p>Đang sử dụng</p>
-          </div>
-        </div>
-        
-        <div className="stat-card available">
-          <div className="stat-icon">📦</div>
-          <div className="stat-info">
-            <h3>{stats.available}</h3>
-            <p>Còn trống</p>
+            <p>Đang kết nối</p>
           </div>
         </div>
       </div>
@@ -98,7 +90,7 @@ const DeviceList = () => {
           className={`filter-btn ${showInUseOnly ? 'active' : ''}`}
           onClick={() => setShowInUseOnly(true)}
         >
-          Đang sử dụng ({stats.inUse})
+          Đang kết nối ({stats.inUse})
         </button>
       </div>
 
@@ -119,7 +111,7 @@ const DeviceList = () => {
             {filteredDevices.length === 0 ? (
               <tr>
                 <td colSpan="6" className="no-data">
-                  {showInUseOnly ? 'Không có thiết bị nào đang được sử dụng' : 'Không có thiết bị nào'}
+                  {showInUseOnly ? 'Không có thiết bị nào đang được kết nối' : 'Không có thiết bị nào'}
                 </td>
               </tr>
             ) : (
@@ -138,7 +130,7 @@ const DeviceList = () => {
                         <div className="sub-info">📞 {device.doctor.phone}</div>
                       </div>
                     ) : (
-                      <span className="not-assigned">Chưa gán</span>
+                      <span className="not-assigned">Chưa có</span>
                     )}
                   </td>
                   <td>
@@ -149,14 +141,14 @@ const DeviceList = () => {
                         <div className="sub-info">Phòng: {device.patient.room}</div>
                       </div>
                     ) : (
-                      <span className="not-assigned">Chưa gán</span>
+                      <span className="not-assigned">Chưa có</span>
                     )}
                   </td>
                   <td>
                     {device.doctor && device.patient ? (
-                      <span className="status in-use">Đang sử dụng</span>
+                      <span className="status in-use">Đang kết nối</span>
                     ) : (
-                      <span className="status available">Còn trống</span>
+                      <span className="status disconnected">Chưa kết nối</span>
                     )}
                   </td>
                 </tr>

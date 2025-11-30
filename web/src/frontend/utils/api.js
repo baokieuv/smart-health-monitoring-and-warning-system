@@ -98,6 +98,23 @@ export const updateDoctor = (doctorId, payload) => unwrap(api.put(`/api/v1/admin
 
 export const deleteDoctor = (doctorId) => unwrap(api.delete(`/api/v1/admin/doctors/${doctorId}`))
 
+// Doctor - Patients
+export const createPatient = (payload) =>
+  unwrap(api.post('/api/v1/doctor/patients', payload))
+
+export const getPatientList = ({ page = 1, limit = 10, search = '' } = {}) =>
+  unwrap(
+    api.get('/api/v1/doctor/patients', {
+      params: { page, limit, search: search || undefined },
+    })
+  )
+
+export const getPatientDetail = (patientId) => unwrap(api.get(`/api/v1/doctor/patients/${patientId}`))
+
+export const updatePatient = (patientId, payload) => unwrap(api.put(`/api/v1/doctor/patients/${patientId}`, payload))
+
+export const deletePatient = (patientId) => unwrap(api.delete(`/api/v1/doctor/patients/${patientId}`))
+
 // Optional endpoints
 export const getDoctorSpecializations = () =>
   unwrap(
@@ -122,7 +139,7 @@ export const updateDoctorPassword = (doctorId, password) =>
 // Doctor Profile APIs
 export const getDoctorProfile = (userId) => unwrap(api.get(`/api/v1/admin/user/${userId}`))
 
-export const updateDoctorProfile = (doctorId, payload) => updateDoctor(doctorId, payload)
+export const updateDoctorProfile = (userId, payload) => unwrap(api.put(`/api/v1/admin/user/${userId}/profile`, payload))
 
 export default {
   api,
@@ -147,5 +164,9 @@ export default {
   updateDoctorPassword,
   getDoctorProfile,
   updateDoctorProfile,
-  // changeDoctorPassword,
+  createPatient,
+  getPatientList,
+  getPatientDetail,
+  updatePatient,
+  deletePatient,
 }

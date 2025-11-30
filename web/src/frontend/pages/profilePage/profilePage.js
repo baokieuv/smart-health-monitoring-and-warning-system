@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import { getDoctorProfile, updateDoctorProfile} from '../../utils/api'
+import { useParams, useNavigate } from 'react-router-dom'
+import { getDoctorProfile, updateDoctorProfile, updateDoctor, getUserInfo, getUserRole} from '../../utils/api'
+import routers from '../../utils/routers'
 import './profilePage.scss'
 
 const ProfilePage = () => {
   const { userId } = useParams()
+  const navigate = useNavigate()
+  const currentUser = getUserInfo()
+  const userRole = getUserRole()
+  const isOwnProfile = currentUser?.id === userId
+  const canEdit = (userRole === 'doctor' && isOwnProfile) || userRole === 'admin'
+  
   const [isEditing, setIsEditing] = useState(false)
   const [doctor, setDoctor] = useState(null)
   const [formData, setFormData] = useState({})
@@ -73,8 +80,14 @@ const ProfilePage = () => {
         return
       }
       
-      // Use doctor._id (doctor_id) instead of userId
-      const response = await updateDoctorProfile(doctor._id, updatePayload)
+      // Admin uses doctor_id, doctor uses userId
+      let response
+      if (userRole === 'admin') {
+        response = await updateDoctor(doctor._id, updatePayload)
+      } else {
+        response = await updateDoctorProfile(userId, updatePayload)
+      }
+      
       setDoctor(response.doctor)
       setFormData(response.doctor)
       setIsEditing(false)
@@ -101,7 +114,7 @@ const ProfilePage = () => {
       current_password: passwordData.current_password,
       new_password: passwordData.new_password
     })
-    alert('Chức năng đổi mật khẩu sẽ được cập nhật sau!')
+    alert('Coming soon!')
     setShowPasswordChange(false)
     setPasswordData({
       current_password: '',
@@ -130,13 +143,30 @@ const ProfilePage = () => {
   return (
     <div className="profile-page doctor-profile">
       <div className="profile-header">
-        <h2>👨‍⚕️ Doctor Profile</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button 
+            className="btn-back" 
+            onClick={() => navigate(userRole === 'admin' ? routers.AdminDoctors : routers.Home)}
+            style={{ 
+              padding: '8px 16px', 
+              background: '#6c757d', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '6px', 
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            ← Return
+          </button>
+          <h2 style={{ margin: 0 }}>👨‍⚕️ Doctor Profile</h2>
+        </div>
         <div className="header-actions">
-          {!isEditing ? (
+          {canEdit && !isEditing ? (
             <button className="btn-edit" onClick={() => setIsEditing(true)}>
               ✏️ Edit
             </button>
-          ) : (
+          ) : canEdit && isEditing ? (
             <>
               <button className="btn-save" onClick={handleSave}>
                 ✓ Save
@@ -145,7 +175,7 @@ const ProfilePage = () => {
                 ✗ Cancel
               </button>
             </>
-          )}
+          ) : null}
         </div>
       </div>
       
@@ -246,17 +276,18 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Password Section */}
-        <div className="info-section password-section">
-          <h3>🔒 Privacy</h3>
-          {!showPasswordChange ? (
-            <button 
-              className="btn-change-password"
-              onClick={() => setShowPasswordChange(true)}
-            >
-              Change Password
-            </button>
-          ) : (
+        {/* Password Section - Only for doctor's own profile */}
+        {canEdit && (
+          <div className="info-section password-section">
+            <h3>🔒 Privacy</h3>
+            {!showPasswordChange ? (
+              <button 
+                className="btn-change-password"
+                onClick={() => setShowPasswordChange(true)}
+              >
+                Change Password
+              </button>
+            ) : (
             <div className="password-form">
               <div className="info-item">
                 <label>Current Password:</label>
@@ -309,6 +340,7 @@ const ProfilePage = () => {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   )
