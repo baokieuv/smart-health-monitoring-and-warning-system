@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema({
     default: 'patient'
     // Role để phân quyền: admin hoặc doctor hoặc patient
   },
+  imageUrl: {
+    type: String,
+    trim: true
+  }
 }, {
   timestamps: true
 });

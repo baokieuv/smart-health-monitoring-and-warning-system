@@ -5,6 +5,7 @@ const authRoutes = require('./routes/auth.routes');
 const patientRoutes = require('./routes/patient.routes');
 const doctorRoutes = require('./routes/doctor.routes');
 const familyRoutes = require('./routes/family.routes');
+const userRoutes = require('./routes/user.routes');
 const connectDB = require('./config/database');
 
 const app = express();
@@ -25,6 +26,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/doctor', patientRoutes);
 app.use('/api/v1/admin', doctorRoutes);
 app.use('/api/v1/family', familyRoutes);
+app.use('/api/v1/user', userRoutes);
 
 // ============= ERROR HANDLERS =============
 // 404 handler
