@@ -23,7 +23,7 @@ Run tạo tài khoản admin mặc định
 ```bash
 node web/src/backend/config/admin.js
 ```
-Run hệ thống
+Run hệ thống (Đảm bảo đã chạy ThingsBoard CE trước đó)
 
 ```bash
 npm start
