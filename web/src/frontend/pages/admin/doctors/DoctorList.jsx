@@ -132,7 +132,7 @@ export default function DoctorList() {
             <tr>
               <th>No.</th>
               <th>Full Name</th>
-              <th>Device ID</th>
+              <th>CCCD</th>
               <th>Position</th>
               <th>Phone</th>
               <th style={{ width: 120 }}>Actions</th>
@@ -143,7 +143,7 @@ export default function DoctorList() {
               <tr key={d._id || d.id}>
                 <td>{(page - 1) * limit + index + 1}</td>
                 <td>{d.full_name}</td>
-                <td>{d.device_id || 'Chưa có'}</td>
+                <td>{d.cccd}</td>
                 <td>{d.position || d.specialization}</td>
                 <td>{d.phone}</td>
                 <td>

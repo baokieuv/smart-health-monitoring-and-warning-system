@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getPatientList, createPatient } from '../../utils/api'
+import { getPatientList, createPatient, getDoctorsList } from '../../utils/api'
 // import routers from '../../utils/routers'
 import './PatientList.css'
 
@@ -12,10 +12,12 @@ export default function PatientList() {
   const [totalPages, setTotalPages] = useState(1)
   const [showAddModal, setShowAddModal] = useState(false)
   const [rooms, setRooms] = useState([])
+  const [doctors, setDoctors] = useState([])
 
   useEffect(() => {
     loadPatients()
     loadRooms()
+    loadDoctors()
   }, [page])
 
   const loadPatients = async () => {
@@ -41,7 +43,7 @@ export default function PatientList() {
     } catch (e) {
       console.error('Load patients error:', e)
       console.error('Error response:', e?.response)
-      setError('Không thể tải danh sách bệnh nhân: ' + (e?.response?.data?.message || e.message))
+      setError('Error when loading patients list: ' + (e?.response?.data?.message || e.message))
     } finally {
       setLoading(false)
     }
@@ -56,6 +58,17 @@ export default function PatientList() {
       { code: 'B202', capacity: 2, occupied: 1 },
       { code: 'C101', capacity: 6, occupied: 6 },
     ])
+  }
+
+  const loadDoctors = async () => {
+    try {
+      const res = await getDoctorsList()
+      if (res?.status === 'success' && res?.data?.doctors) {
+        setDoctors(res.data.doctors)
+      }
+    } catch (e) {
+      console.error('Load doctors error:', e)
+    }
   }
 
   const calculateAge = (birthday) => {
@@ -110,11 +123,9 @@ export default function PatientList() {
               <th>No.</th>
               <th>Full Name</th>
               <th>CCCD</th>
-              <th>Birthday</th>
-              <th>Age</th>
-              <th>Phone</th>
-              <th>Address</th>
               <th>Room</th>
+              <th>Doctor</th>
+              <th>Device ID</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -126,15 +137,15 @@ export default function PatientList() {
                   <td>{(page - 1) * 10 + index + 1}</td>
                   <td><strong>{patient.full_name}</strong></td>
                   <td>{patient.cccd}</td>
-                  <td>{patient.birthday ? new Date(patient.birthday).toLocaleDateString('vi-VN') : '-'}</td>
-                  <td>{age}</td>
-                  <td>{patient.phone}</td>
-                  <td>{patient.address}</td>
                   <td>
                     <Link to={`/rooms/${patient.room}`} className="room-link">
                       {patient.room}
                     </Link>
                   </td>
+                  <td>
+                    {doctors.find(d => d._id === patient.doctorId)?.full_name || 'N/A'}
+                  </td>
+                  <td style={{ fontFamily: 'monospace', fontSize: '13px' }}>{patient.deviceId || '-'}</td>
                   <td>
                     <Link 
                       to={`/patients/${patient._id}`} 
@@ -181,6 +192,7 @@ export default function PatientList() {
       {showAddModal && (
         <AddPatientModal
           rooms={rooms}
+          doctors={doctors}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddPatient}
         />
@@ -190,7 +202,7 @@ export default function PatientList() {
 }
 
 // Add Patient Modal Component
-function AddPatientModal({ rooms, onClose, onSubmit }) {
+function AddPatientModal({ rooms, doctors, onClose, onSubmit }) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     cccd: '',
@@ -198,7 +210,9 @@ function AddPatientModal({ rooms, onClose, onSubmit }) {
     birthday: '',
     address: '',
     phone: '',
-    room: ''
+    room: '',
+    doctorId: '',
+    deviceId: ''
   })
 
   const handleChange = (e) => {
@@ -214,7 +228,7 @@ function AddPatientModal({ rooms, onClose, onSubmit }) {
       alert('CCCD phải có 12 số')
       return
     }
-    if (!formData.full_name || !formData.birthday || !formData.address || !formData.phone || !formData.room) {
+    if (!formData.full_name || !formData.birthday || !formData.address || !formData.phone || !formData.room || !formData.doctorId) {
       alert('Vui lòng điền đầy đủ các trường bắt buộc')
       return
     }
@@ -320,6 +334,32 @@ function AddPatientModal({ rooms, onClose, onSubmit }) {
             {availableRooms.length === 0 && (
               <small style={{ color: '#dc3545' }}>Không có phòng trống. Vui lòng liên hệ quản trị viên.</small>
             )}
+          </div>
+
+          <div className="form-group">
+            <label>Doctor: <span className="required">*</span></label>
+            <select name="doctorId" value={formData.doctorId} onChange={handleChange} required>
+              <option value="">-- Chọn bác sĩ phụ trách --</option>
+              {doctors.map(doctor => (
+                <option key={doctor._id} value={doctor._id}>
+                  {doctor.full_name} - {doctor.specialization}
+                </option>
+              ))}
+            </select>
+            {doctors.length === 0 && (
+              <small style={{ color: '#dc3545' }}>Không có bác sĩ nào trong hệ thống.</small>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label>Device ID:</label>
+            <input
+              type="text"
+              name="deviceId"
+              value={formData.deviceId}
+              onChange={handleChange}
+              placeholder="ID thiết bị (tùy chọn)"
+            />
           </div>
           
           <div className="modal-actions">

@@ -99,6 +99,9 @@ export const updateDoctor = (doctorId, payload) => unwrap(api.put(`/api/v1/admin
 export const deleteDoctor = (doctorId) => unwrap(api.delete(`/api/v1/admin/doctors/${doctorId}`))
 
 // Doctor - Patients
+export const getDoctorsList = () =>
+  unwrap(api.get('/api/v1/doctor/doctors-list'))
+
 export const createPatient = (payload) =>
   unwrap(api.post('/api/v1/doctor/patients', payload))
 

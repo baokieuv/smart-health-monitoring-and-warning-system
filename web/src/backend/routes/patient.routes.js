@@ -25,9 +25,6 @@ router.put(
 		body('full_name')
 			.optional()
 			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
-		body('email')
-			.optional()
-			.isEmail().withMessage('Invalid email format'),
 		body('birthday')
 			.optional()
 			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
@@ -36,10 +33,7 @@ router.put(
 			.isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
 		body('phone')
 			.optional()
-			.custom(validatePhone).withMessage('Invalid phone format'),
-		body('specialization')
-			.optional()
-			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters')
+			.custom(validatePhone).withMessage('Invalid phone format')
 	],
     validateRequest,
     patientController.updateDetail
@@ -68,10 +62,25 @@ router.post(
             .custom(validatePhone).withMessage('Invalid phone format'),
         body('room')
             .notEmpty().withMessage('Room is required')
-            .isLength({ min: 1, max: 50 }).withMessage('Room must be between 1-50 characters')
+            .isLength({ min: 1, max: 50 }).withMessage('Room must be between 1-50 characters'),
+        body('doctorId')
+            .notEmpty().withMessage('Doctor ID is required')
+            .isMongoId().withMessage('Invalid Doctor ID'),
+        body('deviceId')
+            .optional()
+            .isString().withMessage('Device ID must be a string')
     ],
     validateRequest,
     patientController.createPatient
+);
+
+// get doctors list for dropdown API
+router.get(
+    '/doctors-list',
+    authenticate,
+    authorizeRoles('doctor'),
+    validateRequest,
+    patientController.getDoctorsList
 );
 
 // get patient list API
@@ -115,6 +124,9 @@ router.put(
     [
         param('patient_id')
             .isMongoId().withMessage('Invalid Patient ID'),
+        body('cccd')
+            .optional()
+            .custom(validateCCCD).withMessage('Invalid CCCD format'),
         body('full_name')
             .optional()
             .isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
@@ -129,7 +141,13 @@ router.put(
             .custom(validatePhone).withMessage('Invalid phone format'),
         body('room')
             .optional()
-            .isLength({ min: 1, max: 50 }).withMessage('Room must be between 1-50 characters')
+            .isLength({ min: 1, max: 50 }).withMessage('Room must be between 1-50 characters'),
+        body('doctorId')
+            .optional()
+            .isMongoId().withMessage('Invalid Doctor ID'),
+        body('deviceId')
+            .optional()
+            .isString().withMessage('Device ID must be a string')
     ],
     validateRequest,
     patientController.updatePatient
@@ -168,7 +186,10 @@ router.post(
     authorizeRoles('doctor'),
     [
         param('patient_id')
-            .isMongoId().withMessage('Invalid Patient ID')
+            .isMongoId().withMessage('Invalid Patient ID'),
+        body('deviceId')
+            .notEmpty().withMessage('Device ID is required')
+            .isString().withMessage('Device ID must be a string')
     ],
     validateRequest,
     patientController.allocateDevice

@@ -1,9 +1,33 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getPatientList } from '../utils/api'
 import './homePage.scss'
 
 const HomePage = () => {
   const navigate = useNavigate()
+  const [stats, setStats] = useState({
+    patients: 0,
+    alerts: 0,
+    notes: 0
+  })
+
+  useEffect(() => {
+    loadStats()
+  }, [])
+
+  const loadStats = async () => {
+    try {
+      const res = await getPatientList({ page: 1, limit: 1000 })
+      if (res?.status === 'success' && res?.data) {
+        setStats(prev => ({
+          ...prev,
+          patients: res.data.total || 0
+        }))
+      }
+    } catch (e) {
+      console.error('Load stats error:', e)
+    }
+  }
 
   const features = [
     {
@@ -65,15 +89,15 @@ const HomePage = () => {
 
       <div className="home-stats">
         <div className="stat-card">
-          <div className="stat-number">10</div>
+          <div className="stat-number">{stats.patients}</div>
           <div className="stat-label">Patients being monitored</div>
         </div>
         <div className="stat-card">
-          <div className="stat-number">7</div>
+          <div className="stat-number">{stats.alerts}</div>
           <div className="stat-label">Alerts</div>
         </div>
         <div className="stat-card">
-          <div className="stat-number">20</div>
+          <div className="stat-number">{stats.notes}</div>
           <div className="stat-label">Notes</div>
         </div>
       </div>

@@ -23,13 +23,6 @@ export default function Sidebar() {
           <span className="label">Patients List</span>
         </Link>
         <Link 
-          to="/rooms" 
-          className={`sidebar-item ${isActive('/rooms') ? 'active' : ''}`}
-        >
-          <span className="icon">🏥</span>
-          <span className="label">Rooms List</span>
-        </Link>
-        <Link 
           to="/alerts" 
           className={`sidebar-item ${isActive('/alerts') ? 'active' : ''}`}
         >
@@ -37,11 +30,19 @@ export default function Sidebar() {
           <span className="label">Alerts</span>
         </Link>
         <Link 
+          to="/rooms" 
+          className={`sidebar-item ${isActive('/rooms') ? 'active' : ''}`}
+        >
+          <span className="icon">🏥</span>
+          <span className="label">Rooms (Coming soon)</span>
+        </Link>
+        
+        <Link 
           to="/notes" 
           className={`sidebar-item ${isActive('/notes') ? 'active' : ''}`}
         >
           <span className="icon">📝</span>
-          <span className="label">Notes</span>
+          <span className="label">Notes (Coming soon)</span>
         </Link>
       </nav>
     </aside>

@@ -234,11 +234,43 @@ exports.createPatient = async (req, res) => {
     }
 }
 
-// GET /api/v1/doctor/patients -> get list patients by doctorId
+// GET /api/v1/doctor/doctors-list -> get list of doctors for dropdown
+exports.getDoctorsList = async (req, res) => {
+    try {
+        const doctors = await Doctor.find({}, 'userId full_name email specialization')
+            .lean();
+
+        console.log('Found doctors:', doctors.length);
+
+        const doctorsList = doctors.map(doctor => ({
+            _id: doctor.userId,
+            full_name: doctor.full_name,
+            email: doctor.email,
+            specialization: doctor.specialization
+        }));
+
+        console.log("Doctors list retrieved successfully:", doctorsList.length);
+        return res.status(200).json({
+            status: "success",
+            message: "Doctors list retrieved successfully.",
+            data: {
+                doctors: doctorsList
+            }
+        });
+    } catch (err) {
+        console.error('Get doctors list error:', err);
+        return res.status(500).json({
+            status: "error",
+            message: "Unexpected error occurred."
+        });
+    }
+};
+
+// GET /api/v1/doctor/patients -> get list patients
 exports.getPatients = async (req, res) => {
     try {
         const { page = 1, limit = 10, search } = req.query;
-        let query = { doctorId: req.user.id };
+        let query = {};
 
         // Search by name
         if (search) {

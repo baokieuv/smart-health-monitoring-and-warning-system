@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { getPatientDetail, updatePatient } from '../../utils/api'
+import { getPatientDetail, updatePatient, getDoctorsList } from '../../utils/api'
 import './PatientDetail.css'
 
 export default function PatientDetail() {
@@ -11,10 +11,23 @@ export default function PatientDetail() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showEditModal, setShowEditModal] = useState(false)
+  const [doctors, setDoctors] = useState([])
 
   useEffect(() => {
     loadPatient()
+    loadDoctors()
   }, [id])
+
+  const loadDoctors = async () => {
+    try {
+      const res = await getDoctorsList()
+      if (res?.status === 'success' && res?.data?.doctors) {
+        setDoctors(res.data.doctors)
+      }
+    } catch (e) {
+      console.error('Load doctors error:', e)
+    }
+  }
 
   const loadPatient = async () => {
     setLoading(true)
@@ -79,6 +92,12 @@ export default function PatientDetail() {
   }
 
   const age = calculateAge(patient.birthday)
+  
+  const getDoctorName = (doctorId) => {
+    if (!doctorId) return '-'
+    const doctor = doctors.find(d => d._id === doctorId)
+    return doctor ? `${doctor.full_name} (${doctor.specialization})` : doctorId
+  }
 
   return (
     <div className="patient-detail-container">
@@ -124,6 +143,10 @@ export default function PatientDetail() {
             </span>
           </div>
           <div className="info-row">
+            <span className="label">Doctor:</span>
+            <span className="value">{getDoctorName(patient.doctorId)}</span>
+          </div>
+          <div className="info-row">
             <span className="label">Device ID:</span>
             <span className="value">{patient.deviceId || 'Chưa gán'}</span>
           </div>
@@ -134,6 +157,7 @@ export default function PatientDetail() {
       {showEditModal && (
         <EditPatientModal
           patient={patient}
+          doctors={doctors}
           onClose={() => setShowEditModal(false)}
           onSubmit={handleUpdatePatient}
         />
@@ -222,14 +246,16 @@ export default function PatientDetail() {
 }
 
 // Edit Patient Modal Component
-function EditPatientModal({ patient, onClose, onSubmit }) {
+function EditPatientModal({ patient, doctors, onClose, onSubmit }) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     full_name: patient.full_name || '',
     birthday: patient.birthday ? new Date(patient.birthday).toISOString().split('T')[0] : '',
     address: patient.address || '',
     phone: patient.phone || '',
-    room: patient.room || ''
+    room: patient.room || '',
+    doctorId: patient.doctorId || '',
+    deviceId: patient.deviceId || ''
   })
 
   const handleChange = (e) => {
@@ -328,6 +354,29 @@ function EditPatientModal({ patient, onClose, onSubmit }) {
               value={formData.room}
               onChange={handleChange}
               required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Doctor: <span style={{ fontSize: '12px', color: '#999' }}>(Tùy chọn)</span></label>
+            <select name="doctorId" value={formData.doctorId} onChange={handleChange}>
+              <option value="">-- Chọn bác sĩ phụ trách --</option>
+              {doctors.map(doctor => (
+                <option key={doctor._id} value={doctor._id}>
+                  {doctor.full_name} - {doctor.specialization}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Device ID: <span style={{ fontSize: '12px', color: '#999' }}>(Tùy chọn)</span></label>
+            <input
+              type="text"
+              name="deviceId"
+              value={formData.deviceId}
+              onChange={handleChange}
+              placeholder="ID thiết bị"
             />
           </div>
           
