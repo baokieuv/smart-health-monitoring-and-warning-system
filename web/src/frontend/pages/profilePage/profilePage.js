@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getDoctorProfile, updateDoctorProfile, updateDoctor, getUserInfo, getUserRole} from '../../utils/api'
 import routers from '../../utils/routers'
+import AvatarUpload from '../../components/AvatarUpload/AvatarUpload'
 import './profilePage.scss'
 
 const ProfilePage = () => {
@@ -18,6 +19,7 @@ const ProfilePage = () => {
   const [showPasswordChange, setShowPasswordChange] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [avatarUrl, setAvatarUrl] = useState(null)
   const [passwordData, setPasswordData] = useState({
     current_password: '',
     new_password: '',
@@ -33,6 +35,11 @@ const ProfilePage = () => {
         const response = await getDoctorProfile(userId)
         setDoctor(response.doctor)
         setFormData(response.doctor)
+        
+        // Load avatar if user is viewing own profile
+        if (isOwnProfile) {
+          loadAvatar()
+        }
       } catch (err) {
         console.error('Error fetching doctor profile:', err)
         setError('Không thể tải thông tin profile. Vui lòng thử lại.')
@@ -45,6 +52,38 @@ const ProfilePage = () => {
       fetchDoctorProfile()
     }
   }, [userId])
+
+  const loadAvatar = async () => {
+    try {
+      const token = localStorage.getItem('access_token')
+      console.log('Loading avatar with token:', token)
+      
+      if (!token) {
+        console.log('No token found')
+        return
+      }
+
+      const response = await fetch('http://localhost:5000/api/v1/user/download-image', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      console.log('Avatar response status:', response.status)
+      const data = await response.json()
+      console.log('Avatar response data:', data)
+      
+      if (data.status === 'success') {
+        setAvatarUrl(data.data)
+      }
+    } catch (err) {
+      console.error('Error loading avatar:', err)
+    }
+  }
+
+  const handleAvatarUploadSuccess = (url) => {
+    setAvatarUrl(url)
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -178,6 +217,16 @@ const ProfilePage = () => {
           ) : null}
         </div>
       </div>
+
+      {/* Avatar Upload Section - Only for own profile */}
+      {canEdit && (
+        <div className="avatar-section">
+          <AvatarUpload 
+            currentAvatar={avatarUrl} 
+            onUploadSuccess={handleAvatarUploadSuccess}
+          />
+        </div>
+      )}
       
       <div className="doctor-info">
         {/* Personal Info Section */}

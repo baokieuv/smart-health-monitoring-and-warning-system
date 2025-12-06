@@ -28,7 +28,9 @@ exports.authenticate = (req, res, next) => {
 };
 
 exports.authorizeRoles = (...roles) => (req, res, next) => {
+    console.log('Authorization check - User role:', req.user?.role, 'Required roles:', roles);
     if (!req.user || !roles.includes(req.user.role)) {
+        console.log('Authorization failed - Access denied');
         return res.status(403).json({
             status: 'error',
             message: 'Permission denied.'

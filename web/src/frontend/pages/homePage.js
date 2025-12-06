@@ -17,8 +17,10 @@ const HomePage = () => {
 
   const loadStats = async () => {
     try {
-      const res = await getPatientList({ page: 1, limit: 1000 })
+      const res = await getPatientList({ page: 1, limit: 10 })
+      console.log('HomePage stats response:', res)
       if (res?.status === 'success' && res?.data) {
+        console.log('Total patients:', res.data.total)
         setStats(prev => ({
           ...prev,
           patients: res.data.total || 0

@@ -14,14 +14,18 @@ export default function PatientDetail() {
   const [doctors, setDoctors] = useState([])
 
   useEffect(() => {
-    loadPatient()
-    loadDoctors()
+    const loadData = async () => {
+      await Promise.all([loadPatient(), loadDoctors()])
+    }
+    loadData()
   }, [id])
 
   const loadDoctors = async () => {
     try {
       const res = await getDoctorsList()
+      console.log('getDoctorsList API response:', res)
       if (res?.status === 'success' && res?.data?.doctors) {
+        console.log('Setting doctors to:', res.data.doctors)
         setDoctors(res.data.doctors)
       }
     } catch (e) {
@@ -95,8 +99,20 @@ export default function PatientDetail() {
   
   const getDoctorName = (doctorId) => {
     if (!doctorId) return '-'
-    const doctor = doctors.find(d => d._id === doctorId)
-    return doctor ? `${doctor.full_name} (${doctor.specialization})` : doctorId
+    if (doctors.length === 0) return 'Đang tải...'
+    
+    // Convert ObjectId to string for comparison (patient.doctorId is ObjectId, doctors._id is string)
+    const idToMatch = (typeof doctorId === 'object' && doctorId.toString) 
+      ? doctorId.toString() 
+      : String(doctorId)
+    
+    console.log('Looking for doctor with ID:', idToMatch)
+    console.log('Available doctors:', doctors)
+    console.log('Patient object:', patient)
+    
+    const doctor = doctors.find(d => d._id === idToMatch)
+    console.log('Found doctor:', doctor)
+    return doctor ? `${doctor.full_name} (${doctor.specialization})` : '-'
   }
 
   return (
@@ -360,7 +376,7 @@ function EditPatientModal({ patient, doctors, onClose, onSubmit }) {
           <div className="form-group">
             <label>Doctor: <span style={{ fontSize: '12px', color: '#999' }}>(Tùy chọn)</span></label>
             <select name="doctorId" value={formData.doctorId} onChange={handleChange}>
-              <option value="">-- Chọn bác sĩ phụ trách --</option>
+              {/* <option value="">-- Chọn bác sĩ phụ trách --</option> */}
               {doctors.map(doctor => (
                 <option key={doctor._id} value={doctor._id}>
                   {doctor.full_name} - {doctor.specialization}

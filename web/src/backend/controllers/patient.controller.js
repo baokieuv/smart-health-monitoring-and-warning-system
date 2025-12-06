@@ -242,8 +242,9 @@ exports.getDoctorsList = async (req, res) => {
 
         console.log('Found doctors:', doctors.length);
 
+        // Return userId as the ID to match with patient.doctorId (which refs User)
         const doctorsList = doctors.map(doctor => ({
-            _id: doctor.userId,
+            _id: doctor.userId.toString(), // Convert to string for comparison
             full_name: doctor.full_name,
             email: doctor.email,
             specialization: doctor.specialization
@@ -324,14 +325,6 @@ exports.getPatientDetail = async (req, res) => {
             });
         }
 
-        // check doctor id
-        if(patient.doctorId.toString() !== req.user.id.toString()){
-            return res.status(403).json({
-                status: "error",
-                message: "Permission denied."
-            });
-        }
-
         console.log("Patient retrieved successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
@@ -357,14 +350,6 @@ exports.updatePatient = async (req, res) => {
             return res.status(404).json({
                 status: "error",
                 message: "Patient not found."
-            });
-        }
-
-        // check doctor id
-        if(patient.doctorId.toString() !== req.user.id.toString()){
-            return res.status(403).json({
-                status: "error",
-                message: "Permission denied."
             });
         }
 
@@ -412,14 +397,8 @@ exports.getHealthInfo = async (req, res) => {
             });
         }
 
-        // check doctor id
-        if(patient.doctorId.toString() !== req.user.id.toString()){
-            return res.status(403).json({
-                status: "error",
-                message: "Permission denied."
-            });
-        }
-
+        console.log("Patient retrieved successfully: ", patient._id);
+        
         if(!patient.deviceId){
             return res.status(400).json({
                 status: "error",
@@ -495,14 +474,6 @@ exports.deletePatient = async (req, res) => {
             });
         }
 
-        // check doctor id
-        if(patient.doctorId.toString() !== req.user.id.toString()){
-            return res.status(403).json({
-                status: "error",
-                message: "Permission denied."
-            });
-        }
-
         if(patient.deviceId){
             const token = tokenStore.findThingsBoardToken(req.user.id);
             console.log(`Deleting device ${patient.deviceId} from ThingsBoard...`);
@@ -542,14 +513,6 @@ exports.allocateDevice = async(req, res) => {
             return res.status(404).json({
                 status: "error",
                 message: "Patient not found."
-            });
-        }
-
-        // check doctor id
-        if(patient.doctorId.toString() !== req.user.id.toString()){
-            return res.status(403).json({
-                status: "error",
-                message: "Permission denied."
             });
         }
 
@@ -603,14 +566,6 @@ exports.recallDevice = async(req, res) => {
             return res.status(404).json({
                 status: "error",
                 message: "Patient not found."
-            });
-        }
-
-        // check doctor id
-        if(patient.doctorId.toString() !== req.user.id.toString()){
-            return res.status(403).json({
-                status: "error",
-                message: "Permission denied."
             });
         }
 
