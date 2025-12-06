@@ -10,7 +10,7 @@
  * @param token Access token for authentication
  * @param event_group Event group for connection status
  */
-esp_err_t mqtt_client_init(const char *token, EventGroupHandle_t event_group);
+esp_err_t mqtt_client_init(const char *token);
 
 /**
  * @brief Publish telemetry data
@@ -19,8 +19,9 @@ esp_err_t mqtt_client_init(const char *token, EventGroupHandle_t event_group);
  * @param spo2 SpO2 value
  * @param temperature Temperature value
  */
-esp_err_t mqtt_publish_telemetry(const char *cccd, int heart_rate, 
-                                  double spo2, float temperature);
+esp_err_t mqtt_publish_telemetry(int heart_rate, double spo2, float temperature, const char *alarm_status); 
+
+esp_err_t mqtt_publish_attributes(const char *patient_id, const char *doctor_id);
 
 /**
  * @brief Stop MQTT client

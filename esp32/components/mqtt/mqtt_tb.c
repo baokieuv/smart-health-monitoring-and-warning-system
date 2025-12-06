@@ -6,7 +6,7 @@
 
 static const char *TAG = "MQTT_CLIENT";
 static esp_mqtt_client_handle_t mqtt_client = NULL;
-static EventGroupHandle_t s_event_group = NULL;
+extern EventGroupHandle_t g_event_group;
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
                                int32_t event_id, void *event_data) {
@@ -15,15 +15,15 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT Connected");
-            if (s_event_group) {
-                xEventGroupSetBits(s_event_group, MQTT_CONNECTED_BIT);
+            if (g_event_group) {
+                xEventGroupSetBits(g_event_group, MQTT_CONNECTED_BIT);
             }
             break;
 
         case MQTT_EVENT_DISCONNECTED:
             ESP_LOGW(TAG, "MQTT Disconnected");
-            if (s_event_group) {
-                xEventGroupClearBits(s_event_group, MQTT_CONNECTED_BIT);
+            if (g_event_group) {
+                xEventGroupClearBits(g_event_group, MQTT_CONNECTED_BIT);
             }
             break;
 
@@ -46,8 +46,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
     }
 }
 
-esp_err_t mqtt_client_init(const char *token, EventGroupHandle_t event_group) {
-    if (!token || !event_group) {
+esp_err_t mqtt_client_init(const char *token) {
+    if (!token || !g_event_group) {
         ESP_LOGE(TAG, "Invalid parameters");
         return ESP_ERR_INVALID_ARG;
     }
@@ -56,8 +56,6 @@ esp_err_t mqtt_client_init(const char *token, EventGroupHandle_t event_group) {
         ESP_LOGW(TAG, "MQTT client already initialized");
         return ESP_OK;
     }
-
-    s_event_group = event_group;
 
     ESP_LOGI(TAG, "Initializing MQTT client...");
     
@@ -93,16 +91,10 @@ esp_err_t mqtt_client_init(const char *token, EventGroupHandle_t event_group) {
     return ESP_OK;
 }
 
-esp_err_t mqtt_publish_telemetry(const char *cccd, int heart_rate,
-                                  double spo2, float temperature) {
+esp_err_t mqtt_publish_telemetry(int heart_rate, double spo2, float temperature, const char *alarm_status) {
     if (!mqtt_client) {
         ESP_LOGE(TAG, "MQTT client not initialized");
         return ESP_ERR_INVALID_STATE;
-    }
-
-    if (!cccd) {
-        ESP_LOGE(TAG, "Invalid CCCD");
-        return ESP_ERR_INVALID_ARG;
     }
 
     // Check connection status
@@ -114,8 +106,8 @@ esp_err_t mqtt_publish_telemetry(const char *cccd, int heart_rate,
     // Build JSON payload
     char payload[256];
     int len = snprintf(payload, sizeof(payload),
-        "{\"cccd\":\"%s\",\"heartRate\":%d,\"O2\":%.2f,\"temperature\":%.2f,\"alarm\":\"normal\"}",
-        cccd, heart_rate, spo2, temperature);
+        "{\"heartRate\":%d,\"SpO2\":%.2f,\"temperature\":%.2f,\"alarm\":\"%s\"}",
+        heart_rate, spo2, temperature, alarm_status ? alarm_status : "normal");
 
     if (len < 0 || len >= sizeof(payload)) {
         ESP_LOGE(TAG, "Failed to build payload");
@@ -131,6 +123,44 @@ esp_err_t mqtt_publish_telemetry(const char *cccd, int heart_rate,
     }
 
     ESP_LOGI(TAG, "Telemetry published: %s", payload);
+    return ESP_OK;
+}
+
+esp_err_t mqtt_publish_attributes(const char *patient_id, const char *doctor_id){
+    if (!mqtt_client) {
+        ESP_LOGE(TAG, "MQTT client not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (!patient_id || !doctor_id) {
+        ESP_LOGE(TAG, "Invalid patient or doctor ID");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!mqtt_is_connected()) {
+        ESP_LOGW(TAG, "MQTT not connected, skipping publish");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    // Build attributes JSON payload
+    char payload[256];
+    int len = snprintf(payload, sizeof(payload),
+        "{\"patientID\":\"%s\",\"doctorID\":\"%s\"}",
+        patient_id, doctor_id);
+
+    if (len < 0 || len >= sizeof(payload)) {
+        ESP_LOGE(TAG, "Failed to build attributes payload");
+        return ESP_FAIL;
+    }
+
+    int msg_id = esp_mqtt_client_publish(mqtt_client, ATTRIBUTES_TOPIC, 
+                                         payload, 0, 1, 0);
+    if (msg_id < 0) {
+        ESP_LOGE(TAG, "Failed to publish attributes");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Attributes published: %s", payload);
     return ESP_OK;
 }
 
@@ -153,7 +183,7 @@ esp_err_t mqtt_client_stop(void) {
 }
 
 uint8_t mqtt_is_connected(void) {
-    if (!s_event_group) return false;
-    EventBits_t bits = xEventGroupGetBits(s_event_group);
+    if (!g_event_group) return false;
+    EventBits_t bits = xEventGroupGetBits(g_event_group);
     return (bits & MQTT_CONNECTED_BIT) != 0;
 }

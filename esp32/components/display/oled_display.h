@@ -7,8 +7,8 @@
 #include "u8g2.h"
 
 // Cấu hình chân GPIO (Khớp với main.c của bạn)
-#define OLED_SDA_PIN 41
-#define OLED_SCL_PIN 42
+#define OLED_SDA_PIN 21
+#define OLED_SCL_PIN 22
 #define OLED_I2C_ADDR 0x3C
 
 // Struct dữ liệu hiển thị (Dùng chung cho cả Main và Display Task)

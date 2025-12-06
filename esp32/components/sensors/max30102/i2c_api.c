@@ -4,17 +4,17 @@
 
 esp_err_t i2c_init(i2c_port_t i2c_num, int scl_pin, int sda_pin)
 {
-	i2c_config_t i2c_configuration = {
-			.mode              = I2C_MODE_MASTER, //I2C COMO MASTER
-			.sda_io_num        = sda_pin,
-			.sda_pullup_en     = 1,
-			.scl_io_num        = scl_pin,
-			.scl_pullup_en     = 1,
-			.master.clk_speed  = 200000           //SCL CLOCK SPEED 200KHZ
-	};
-	i2c_param_config(i2c_num, &i2c_configuration);
-	esp_err_t err = i2c_driver_install(i2c_num, i2c_configuration.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
-	return err;
+	// i2c_config_t i2c_configuration = {
+	// 		.mode              = I2C_MODE_MASTER, //I2C COMO MASTER
+	// 		.sda_io_num        = sda_pin,
+	// 		.sda_pullup_en     = 1,
+	// 		.scl_io_num        = scl_pin,
+	// 		.scl_pullup_en     = 1,
+	// 		.master.clk_speed  = 200000           //SCL CLOCK SPEED 200KHZ
+	// };
+	// i2c_param_config(i2c_num, &i2c_configuration);
+	//esp_err_t err = i2c_driver_install(i2c_num, i2c_configuration.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
+	return ESP_OK;
 }
 
 esp_err_t i2c_sensor_read(i2c_port_t i2c_num, uint8_t *data_rd, size_t size)

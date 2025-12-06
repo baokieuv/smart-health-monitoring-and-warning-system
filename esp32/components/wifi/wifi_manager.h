@@ -10,7 +10,7 @@
 /**
  * @brief Initialize WiFi manager
  */
-esp_err_t wifi_manager_init(EventGroupHandle_t event_group);
+esp_err_t wifi_manager_init();
 
 /**
  * @brief Start WiFi in AP mode for configuration

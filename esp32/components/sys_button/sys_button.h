@@ -14,6 +14,7 @@ typedef enum
     BUTTON_EVENT_LONG_PRESS    // Bấm giữ (Chuyển HTTP View)
 } app_button_event_id_t;
 
-esp_err_t sys_button_init(gpio_num_t pin_num);
-
+// esp_err_t sys_button_init(gpio_num_t pin_num);
+esp_err_t button_manager_init_button1(gpio_num_t pin_num);
+esp_err_t button_manager_init_button2(gpio_num_t pin_num);
 #endif

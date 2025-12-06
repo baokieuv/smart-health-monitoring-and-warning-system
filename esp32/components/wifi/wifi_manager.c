@@ -6,7 +6,7 @@
 #include <string.h>
 
 static const char *TAG = "WIFI_MGR";
-static EventGroupHandle_t s_event_group = NULL;
+extern EventGroupHandle_t g_event_group;
 static int s_retry_num = 0;
 static esp_netif_t *s_sta_netif = NULL;
 static esp_netif_t *s_ap_netif = NULL;
@@ -28,7 +28,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         }
         else
         {
-            xEventGroupSetBits(s_event_group, WIFI_FAIL_BIT);
+            xEventGroupSetBits(g_event_group, WIFI_FAIL_BIT);
             ESP_LOGW(TAG, "Failed to connect to AP");
         }
     }
@@ -37,58 +37,50 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
-        xEventGroupSetBits(s_event_group, WIFI_CONNECTED_BIT);
+        xEventGroupSetBits(g_event_group, WIFI_CONNECTED_BIT);
     }
 }
 
-esp_err_t wifi_manager_init(EventGroupHandle_t event_group)
+esp_err_t wifi_manager_init()
 {
-    if (!event_group)
+    if (!g_event_group)
     {
         ESP_LOGE(TAG, "Invalid event group");
         return ESP_ERR_INVALID_ARG;
     }
 
-    s_event_group = event_group;
-
-    static bool wifi_initialized = false;
-    if (!wifi_initialized)
-    {
-        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-        esp_err_t err = esp_wifi_init(&cfg);
-        if (err != ESP_OK)
-        {
-            ESP_LOGE(TAG, "WiFi init failed: %s", esp_err_to_name(err));
-            return err;
-        }
-
-        err = esp_event_handler_instance_register(
-            WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL);
-        if (err != ESP_OK)
-        {
-            ESP_LOGE(TAG, "Failed to register WiFi event handler");
-            return err;
-        }
-
-        err = esp_event_handler_instance_register(
-            IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL);
-        if (err != ESP_OK)
-        {
-            ESP_LOGE(TAG, "Failed to register IP event handler");
-            return err;
-        }
-        wifi_initialized = true;
+    esp_err_t err = esp_event_handler_instance_register(
+        WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to register WiFi event handler");
+        return err;
     }
+
+    err = esp_event_handler_instance_register(
+        IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to register IP event handler");
+        return err;
+    }
+
     ESP_LOGI(TAG, "WiFi Manager initialized");
     return ESP_OK;
 }
 
 esp_err_t wifi_start_ap_mode(void)
 {
+    xEventGroupClearBits(g_event_group, WIFI_CONNECTED_BIT);
     ESP_LOGI(TAG, "Switching to AP mode...");
     if (!s_ap_netif)
     {
         s_ap_netif = esp_netif_create_default_wifi_ap();
+    }
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    esp_err_t err = esp_wifi_init(&cfg);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "WiFi init failed: %s", esp_err_to_name(err));
+        return err;
     }
     wifi_config_t ap_config = {
         .ap = {
@@ -99,7 +91,7 @@ esp_err_t wifi_start_ap_mode(void)
             .authmode = WIFI_AUTH_OPEN,
         },
     };
-    esp_err_t err = esp_wifi_set_mode(WIFI_MODE_AP);
+    err = esp_wifi_set_mode(WIFI_MODE_AP);
     if (err == ESP_OK)
     {
         err = esp_wifi_set_config(WIFI_IF_AP, &ap_config);
@@ -132,10 +124,17 @@ bool wifi_start_station_mode(const char *ssid, const char *pass)
     {
         s_sta_netif = esp_netif_create_default_wifi_sta();
     }
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    esp_err_t err = esp_wifi_init(&cfg);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "WiFi init failed: %s", esp_err_to_name(err));
+        return err;
+    }
     wifi_config_t wifi_config = {0};
     strncpy((char *)wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid) - 1);
     strncpy((char *)wifi_config.sta.password, pass, sizeof(wifi_config.sta.password) - 1);
-    esp_err_t err = esp_wifi_set_mode(WIFI_MODE_STA);
+    err = esp_wifi_set_mode(WIFI_MODE_STA);
     if (err == ESP_OK)
     {
         err = esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
@@ -151,9 +150,9 @@ bool wifi_start_station_mode(const char *ssid, const char *pass)
     }
     // Wait for connection or failure
     EventBits_t bits = xEventGroupWaitBits(
-        s_event_group,
+        g_event_group,
         WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-        pdTRUE,  // Clear bits after reading
+        pdFALSE,  // Clear bits after reading
         pdFALSE, // Wait for either bit
         pdMS_TO_TICKS(WIFI_CONNECT_TIMEOUT_MS));
     if (bits & WIFI_CONNECTED_BIT)
@@ -172,6 +171,11 @@ esp_err_t wifi_stop(void)
 {
     ESP_LOGI(TAG, "Stopping WiFi...");
     esp_err_t err = esp_wifi_stop();
+
+    if (err == ESP_OK) {
+        err = esp_wifi_deinit();
+        xEventGroupClearBits(g_event_group, WIFI_CONNECTED_BIT);
+    }
     if (err == ESP_OK)
     {
         ESP_LOGI(TAG, "WiFi stopped");
@@ -185,8 +189,8 @@ esp_err_t wifi_stop(void)
 
 bool wifi_is_connected(void)
 {
-    if (!s_event_group)
+    if (!g_event_group)
         return false;
-    EventBits_t bits = xEventGroupGetBits(s_event_group);
+    EventBits_t bits = xEventGroupGetBits(g_event_group);
     return (bits & WIFI_CONNECTED_BIT) != 0;
 }

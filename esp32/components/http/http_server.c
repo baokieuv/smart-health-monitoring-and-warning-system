@@ -9,26 +9,87 @@
 
 static const char *TAG = "HTTP_SERVER";
 static httpd_handle_t server = NULL;
+static system_mode_t s_current_mode = SYS_MODE_AP_SIMPLE;
 
-extern const uint8_t index_html_start[] asm("_binary_index_html_start");
-extern const uint8_t index_html_end[] asm("_binary_index_html_end");
+extern const uint8_t index_simple_html_start[] asm("_binary_index_simple_html_start");
+extern const uint8_t index_simple_html_end[] asm("_binary_index_simple_html_end");
 
-static http_view_mode_t s_current_view_mode = HTTP_VIEW_USER;
+extern const uint8_t index_full_html_start[] asm("_binary_index_full_html_start");
+extern const uint8_t index_full_html_end[] asm("_binary_index_full_html_end");
 
 static esp_err_t root_handler(httpd_req_t *req)
 {
-    if (s_current_view_mode == HTTP_VIEW_USER)
+    if (s_current_mode == SYS_MODE_AP_SIMPLE)
     {
         httpd_resp_set_type(req, "text/html");
-        return httpd_resp_send(req, (const char *)index_html_start,
-                               index_html_end - index_html_start);
+        return httpd_resp_send(req, (const char *)index_simple_html_start,
+                               index_simple_html_end - index_simple_html_start);
     }
     else
     {
-        const char *doctor_page = "<h1>Doctor View</h1><p>This is a placeholder for the doctor view page.</p>";
         httpd_resp_set_type(req, "text/html");
-        return httpd_resp_send(req, doctor_page, strlen(doctor_page));
+        return httpd_resp_send(req, (const char *)index_full_html_start,
+                               index_full_html_end - index_full_html_start);
     }
+}
+
+static esp_err_t save_simple_handler(httpd_req_t *req, cJSON *root){
+    const cJSON *ssid = cJSON_GetObjectItem(root, "ssid");
+    const cJSON *pass = cJSON_GetObjectItem(root, "pass");
+
+    if (!ssid || !pass ||
+        !cJSON_IsString(ssid) || !cJSON_IsString(pass))
+    {
+        ESP_LOGE(TAG, "Invalid or missing fields in JSON");
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing fields");
+        return ESP_FAIL;
+    }
+
+    esp_err_t err = nvs_save_wifi_config(ssid->valuestring, pass->valuestring);
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to save");
+        return err;
+    }
+    
+    httpd_resp_sendstr(req, "<h3>Saved! Device will restart...</h3>");
+    return ESP_OK;
+}
+
+static esp_err_t save_full_handler(httpd_req_t *req, cJSON *root){
+    const cJSON *patient = cJSON_GetObjectItem(root, "patientID");
+    const cJSON *doctor = cJSON_GetObjectItem(root, "doctorID");
+    const cJSON *ssid = cJSON_GetObjectItem(root, "ssid");
+    const cJSON *pass = cJSON_GetObjectItem(root, "pass");
+
+    if (!patient || !doctor || !ssid || !pass ||
+        !cJSON_IsString(patient) || !cJSON_IsString(doctor) ||
+        !cJSON_IsString(ssid) || !cJSON_IsString(pass)) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing fields");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Full config - Patient: %s, Doctor: %s", 
+             patient->valuestring, doctor->valuestring);
+
+    // Save full configuration
+    esp_err_t err = nvs_save_full_config(
+        ssid->valuestring, 
+        pass->valuestring,
+        patient->valuestring, 
+        doctor->valuestring
+    );
+
+    if (err != ESP_OK) {
+        httpd_resp_send_500(req);
+        return err;
+    }
+
+    httpd_resp_sendstr(req, 
+        "<html><body><h3>Configuration Saved!</h3>"
+        "<p>Device will restart, connect to WiFi, and perform provisioning automatically...</p>"
+        "</body></html>");
+
+    return ESP_OK;
 }
 
 static esp_err_t save_handler(httpd_req_t *req)
@@ -36,6 +97,8 @@ static esp_err_t save_handler(httpd_req_t *req)
     char *buffer = NULL;
     cJSON *root = NULL;
     esp_err_t ret = ESP_FAIL;
+
+    ESP_LOGI(TAG, "Received data");
 
     // Allocate buffer for request data
     buffer = malloc(req->content_len + 1);
@@ -56,72 +119,30 @@ static esp_err_t save_handler(httpd_req_t *req)
     }
     buffer[received] = '\0';
 
-    // Parse JSON
     root = cJSON_Parse(buffer);
-    if (!root)
-    {
-        ESP_LOGE(TAG, "Failed to parse JSON");
+    if (!root) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
         goto cleanup;
     }
 
-    // Extract fields
-    const cJSON *doctorID = cJSON_GetObjectItem(root, "doctorID");
-    const cJSON *patientID = cJSON_GetObjectItem(root, "patientID");
-    const cJSON *ssid = cJSON_GetObjectItem(root, "ssid");
-    const cJSON *pass = cJSON_GetObjectItem(root, "pass");
-
-    // Validate fields
-    if (!doctorID || !patientID || !ssid || !pass ||
-        !cJSON_IsString(doctorID) || !cJSON_IsString(patientID) ||
-        !cJSON_IsString(ssid) || !cJSON_IsString(pass))
-    {
-        ESP_LOGE(TAG, "Invalid or missing fields in JSON");
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing required fields");
-        goto cleanup;
+    if(s_current_mode == SYS_MODE_AP_SIMPLE){
+        ret = save_simple_handler(req, root);
+    }else if(s_current_mode == SYS_MODE_AP_FULL){
+        ret = save_full_handler(req, root);
     }
 
-    ESP_LOGI(TAG, "Received config - PatientID: %s, SSID: %s",
-             patientID->valuestring, ssid->valuestring);
-
-    // Save WiFi configuration
-    esp_err_t err = nvs_save_wifi_config(ssid->valuestring, pass->valuestring,
-                                         patientID->valuestring);
-    if (err != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to save WiFi config");
-        httpd_resp_send_500(req);
-        goto cleanup;
+    // Schedule restart after successful save
+    if (ret == ESP_OK) {
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        esp_restart();
     }
-
-    // Send provisioning request
-    err = provisioning_send_request(doctorID->valuestring);
-    if (err == ESP_OK)
-    {
-        httpd_resp_sendstr(req,
-                           "<h3>Configuration saved successfully. Device will restart...</h3>");
-        ret = ESP_OK;
-    }
-    else
-    {
-        httpd_resp_sendstr(req,
-                           "<h3>Config saved but provisioning failed. Device will restart...</h3>");
-        ret = ESP_OK; // Still restart even if provisioning failed
-    }
-
-    // Schedule restart
-    vTaskDelay(pdMS_TO_TICKS(1500));
-    esp_restart();
-
 cleanup:
-    if (buffer)
-        free(buffer);
-    if (root)
-        cJSON_Delete(root);
+    if (buffer) free(buffer);
+    if (root) cJSON_Delete(root);
     return ret;
 }
 
-esp_err_t http_server_start(void)
+esp_err_t http_server_start(system_mode_t mode)
 {
     if (server != NULL)
     {
@@ -129,10 +150,14 @@ esp_err_t http_server_start(void)
         return ESP_OK;
     }
 
+    s_current_mode = mode;
+
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.lru_purge_enable = true;
 
-    ESP_LOGI(TAG, "Starting HTTP server...");
+    ESP_LOGI(TAG, "Starting HTTP server in %s mode...", 
+             mode == SYS_MODE_AP_SIMPLE ? "Simple" : "Full");
+
     esp_err_t err = httpd_start(&server, &config);
     if (err != ESP_OK)
     {
@@ -156,17 +181,14 @@ esp_err_t http_server_start(void)
     };
 
     err = httpd_register_uri_handler(server, &uri_root);
-    if (err == ESP_OK)
-    {
+    if (err == ESP_OK) {
         err = httpd_register_uri_handler(server, &uri_save);
     }
 
-    if (err == ESP_OK)
-    {
+    if (err == ESP_OK) {
         ESP_LOGI(TAG, "HTTP server started successfully");
     }
-    else
-    {
+    else {
         ESP_LOGE(TAG, "Failed to register URI handlers");
         httpd_stop(server);
         server = NULL;
@@ -177,8 +199,7 @@ esp_err_t http_server_start(void)
 
 esp_err_t http_server_stop(void)
 {
-    if (server == NULL)
-    {
+    if (server == NULL) {
         return ESP_OK;
     }
 
@@ -186,12 +207,10 @@ esp_err_t http_server_stop(void)
     esp_err_t err = httpd_stop(server);
     server = NULL;
 
-    if (err == ESP_OK)
-    {
+    if (err == ESP_OK) {
         ESP_LOGI(TAG, "HTTP server stopped");
     }
-    else
-    {
+    else {
         ESP_LOGE(TAG, "Failed to stop HTTP server: %s", esp_err_to_name(err));
     }
 
@@ -201,18 +220,4 @@ esp_err_t http_server_stop(void)
 uint8_t http_server_is_running(void)
 {
     return server != NULL;
-}
-
-void http_server_toggle_view_mode(void)
-{
-    if (s_current_view_mode == HTTP_VIEW_USER)
-    {
-        s_current_view_mode = HTTP_VIEW_DOCTOR;
-        ESP_LOGI(TAG, "Switched to DOCTOR view mode");
-    }
-    else
-    {
-        s_current_view_mode = HTTP_VIEW_USER;
-        ESP_LOGI(TAG, "Switched to USER view mode");
-    }
 }

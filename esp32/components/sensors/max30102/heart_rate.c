@@ -154,7 +154,7 @@ esp_err_t heart_rate_start_task(void (*callback)(heart_rate_data_t data)) {
     BaseType_t ret = xTaskCreate(
         heart_rate_task,
         "heart_rate_task",
-        4096,
+        6144,
         (void*)callback,
         5,
         NULL

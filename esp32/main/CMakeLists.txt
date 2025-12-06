@@ -12,9 +12,9 @@ idf_component_register(
         "../components/sensors/max30102/max30102_api.c"
         "../components/sensors/ds18b20/temperature.c"
         "../components/sensors/mpu6050/mpu6050_api.c"
-        "../components/gpio/gpio_handler.c"
         "../components/display/oled_display.c"
         "../components/sys_button/sys_button.c"
+        "../components/alarm/alarm_manager.c"
     INCLUDE_DIRS 
         "."
         "../components/storage"
@@ -25,7 +25,7 @@ idf_component_register(
         "../components/sensors/ds18b20"
         "../components/sensors/max30102"
         "../components/sensors/mpu6050"
-        "../components/gpio"
         "../components/display"
         "../components/sys_button"
+        "../components/alarm"
 )

@@ -70,7 +70,7 @@
         <h2>Smart healthcare</h2>
         
         <label for="docterID">Doctor's ID</label>
-        <input type="text" id="docterID" name="docterID" placeholder="Enter doctor's id">
+        <input type="text" id="doctorID" name="docterID" placeholder="Enter doctor's id">
 
         <label for="patientID">Patient's ID</label>
         <input type="text" id="patientID" name="patientID" placeholder="Enter patient's id">
@@ -81,13 +81,11 @@
         <label for="password">Password</label>
         <input type="password" id="password" name="password" placeholder="Enter password">
 
-        <input type="submit" id="button1" value="Submit" onclick="myFunction1()">
+        <button id="button1" onclick="myFunction1()">Submit</button>
         
     </div>
 
     <script>
-        var xhttp1 = new XMLHttpRequest();
-
         function myFunction1(){
             const payload = {
                 doctorID: document.getElementById("doctorID").value,
