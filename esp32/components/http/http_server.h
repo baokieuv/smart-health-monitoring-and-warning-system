@@ -8,8 +8,7 @@
 /**
  * @brief Start HTTP configuration server
  */
-esp_err_t
-http_server_start(system_mode_t sys_mode);
+esp_err_t http_server_start(system_mode_t sys_mode);
 
 /**
  * @brief Stop HTTP configuration server
