@@ -67,6 +67,7 @@ exports.login = async (req, res) => {
 			if(resp.ok){
 				const json = await resp.json();
 				tokenStore.saveThingsBoardToken(user._id.toString(), json.token, tokens.refreshTokenExpiresAt);
+				console.log("ThingsBoard login successful for user: ", user._id);
 			} else {
 				console.warn("ThingsBoard login failed with status: ", resp.status);
 			}

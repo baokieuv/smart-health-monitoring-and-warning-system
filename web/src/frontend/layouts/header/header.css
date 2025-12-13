@@ -37,19 +37,25 @@
       transition: background 0.3s;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.8);
       }
     }
 
     .user-info {
-      background: rgba(255, 255, 255, 0.15);
-      cursor: default;
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
       font-weight: 600;
+      transition: background 0.3s;
+      &:hover {
+        background: rgba(0, 255, 0, 0.8);
+      }
     }
 
     .logout-btn {
       background: rgba(255, 255, 255, 0.2);
-      border: none;
+      border: darkred;
       color: white;
       cursor: pointer;
       font-size: 14px;

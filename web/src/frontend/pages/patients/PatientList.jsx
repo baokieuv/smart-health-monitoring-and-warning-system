@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getPatientList, createPatient, getDoctorsList } from '../../utils/api'
+import { getPatientList, createPatient, getDoctorsList, deletePatient } from '../../utils/api'
 // import routers from '../../utils/routers'
 import './PatientList.css'
 
@@ -101,6 +101,23 @@ export default function PatientList() {
     }
   }
 
+  const handleDeletePatient = async (patientId, patientName) => {
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa bệnh nhân "${patientName}"?\nThao tác này không thể hoàn tác.`)
+    if (!confirmed) return
+
+    try {
+      const res = await deletePatient(patientId)
+      if (res?.status === 'success') {
+        alert('Xóa bệnh nhân thành công!')
+        loadPatients()
+      }
+    } catch (e) {
+      console.error('Delete patient error:', e)
+      const msg = e?.response?.data?.message || 'Không thể xóa bệnh nhân'
+      alert(msg)
+    }
+  }
+
   return (
     <div className="patient-list-container">
       <div className="patient-list-header">
@@ -143,16 +160,32 @@ export default function PatientList() {
                     </Link>
                   </td>
                   <td>
-                    {doctors.find(d => d._id === patient.doctorId)?.full_name || 'N/A'}
+                    {patient.doctor ? (
+                      <div>
+                        <div style={{ fontWeight: '600' }}>{patient.doctor.full_name}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>{patient.doctor.specialization}</div>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#999' }}>N/A</span>
+                    )}
                   </td>
                   <td style={{ fontFamily: 'monospace', fontSize: '13px' }}>{patient.deviceId || '-'}</td>
                   <td>
-                    <Link 
-                      to={`/patients/${patient._id}`} 
-                      className="btn-view"
-                    >
-                      👁️ View
-                    </Link>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                      <Link 
+                        to={`/patients/${patient._id}`} 
+                        className="btn-view"
+                      >
+                        👁️ View
+                      </Link>
+                      <button
+                        onClick={() => handleDeletePatient(patient._id, patient.full_name)}
+                        className="btn-delete"
+                        title="Delete patient"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )

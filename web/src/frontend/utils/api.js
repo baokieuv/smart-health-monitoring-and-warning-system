@@ -144,6 +144,9 @@ export const getDoctorProfile = (userId) => unwrap(api.get(`/api/v1/admin/user/$
 
 export const updateDoctorProfile = (userId, payload) => unwrap(api.put(`/api/v1/admin/user/${userId}/profile`, payload))
 
+// Current Doctor Info
+export const getCurrentDoctorInfo = () => unwrap(api.get('/api/v1/doctor/info'))
+
 export default {
   api,
   getToken,
@@ -167,6 +170,7 @@ export default {
   updateDoctorPassword,
   getDoctorProfile,
   updateDoctorProfile,
+  getCurrentDoctorInfo,
   createPatient,
   getPatientList,
   getPatientDetail,

@@ -108,7 +108,7 @@ export default function LoginPage() {
           />
         </div>
         <div style={{ color: '#999', fontSize: 12, marginBottom: 12, padding: 10, background: '#f9f9f9', borderRadius: 6 }}>
-          <div style={{ marginBottom: 4 }}><strong>Tài khoản test:</strong></div>
+          <div style={{ marginBottom: 4 }}><strong>Tài khoản:</strong></div>
           <div>👤 Admin: <code>admin</code> / <code>admin123</code></div>
           <div>👨‍⚕️ Bác sĩ 1: <code>000000000000</code> / <code>000000000000</code></div>
           <div>👨‍⚕️ Bác sĩ 2: <code>doctor02</code> / <code>1234</code></div>

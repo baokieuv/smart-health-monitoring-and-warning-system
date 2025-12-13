@@ -1,12 +1,30 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getUserInfo, clearToken, clearUserInfo } from '../../utils/api'
+import { getUserInfo, clearToken, clearUserInfo, getCurrentDoctorInfo } from '../../utils/api'
 import routers from '../../utils/routers'
 import './header.css'
 
 const Header = () => {
   const navigate = useNavigate()
   const userInfo = getUserInfo()
+  const [doctorName, setDoctorName] = useState('')
+  
+  useEffect(() => {
+    const fetchDoctorInfo = async () => {
+      if (userInfo?.role === 'doctor') {
+        try {
+          const response = await getCurrentDoctorInfo()
+          if (response?.status === 'success' && response?.data) {
+            setDoctorName(response.data.full_name)
+          }
+        } catch (error) {
+          console.error('Failed to fetch doctor info:', error)
+          setDoctorName(userInfo.username)
+        }
+      }
+    }
+    fetchDoctorInfo()
+  }, [userInfo])
   
   const handleLogout = () => {
     if (window.confirm('Bạn có chắc chắn muốn đăng xuất?')) {
@@ -29,8 +47,8 @@ const Header = () => {
           {userInfo && (
             <>
               {userInfo.role === 'doctor' && (
-                <Link to={routers.ProfilePage(userInfo.id)} className="nav-link user-info" data-discover="true">
-                  👨‍⚕️ {userInfo.username || userInfo.name || 'Doctor'}
+                <Link to={routers.ProfilePage(userInfo.id)} className="user-info">
+                  👨‍⚕️ {doctorName || userInfo.username || 'Doctor'}
                 </Link>
               )}
               {/* {userInfo.role !== 'doctor' && (

@@ -93,15 +93,15 @@
   white-space: nowrap;
 }
 
-.patient-table th:nth-child(1) { width: 50px; text-align: center; } /* No. */
-.patient-table th:nth-child(2) { width: 180px; } /* Full Name */
-.patient-table th:nth-child(3) { width: 120px; } /* CCCD */
-.patient-table th:nth-child(4) { width: 80px; } /* Gender */
-.patient-table th:nth-child(5) { width: 60px; text-align: center; } /* Age */
-.patient-table th:nth-child(6) { width: 140px; } /* Status */
+.patient-table th:nth-child(1) { width: 30px; text-align: center; } /* No. */
+.patient-table th:nth-child(2) { width: 100px; } /* Full Name */
+.patient-table th:nth-child(3) { width: 40px; } /* CCCD */
+.patient-table th:nth-child(4) { width: 10px; } /* Room */
+.patient-table th:nth-child(5) { width: 120px; text-align: center; } /* Doctor */
+.patient-table th:nth-child(6) { width: 80px; } /* Device Id */
 .patient-table th:nth-child(7) { width: 130px; } /* Emergency Contact */
-.patient-table th:nth-child(8) { width: 80px; } /* Room */
-.patient-table th:nth-child(9) { width: 100px; text-align: center; } /* Actions */
+.patient-table th:nth-child(8) { width: 10px; } /* Room */
+.patient-table th:nth-child(9) { width: 10px; text-align: center; } /* Actions */
 
 .patient-table tbody tr {
   border-bottom: 1px solid #f0f0f0;
@@ -159,6 +159,16 @@
   text-decoration: underline;
 }
 
+.doctor-link {
+  color: #28a745;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.doctor-link:hover {
+  text-decoration: underline;
+}
+
 .btn-view {
   display: inline-block;
   padding: 6px 12px;
@@ -169,10 +179,30 @@
   font-size: 13px;
   font-weight: 600;
   transition: background 0.2s;
+  border: none;
+  cursor: pointer;
 }
 
 .btn-view:hover {
   background: #5568d3;
+}
+
+.btn-delete {
+  display: inline-block;
+  padding: 6px 12px;
+  background: #dc3545;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-delete:hover {
+  background: #c82333;
 }
 
 /* Modal Styles */

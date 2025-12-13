@@ -191,7 +191,8 @@ exports.createPatient = async (req, res) => {
             birthday: req.body.birthday,
             address: sanitizeInput(req.body.address),
             phone: sanitizeInput(req.body.phone),
-            room: sanitizeInput(req.body.room)
+            room: sanitizeInput(req.body.room),
+            doctorId: req.body.doctorId  // ID của bác sỹ được chọn
         };
 
         // Check duplicate CCCD
@@ -215,8 +216,7 @@ exports.createPatient = async (req, res) => {
         });
         const newPatient = await Patient.create({
             ...patientData,
-            userId: user._id,
-            doctorId: req.user.id   //userId của doctor
+            userId: user._id
         });
 
         console.log("Patient created successfully: ", newPatient._id);
@@ -290,9 +290,28 @@ exports.getPatients = async (req, res) => {
             .limit(limitInt)
             .lean();
 
+        // Populate doctor information for each patient
+        const patientsWithDoctors = await Promise.all(
+            patients.map(async (patient) => {
+                if (patient.doctorId) {
+                    const doctor = await Doctor.findOne({ userId: patient.doctorId }).lean();
+                    if (doctor) {
+                        return {
+                            ...patient,
+                            doctor: {
+                                full_name: doctor.full_name,
+                                specialization: doctor.specialization
+                            }
+                        };
+                    }
+                }
+                return patient;
+            })
+        );
+
         const total_pages = Math.ceil(total / limitInt) || 1;
 
-        console.log("Patients retrieved successfully");
+        // console.log("Patients retrieved successfully");
         return res.status(200).json({
             status: "success",
             message: "Patients retrieved successfully.",
@@ -301,7 +320,7 @@ exports.getPatients = async (req, res) => {
                 page: pageInt,
                 limit: limitInt,
                 total_pages,
-                patients
+                patients: patientsWithDoctors
             }
         });
     } catch (err) {
@@ -325,7 +344,7 @@ exports.getPatientDetail = async (req, res) => {
             });
         }
 
-        console.log("Patient retrieved successfully: ", patient._id);
+        // console.log("Patient retrieved successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
             message: "Patient retrieved successfully.",
@@ -355,12 +374,16 @@ exports.updatePatient = async (req, res) => {
 
         // Prepare update data
         const updateData = {};
-        const allowedFields = ['full_name', 'birthday', 'address', 'phone', 'room'];
+        const allowedFields = ['full_name', 'birthday', 'address', 'phone', 'room', 'doctorId'];
         
         //Lọc data
         allowedFields.forEach(field => {
             if (req.body[field] !== undefined) {
-                updateData[field] = field === 'birthday' ? req.body[field] : sanitizeInput(req.body[field]);
+                if (field === 'birthday' || field === 'doctorId') {
+                    updateData[field] = req.body[field];
+                } else {
+                    updateData[field] = sanitizeInput(req.body[field]);
+                }
             }
         });
 
@@ -370,7 +393,7 @@ exports.updatePatient = async (req, res) => {
             { new: true, runValidators: true }
         );
 
-        console.log("Patient information updated successfully: ", patient._id);
+        // console.log("Patient information updated successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
             message: "Patient information updated successfully.",
@@ -397,7 +420,7 @@ exports.getHealthInfo = async (req, res) => {
             });
         }
 
-        console.log("Patient retrieved successfully: ", patient._id);
+        // console.log("Patient retrieved successfully: ", patient._id);
         
         if(!patient.deviceId){
             return res.status(400).json({
@@ -445,7 +468,7 @@ exports.getHealthInfo = async (req, res) => {
             alarm_status: healthInfo.alarm || null,
         };
 
-        console.log("Get patient health successfully: ", patient._id);
+        // console.log("Get patient health successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
             message: "Get patient health successfully.",
@@ -488,7 +511,7 @@ exports.deletePatient = async (req, res) => {
         await Patient.deleteOne({ _id: patient._id });
         await Device.deleteOne({ deviceId: patient.deviceId });
 
-        console.log("Patient deleted successfully: ", patient._id);
+        // console.log("Patient deleted successfully: ", patient._id);
         return res.status(200).json({
             status: "success",
             message: "Patient deleted successfully.",
