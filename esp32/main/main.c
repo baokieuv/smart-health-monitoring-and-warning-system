@@ -584,6 +584,8 @@ static esp_err_t start_normal_mode(void)
         if (err == ESP_OK) {
             // Start MQTT telemetry task
             xTaskCreate(mqtt_send_task, "mqtt_send", 4096, NULL, 5, NULL);
+        
+            mqtt_start_ota_scheduler();
         } else {
             ESP_LOGW(TAG, "MQTT init failed");
         }

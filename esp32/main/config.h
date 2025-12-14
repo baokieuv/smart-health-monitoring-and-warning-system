@@ -11,6 +11,8 @@
 #define MQTT_BROKER "mqtt://demo.thingsboard.io:1883"
 #define TELEMETRY_TOPIC "v1/devices/me/telemetry"
 #define ATTRIBUTES_TOPIC "v1/devices/me/attributes"
+#define ATTR_REQUEST_TOPIC  "v1/devices/me/attributes/request/1"
+#define ATTR_RESPONSE_TOPIC "v1/devices/me/attributes/response/+"
 #define MQTT_RECONNECT_DELAY_MS 5000
 
 // NVS Configuration
@@ -60,6 +62,8 @@
 #define HEART_READ_DELAY_MS 2000
 #define MQTT_SEND_DELAY_MS 5000
 #define OLED_UPDATE_DELAY_MS 500
+#define OTA_CHECK_INTERVAL_MS 60000 * 5 //5p
+
 
 // MPU6050 Configuration
 #define I2C_PORT I2C_NUM_1

@@ -5,6 +5,10 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
+#define OTA_URL_SIZE 256
+#define FIRMWARE_TITLE      "iot_project"
+#define VERION              "1.0"
+
 /**
  * @brief Initialize and start MQTT client
  * @param token Access token for authentication
@@ -32,5 +36,7 @@ esp_err_t mqtt_client_stop(void);
  * @brief Check if MQTT is connected
  */
 uint8_t mqtt_is_connected(void);
+
+void mqtt_start_ota_scheduler(void);
 
 #endif // MQTT_CLIENT_H
