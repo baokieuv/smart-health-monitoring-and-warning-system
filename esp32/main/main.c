@@ -97,7 +97,9 @@ static void mqtt_send_task(void *param)
             alarm_check_health_data(s_data.heart_rate, s_data.spo2, s_data.temperature);
             
             // Send telemetry with alarm status
-            const char *alarm_str = alarm_get_string();
+            char alarm_str[128] = { 0 };
+            alarm_get_string(alarm_str);
+            // const char *alarm_str = alarm_get_string();
 
             // Send telemetry
             esp_err_t err = mqtt_publish_telemetry(
@@ -265,200 +267,36 @@ static esp_err_t do_provisioning_if_needed(void){
     return ESP_OK;
 }
 
-/**
- * @brief Initialize system
- */
-static esp_err_t system_init(void)
-{
-    // Initialize NVS
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-
-    // Initialize networking
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-    // Create event group
-    g_event_group = xEventGroupCreate();
-    if (!g_event_group)
-    {
-        ESP_LOGE(TAG, "Failed to create event group");
-        return ESP_FAIL;
-    }
-
-    xEventGroupSetBits(g_event_group, DEVICE_ACTIVE_BIT);
-
-    // Initialize I2C for OLED and sensors
-    // i2c_config_t i2c_conf = {
-    //     .mode = I2C_MODE_MASTER,
-    //     .sda_io_num = I2C_SDA,
-    //     .scl_io_num = I2C_SCL,
-    //     .sda_pullup_en = GPIO_PULLUP_ENABLE,
-    //     .scl_pullup_en = GPIO_PULLUP_ENABLE,
-    //     .master.clk_speed = I2C_FREQ,
-    // };
-    // ESP_ERROR_CHECK(i2c_param_config(I2C_PORT, &i2c_conf));
-    // ESP_ERROR_CHECK(i2c_driver_install(I2C_PORT, i2c_conf.mode, 0, 0, 0));  
-
-    // Initialize OLED display
-    u8g2_esp32_hal_t u8g2_hal = U8G2_ESP32_HAL_DEFAULT;
-    u8g2_hal.bus.i2c.sda = I2C_SDA;
-    u8g2_hal.bus.i2c.scl = I2C_SCL;
-    u8g2_esp32_hal_init(u8g2_hal);
-    
-    ESP_ERROR_CHECK(oled_display_init(u8g2_esp32_i2c_byte_cb, 
-                                      u8g2_esp32_gpio_and_delay_cb));
-    
-  // Create OLED queue and task
-    s_oled_queue = xQueueCreate(16, sizeof(display_data_t));
-    xTaskCreate(oled_display_task, "oled_task", 4096, (void *)s_oled_queue, 3, NULL);
-    xTaskCreate(oled_update_task, "oled_update", 2048, NULL, 3, NULL);
-
-    // Initialize alarm manager
-    ESP_ERROR_CHECK(alarm_manager_init(g_event_group));
-
-    // Initialize WiFi manager
-    ESP_ERROR_CHECK(wifi_manager_init(g_event_group));
-
-    // Initialize buttons
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(
-        BUTTON1_EVENT_BASE, ESP_EVENT_ANY_ID, 
-        button1_event_handler, NULL, NULL));
-    
-    // Register button 2 handler
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(
-        BUTTON2_EVENT_BASE, ESP_EVENT_ANY_ID, 
-        button2_event_handler, NULL, NULL));
-
-    // ESP_ERROR_CHECK(sys_button_init(BTN1_PIN));
-    // ESP_ERROR_CHECK(sys_button_init(BTN2_PIN));    
-    ESP_ERROR_CHECK(button_manager_init_button1(BTN1_PIN));
-    ESP_ERROR_CHECK(button_manager_init_button2(BTN2_PIN));
-    // Initialize MPU650
-
-    ESP_LOGI(TAG, "System initialized successfully");
-    return ESP_OK;
-}
-
-/**
- * @brief Start sensor tasks
- */
-static void start_sensor_tasks(void) {
-    // Initialize and start temperature sensor
-    if (temperature_sensor_init() == ESP_OK) {
-        temperature_start_task(on_temperature_update);
-    } else {
-        ESP_LOGW(TAG, "Temperature sensor init failed");
-    }
-
-    // Initialize and start heart rate sensor
-    if (heart_rate_sensor_init() == ESP_OK) {
-        heart_rate_start_task(on_heart_rate_update);
-    } else {
-        ESP_LOGW(TAG, "Heart rate sensor init failed");
-    }
-}
-
-/**
- * @brief Start normal operation mode with WiFi and MQTT
- */
-static esp_err_t start_normal_mode(void)
-{
-    ESP_LOGI(TAG, "Starting normal operation mode...");
-    char ssid[SSID_MAX_LEN], pass[PASSWORD_MAX_LEN];
-    char patient[CCCD_MAX_LEN], doctor[CCCD_MAX_LEN], token[TOKEN_MAX_LEN];
-    
-    // Try to load WiFi config
-    if (!nvs_load_wifi_config(ssid, pass)) {
-        ESP_LOGW(TAG, "No WiFi config found");
-        return ESP_FAIL;
-    }
-
-    ESP_LOGI(TAG, "WiFi config found - Connecting...");
-
-    // Connect to WiFi
-    if (!wifi_start_station_mode(ssid, pass)) {
-        ESP_LOGE(TAG, "WiFi connection failed");
-        return ESP_FAIL;
-    }
-    
-    ESP_LOGI(TAG, "WiFi connected successfully");
-
-    // Check if provisioning is needed (after WiFi connection!)
-    if (nvs_check_need_provisioning()) {
-        ESP_LOGI(TAG, "Provisioning required, performing now...");
-        do_provisioning_if_needed();
-    }
-
-
-   // Try to load full config
-    if (nvs_load_full_config(ssid, pass, patient, doctor, token)) {
-        ESP_LOGI(TAG, "Full config found - Starting MQTT");
-        
-        // Save patient and doctor info
-        strncpy(s_data.patient, patient, sizeof(s_data.patient) - 1);
-        strncpy(s_data.doctor, doctor, sizeof(s_data.doctor) - 1);
-        
-        // Initialize MQTT
-        esp_err_t err = mqtt_client_init(token);
-        if (err == ESP_OK) {
-            // Start MQTT telemetry task
-            xTaskCreate(mqtt_send_task, "mqtt_send", 4096, NULL, 5, NULL);
-        } else {
-            ESP_LOGW(TAG, "MQTT init failed");
-        }
-    } else {
-        ESP_LOGI(TAG, "No full config, WiFi only mode");
-    }
-
-    s_system_mode = SYS_MODE_STATION;
-    return ESP_OK;
-}
-
 // ====== Task đọc cảm biến (producer) ======
 static void mpu6050_task(void *param)
 {
     ESP_LOGI(TAG, "MPU6050 task started");
 
-    while (1)
-    {
+    while (1) {
         mpu6050_data_t data = {0};
-        if (mpu6050_is_ready())
-        {
+        if (mpu6050_is_ready()) {
             esp_err_t err = mpu6050_read_all(&data);
-            if (err == ESP_OK)
-            {
-                if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS)
-                {
+            if (err == ESP_OK) {
+                if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
                     mpu6050_data_t trash;
                     (void)xQueueReceive(g_mpu_queue, &trash, 0); // pop oldest (non-blocking)
 
-                    if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS)
-                    {
+                    if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
                         ESP_LOGW(TAG, "Queue full, dropped newest sample");
                     }
-                    else
-                    {
+                    else {
                         ESP_LOGW(TAG, "Queue full, dropped oldest sample");
                     }
                 }
-                else
-                {
+                else {
                     ESP_LOGW(TAG, "read_all failed");
                 }
             }
-            else
-            {
+            else {
                 ESP_LOGW(TAG, "mpu6050_read_all failed: %s", esp_err_to_name(err));
             }
         }
-        else
-        {
+        else {
             ESP_LOGW(TAG, "MPU6050 not ready");
         }
         vTaskDelay(pdMS_TO_TICKS(MPU_PERIOD_MS));
@@ -471,16 +309,6 @@ static inline float vec3_norm(float x, float y, float z)
     return sqrtf(x * x + y * y + z * z);
 }
 
-typedef enum
-{
-    ST_IDLE,
-    ST_FREE_FALL,
-    ST_IMPACT_WAIT,
-    ST_POST_MONITOR
-} fall_state_t;
-
-/// Test
-#define FALL_LED_GPIO GPIO_NUM_4
 
 static const char *fall_state_to_str(fall_state_t s)
 {
@@ -498,26 +326,10 @@ static const char *fall_state_to_str(fall_state_t s)
         return "UNKNOWN";
     }
 }
-///
+
 static void handle_mpu6050_data(void *param)
 {
     ESP_LOGI(TAG, "Fall detector started");
-    // Demo: init LED ngay trong handler
-    static bool s_led_inited = false;
-    if (!s_led_inited)
-    {
-        gpio_config_t io_conf = {
-            .pin_bit_mask = 1ULL << FALL_LED_GPIO,
-            .mode = GPIO_MODE_OUTPUT,
-            .pull_up_en = GPIO_PULLUP_DISABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type = GPIO_INTR_DISABLE,
-        };
-        gpio_config(&io_conf);
-        gpio_set_level(FALL_LED_GPIO, 0);
-        s_led_inited = true;
-    }
-    /////
 
     fall_state_t state = ST_FREE_FALL;
     fall_state_t prev_state = state;
@@ -596,13 +408,7 @@ static void handle_mpu6050_data(void *param)
                     t_last_report = now;
                     ESP_LOGW(TAG, "[FALL DETECTED] |acc|=%.2fg, |gyro|=%.0fdps, roll=%.1f°, pitch=%.1f°", acc_norm, gyro_norm, data.angle.roll, data.angle.pitch);
                     // ================= DEMO BÁO ĐÈN NGAY TẠI TODO =================
-                    for (int i = 0; i < 3; ++i)
-                    {
-                        gpio_set_level(FALL_LED_GPIO, 1);
-                        vTaskDelay(pdMS_TO_TICKS(200));
-                        gpio_set_level(FALL_LED_GPIO, 0);
-                        vTaskDelay(pdMS_TO_TICKS(200));
-                    }
+                    
                     // ==============================================================
                 }
                 state = ST_IDLE;
@@ -626,17 +432,167 @@ static void handle_mpu6050_data(void *param)
                      fall_state_to_str(state));
             prev_state = state;
         }
-
-        ESP_LOGI(TAG,
-                 "ACC: ax=%6.3f ay=%6.3f az=%6.3f | "
-                 "GYR: gx=%7.3f gy=%7.3f gz=%7.3f | "
-                 "TMP: %5.2f C | "
-                 "ANG: roll=%6.2f pitch=%6.2f",
-                 data.accel.ax, data.accel.ay, data.accel.az,
-                 data.gyro.gx, data.gyro.gy, data.gyro.gz,
-                 data.temp.celsius,
-                 data.angle.roll, data.angle.pitch);
     }
+}
+
+/**
+ * @brief Initialize system
+ */
+static esp_err_t system_init(void)
+{
+    // Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    // Initialize networking
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    // Create event group
+    g_event_group = xEventGroupCreate();
+    if (!g_event_group)
+    {
+        ESP_LOGE(TAG, "Failed to create event group");
+        return ESP_FAIL;
+    }
+
+    xEventGroupSetBits(g_event_group, DEVICE_ACTIVE_BIT);
+
+    // Initialize I2C for OLED and sensors
+    // i2c_config_t i2c_conf = {
+    //     .mode = I2C_MODE_MASTER,
+    //     .sda_io_num = I2C_SDA,
+    //     .scl_io_num = I2C_SCL,
+    //     .sda_pullup_en = GPIO_PULLUP_ENABLE,
+    //     .scl_pullup_en = GPIO_PULLUP_ENABLE,
+    //     .master.clk_speed = I2C_FREQ,
+    // };
+    // ESP_ERROR_CHECK(i2c_param_config(I2C_PORT, &i2c_conf));
+    // ESP_ERROR_CHECK(i2c_driver_install(I2C_PORT, i2c_conf.mode, 0, 0, 0));  
+
+    // Initialize OLED display
+    u8g2_esp32_hal_t u8g2_hal = U8G2_ESP32_HAL_DEFAULT;
+    u8g2_hal.bus.i2c.sda = I2C_SDA;
+    u8g2_hal.bus.i2c.scl = I2C_SCL;
+    u8g2_esp32_hal_init(u8g2_hal);
+    
+    ESP_ERROR_CHECK(oled_display_init(u8g2_esp32_i2c_byte_cb, 
+                                      u8g2_esp32_gpio_and_delay_cb));
+    
+    // Create OLED queue and task
+    s_oled_queue = xQueueCreate(16, sizeof(display_data_t));
+    g_mpu_queue = xQueueCreate(QUEUE_LEN, sizeof(mpu6050_data_t));
+
+    // Initialize mpu6050
+    ESP_ERROR_CHECK(mpu6050_init(I2C_PORT));
+
+    // Initialize alarm manager
+    ESP_ERROR_CHECK(alarm_manager_init(g_event_group));
+
+    // Initialize WiFi manager
+    ESP_ERROR_CHECK(wifi_manager_init(g_event_group));
+
+    // Initialize buttons
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(
+        BUTTON1_EVENT_BASE, ESP_EVENT_ANY_ID, 
+        button1_event_handler, NULL, NULL));
+    
+    // Register button 2 handler
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(
+        BUTTON2_EVENT_BASE, ESP_EVENT_ANY_ID, 
+        button2_event_handler, NULL, NULL));
+
+    ESP_ERROR_CHECK(button_manager_init_button1(BTN1_PIN));
+    ESP_ERROR_CHECK(button_manager_init_button2(BTN2_PIN));
+    // Initialize MPU650
+
+    ESP_LOGI(TAG, "System initialized successfully");
+    return ESP_OK;
+}
+
+/**
+ * @brief Start sensor tasks
+ */
+static void start_sensor_tasks(void) {
+    // Initialize and start temperature sensor
+    if (temperature_sensor_init() == ESP_OK) {
+        temperature_start_task(on_temperature_update);
+    } else {
+        ESP_LOGW(TAG, "Temperature sensor init failed");
+    }
+
+    // Initialize and start heart rate sensor
+    if (heart_rate_sensor_init() == ESP_OK) {
+        heart_rate_start_task(on_heart_rate_update);
+    } else {
+        ESP_LOGW(TAG, "Heart rate sensor init failed");
+    }
+
+    xTaskCreate(oled_display_task, "oled_task", 4096, (void *)s_oled_queue, 3, NULL);
+    xTaskCreate(oled_update_task, "oled_update", 2048, NULL, 3, NULL);
+    xTaskCreate(mpu6050_task, "mpu6050_task", 4096, NULL, 5, NULL);
+    xTaskCreate(handle_mpu6050_data, "mpu6050_handler", 4096, NULL, 4, NULL);
+}
+
+/**
+ * @brief Start normal operation mode with WiFi and MQTT
+ */
+static esp_err_t start_normal_mode(void)
+{
+    ESP_LOGI(TAG, "Starting normal operation mode...");
+    char ssid[SSID_MAX_LEN], pass[PASSWORD_MAX_LEN];
+    char patient[CCCD_MAX_LEN], doctor[CCCD_MAX_LEN], token[TOKEN_MAX_LEN];
+    
+    // Try to load WiFi config
+    if (!nvs_load_wifi_config(ssid, pass)) {
+        ESP_LOGW(TAG, "No WiFi config found");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "WiFi config found - Connecting...");
+
+    // Connect to WiFi
+    if (!wifi_start_station_mode(ssid, pass)) {
+        ESP_LOGE(TAG, "WiFi connection failed");
+        return ESP_FAIL;
+    }
+    
+    ESP_LOGI(TAG, "WiFi connected successfully");
+
+    // Check if provisioning is needed (after WiFi connection!)
+    if (nvs_check_need_provisioning()) {
+        ESP_LOGI(TAG, "Provisioning required, performing now...");
+        do_provisioning_if_needed();
+    }
+
+
+   // Try to load full config
+    if (nvs_load_full_config(ssid, pass, patient, doctor, token)) {
+        ESP_LOGI(TAG, "Full config found - Starting MQTT");
+        
+        // Save patient and doctor info
+        strncpy(s_data.patient, patient, sizeof(s_data.patient) - 1);
+        strncpy(s_data.doctor, doctor, sizeof(s_data.doctor) - 1);
+        
+        // Initialize MQTT
+        esp_err_t err = mqtt_client_init(token);
+        if (err == ESP_OK) {
+            // Start MQTT telemetry task
+            xTaskCreate(mqtt_send_task, "mqtt_send", 4096, NULL, 5, NULL);
+        } else {
+            ESP_LOGW(TAG, "MQTT init failed");
+        }
+    } else {
+        ESP_LOGI(TAG, "No full config, WiFi only mode");
+    }
+
+    s_system_mode = SYS_MODE_STATION;
+    return ESP_OK;
 }
 
 void app_main(void) {
@@ -670,90 +626,3 @@ void app_main(void) {
 
     ESP_LOGI(TAG, "=== Initialization Complete ===");
 }
-
-// void app_main(void)
-// {
-//     esp_err_t ret = nvs_flash_init();
-//     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-//     {
-//         ESP_ERROR_CHECK(nvs_flash_erase());
-//         ret = nvs_flash_init();
-//     }
-//     ESP_ERROR_CHECK(ret);
-
-//     i2c_config_t conf = {
-//         .mode = I2C_MODE_MASTER,
-//         .sda_io_num = 41,
-//         .scl_io_num = 42,
-//         .sda_pullup_en = GPIO_PULLUP_ENABLE,
-//         .scl_pullup_en = GPIO_PULLUP_ENABLE,
-//         .master.clk_speed = 100000,
-//     };
-//     ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &conf));
-//     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, conf.mode, 0, 0, 0));
-
-//     esp_err_t err;
-
-//     // g_mpu_queue = xQueueCreate(QUEUE_LEN, sizeof(mpu6050_data_t));
-//     // if (!g_mpu_queue)
-//     // {
-//     //     ESP_LOGE(TAG, "xQueueCreate failed");
-//     //     return;
-//     // }
-
-//     // err = mpu6050_init(I2C_PORT);
-
-//     // if (err != ESP_OK)
-//     // {
-//     //     ESP_LOGE(TAG, "mpu6050_init failed: %s", esp_err_to_name(err));
-//     //     return;
-//     // }
-//     // ESP_LOGI(TAG, "MPU6050 init OK, starting task...");
-
-//     // // Tạo task producer (đọc cảm biến)
-//     // if (xTaskCreate(mpu6050_task, "mpu6050_task", 4096, NULL, 5, NULL) != pdPASS)
-//     // {
-//     //     ESP_LOGE(TAG, "xTaskCreate mpu6050_task failed");
-//     //     return;
-//     // }
-
-//     // // Tạo task consumer (xử lý ngã)
-//     // if (xTaskCreate(handle_mpu6050_data, "mpu6050_handler", 4096, NULL, 4, NULL) != pdPASS)
-//     // {
-//     //     ESP_LOGE(TAG, "xTaskCreate handle_mpu6050_data failed");
-//     //     return;
-//     // }
-
-//     u8g2_esp32_hal_t u8g2_esp32_hal = U8G2_ESP32_HAL_DEFAULT;
-//     u8g2_esp32_hal.bus.i2c.sda = 41;
-//     u8g2_esp32_hal.bus.i2c.scl = 42;
-//     u8g2_esp32_hal_init(u8g2_esp32_hal);
-
-//     err = oled_display_init(u8g2_esp32_i2c_byte_cb, u8g2_esp32_gpio_and_delay_cb);
-//     if (err != ESP_OK)
-//     {
-//         ESP_LOGE(TAG, "oled_display_init failed: %s", esp_err_to_name(err));
-//         return;
-//     }
-//     ESP_LOGI(TAG, "OLED display init OK");
-
-//     // test OLED
-//     QueueHandle_t g_oled_queue = xQueueCreate(QUEUE_LEN, sizeof(display_data_t));
-
-//     xTaskCreate(oled_display_task, "oled_display_task", 4096, (void *)g_oled_queue, 3, NULL);
-//     xTaskCreate(fake_sensor_task, "fake_sensor_task", 2048, (void *)g_oled_queue, 3, NULL);
-
-//     // test switch wifi mode
-//     ESP_ERROR_CHECK(esp_netif_init());
-//     ESP_ERROR_CHECK(esp_event_loop_create_default());
-//     g_event_group = xEventGroupCreate();
-//     wifi_manager_init(g_event_group);
-
-//     ESP_ERROR_CHECK(esp_event_handler_instance_register(APP_BUTTON_EVENT,
-//                                                         ESP_EVENT_ANY_ID,
-//                                                         app_button_event_handler,
-//                                                         NULL, NULL));
-
-//     sys_button_init(BUTTON_GPIO_NUM);
-//     switch_to_sta_mode();
-// }

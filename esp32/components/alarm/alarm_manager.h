@@ -18,5 +18,5 @@ bool alarm_is_active(void);
 
 alarm_type_t alarm_get_current_type(void);
 
-const char* alarm_get_string(void);
+void alarm_get_string(char *alarm_str);
 #endif

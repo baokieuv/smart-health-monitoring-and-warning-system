@@ -35,6 +35,9 @@
 #define LED_PIN GPIO_NUM_2
 #define BUZZER_PIN GPIO_NUM_15
 
+/// Test
+#define FALL_LED_GPIO GPIO_NUM_6
+
 // I2C Configuration for MAX30102
 #define MAX30102_I2C_PORT I2C_NUM_1
 #define MAX30102_SCL_PIN GPIO_NUM_22
@@ -108,6 +111,7 @@ typedef enum {
     ALARM_HEART_RATE_LOW,
     ALARM_SPO2_LOW,
     ALARM_TEMP_HIGH,
+    ALARM_FALL_DETECTION,
     ALARM_SOS
 } alarm_type_t;
 
@@ -117,5 +121,13 @@ typedef enum {
     BTN_DOUBLE_CLICK,
     BTN_LONG_PRESS
 } button_event_id_t;
+
+// Fall state
+typedef enum {
+    ST_IDLE,
+    ST_FREE_FALL,
+    ST_IMPACT_WAIT,
+    ST_POST_MONITOR
+} fall_state_t;
 
 #endif // CONFIG_H
