@@ -1,11 +1,10 @@
 idf_component_register(
     SRCS
-        "sys_button.c"
+        "wifi_manager.c"
     INCLUDE_DIRS
         "."
     REQUIRES
-        driver
-        button
+        esp_wifi
+        esp_netif
         common
-        esp_event
 )

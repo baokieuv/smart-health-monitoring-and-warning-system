@@ -1,0 +1,12 @@
+idf_component_register(
+    SRCS
+        "provisioning.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        esp_http_client
+        json
+        storage
+        esp_wifi
+        common
+)

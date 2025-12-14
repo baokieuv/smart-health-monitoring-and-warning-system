@@ -2,6 +2,7 @@
 #define HEART_RATE_H
 
 #include "esp_err.h"
+#include "sytem_config.h"
 
 typedef struct {
     int heart_rate;

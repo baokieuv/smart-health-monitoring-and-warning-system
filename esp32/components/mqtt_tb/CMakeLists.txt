@@ -1,0 +1,15 @@
+idf_component_register(
+    SRCS
+        "mqtt_tb.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        mqtt
+        json 
+        app_update 
+        esp_http_client 
+        esp_https_ota 
+        esp_event
+        mbedtls
+        common
+)

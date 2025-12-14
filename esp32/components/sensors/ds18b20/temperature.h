@@ -3,6 +3,7 @@
 
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
+#include "sytem_config.h"
 
 /**
  * @brief Initialize temperature sensor

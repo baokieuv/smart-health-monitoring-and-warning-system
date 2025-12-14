@@ -1,5 +1,4 @@
 #include "heart_rate.h"
-#include "config.h"
 #include "max30102_api.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -24,7 +23,7 @@ esp_err_t heart_rate_sensor_init(void) {
     }
 
     // Initialize I2C
-    esp_err_t err = i2c_init(MAX30102_I2C_PORT, MAX30102_SCL_PIN, MAX30102_SDA_PIN);
+    esp_err_t err = i2c_init(I2C_PORT, I2C_SCL_PIN, I2C_SDA_PIN);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "I2C initialization failed: %s", esp_err_to_name(err));
         return err;
@@ -72,7 +71,7 @@ esp_err_t heart_rate_sensor_init(void) {
         .MULTI_LED_CONTROL2.SLOT3   = 0,      // Disabled
     };
 
-    err = max30102_init(MAX30102_I2C_PORT, &max30102_configuration);
+    err = max30102_init(I2C_PORT, &max30102_configuration);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "MAX30102 initialization failed: %s", esp_err_to_name(err));
         return err;
@@ -102,12 +101,12 @@ esp_err_t heart_rate_read(heart_rate_data_t *data) {
 
         // Wait for PPG_RDY interrupt (bit 6 in REG_INTR_STATUS_1)
         while (!(int_status & 0x40)) {
-            read_max30102_reg(MAX30102_I2C_PORT, REG_INTR_STATUS_1, &int_status, 1);
+            read_max30102_reg(I2C_PORT, REG_INTR_STATUS_1, &int_status, 1);
             vTaskDelay(pdMS_TO_TICKS(1));
         }
 
         // Read FIFO data
-        read_max30102_fifo(MAX30102_I2C_PORT, &red_buffer[i], &ir_buffer[i]);
+        read_max30102_fifo(I2C_PORT, &red_buffer[i], &ir_buffer[i]);
     }
 
     ESP_LOGI(TAG, "Buffer full. Processing...");

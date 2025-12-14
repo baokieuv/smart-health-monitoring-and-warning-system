@@ -1,5 +1,4 @@
 #include "temperature.h"
-#include "config.h"
 #include "onewire_bus.h"
 #include "ds18b20.h"
 #include "esp_log.h"

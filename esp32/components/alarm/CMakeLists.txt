@@ -1,0 +1,9 @@
+idf_component_register(
+    SRCS 
+        "alarm_manager.c"                    
+    INCLUDE_DIRS 
+        "."                    
+    REQUIRES 
+        common 
+        driver 
+)

@@ -5,6 +5,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "u8g2.h"
+#include "sytem_config.h"
 
 // Cấu hình chân GPIO (Khớp với main.c của bạn)
 #define OLED_SDA_PIN 21
@@ -20,22 +21,29 @@ typedef struct
 } display_data_t;
 
 /**
- * @brief Khởi tạo màn hình OLED sử dụng thư viện u8g2
- * @return ESP_OK nếu thành công
+ * @brief Initialize OLED display
+ * @param byte_cb I2C byte callback function
+ * @param gpio_cb GPIO and delay callback function
+ * @return ESP_OK on success
  */
 esp_err_t oled_display_init(u8x8_msg_cb byte_cb, u8x8_msg_cb gpio_cb);
 
 /**
- * @brief Cập nhật màn hình với dữ liệu mới (Hàm nội bộ, nhưng có thể gọi trực tiếp nếu cần)
- * * @param heart_rate Nhịp tim
- * @param spo2 Nồng độ oxy
- * @param temperature Nhiệt độ
+ * @brief Update OLED display with health data
+ * @details Layout:
+ *   - Left side: Heart rate with icon
+ *   - Top right: SpO2 with icon
+ *   - Bottom right: Temperature with icon
+ * 
+ * @param heart_rate Heart rate in BPM
+ * @param spo2 Blood oxygen saturation (%)
+ * @param temperature Body temperature (°C)
  */
 void oled_update_health_data(int heart_rate, int spo2, float temperature);
 
 /**
- * @brief Task FreeRTOS để nhận dữ liệu từ Queue và hiển thị
- * @param param Handle của Queue (QueueHandle_t)
+ * @brief OLED display task - receives data from queue and updates display
+ * @param param Queue handle for receiving display data
  */
 void oled_display_task(void *param);
 

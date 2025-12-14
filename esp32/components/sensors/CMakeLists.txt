@@ -1,0 +1,20 @@
+idf_component_register(
+    SRCS
+        "../sensors/ds18b20/temperature.c"
+        "../sensors/max30102/algorithm.c"
+        "../sensors/max30102/i2c_api.c"
+        "../sensors/max30102/heart_rate.c"
+        "../sensors/max30102/max30102_api.c"
+        "../sensors/mpu6050/mpu6050_api.c"
+    INCLUDE_DIRS
+        "."
+        "../sensors/ds18b20"
+        "../sensors/max30102"
+        "../sensors/mpu6050"
+    REQUIRES
+        driver
+        esp_timer
+        onewire_bus
+        ds18b20
+        common
+)

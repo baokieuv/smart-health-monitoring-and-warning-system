@@ -1,3 +1,9 @@
-idf_component_register(SRCS "oled_display.c"
-                       INCLUDE_DIRS "."
-                       REQUIRES u8g2 u8g2_esp32_hal_idf)
+idf_component_register(
+    SRCS "oled_display.c"                   
+    INCLUDE_DIRS "."
+    REQUIRES
+        driver
+        u8g2
+        esp_timer
+        common
+)

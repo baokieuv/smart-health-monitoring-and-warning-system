@@ -1,11 +1,9 @@
 idf_component_register(
     SRCS
-        "sys_button.c"
+        "nvs_storage.c"
     INCLUDE_DIRS
         "."
     REQUIRES
-        driver
-        button
+        nvs_flash
         common
-        esp_event
 )

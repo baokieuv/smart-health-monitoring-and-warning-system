@@ -1,11 +1,7 @@
 idf_component_register(
     SRCS
-        "sys_button.c"
     INCLUDE_DIRS
         "."
     REQUIRES
         driver
-        button
-        common
-        esp_event
 )

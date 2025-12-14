@@ -1,31 +1,20 @@
 idf_component_register(
-    SRCS 
-        "main.c" 
-        "../components/storage/nvs_storage.c"
-        "../components/wifi/wifi_manager.c"
-        "../components/http/http_server.c"
-        "../components/mqtt/mqtt_tb.c"
-        "../components/provisioning/provisioning.c"
-        "../components/sensors/max30102/algorithm.c"
-        "../components/sensors/max30102/heart_rate.c"
-        "../components/sensors/max30102/i2c_api.c"
-        "../components/sensors/max30102/max30102_api.c"
-        "../components/sensors/ds18b20/temperature.c"
-        "../components/sensors/mpu6050/mpu6050_api.c"
-        "../components/display/oled_display.c"
-        "../components/sys_button/sys_button.c"
-        "../components/alarm/alarm_manager.c"
-    INCLUDE_DIRS 
-        "."
-        "../components/storage"
-        "../components/wifi"
-        "../components/http"
-        "../components/mqtt"
-        "../components/provisioning"
-        "../components/sensors/ds18b20"
-        "../components/sensors/max30102"
-        "../components/sensors/mpu6050"
-        "../components/display"
-        "../components/sys_button"
-        "../components/alarm"
+    SRCS "main.c"
+    INCLUDE_DIRS "."
+    REQUIRES
+        nvs_flash 
+        driver 
+        esp_event 
+        esp_netif
+
+        alarm
+        common                                                                              
+        display
+        http
+        mqtt_tb
+        provisioning
+        sensors
+        storage
+        sys_button
+        wifi
 )

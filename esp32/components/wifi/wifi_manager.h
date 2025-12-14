@@ -4,32 +4,39 @@
 #include <stdbool.h>
 #include "esp_err.h"
 #include "esp_event.h"
+#include "sytem_config.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 
 /**
- * @brief Initialize WiFi manager
+ * @brief Initialize WiFi manager and register event handlers
+ * @return ESP_OK on success
  */
 esp_err_t wifi_manager_init();
 
 /**
- * @brief Start WiFi in AP mode for configuration
+ * @brief Start WiFi in Access Point mode
+ * @return ESP_OK on success
  */
 esp_err_t wifi_start_ap_mode(void);
 
 /**
- * @brief Start WiFi in Station mode
- * @return true if connected successfully
+ * @brief Start WiFi in Station mode and connect to AP
+ * @param ssid WiFi SSID to connect to
+ * @param pass WiFi password
+ * @return true if connected successfully, false otherwise
  */
 bool wifi_start_station_mode(const char *ssid, const char *pass);
 
 /**
- * @brief Stop current WiFi mode
+ * @brief Stop WiFi and deinitialize driver
+ * @return ESP_OK on success
  */
 esp_err_t wifi_stop(void);
 
 /**
- * @brief Get WiFi connection status
+ * @brief Check if WiFi is connected
+ * @return true if connected, false otherwise
  */
 bool wifi_is_connected(void);
 
