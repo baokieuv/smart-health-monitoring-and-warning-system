@@ -69,7 +69,7 @@ export default function AdminShell() {
         <aside className="admin-sidebar">
           <nav>
             <SidebarItem icon="ℹ️" label="Information" to={routers.AdminInfo} />
-            <SidebarItem icon="👨‍⚕️" label="Doctors List" to={routers.AdminDoctors} />
+            <SidebarItem icon="👨‍⚕️" label="Doctors Management" to={routers.AdminDoctors} />
             <SidebarItem icon="📱" label="Device Management" to={routers.AdminDevices} />
             <SidebarItem icon="🏥" label="Rooms (Coming soon)" to={routers.AdminRooms} />
             {getToken() && (
