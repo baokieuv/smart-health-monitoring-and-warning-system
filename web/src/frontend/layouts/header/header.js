@@ -56,9 +56,9 @@ const Header = () => {
                   {userInfo.role === 'admin' ? '👤' : '👨‍⚕️'} {userInfo.username || userInfo.name}
                 </span>
               )} */}
-              <button onClick={handleLogout} className="nav-link logout-btn">
+              {/* <button onClick={handleLogout} className="nav-link logout-btn">
                 🚪 Logout
-              </button>
+              </button> */}
             </>
           )}
           {!userInfo && (

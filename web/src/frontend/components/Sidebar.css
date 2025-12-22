@@ -68,6 +68,32 @@
   animation: pulse-badge 2s infinite;
 }
 
+.nav-link {
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background 0.3s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.8);
+  }
+}
+
+.logout-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 15px;
+  font-family: inherit;
+  text-align: center;
+  
+  &:hover {
+    background: rgba(255, 77, 77, 0.15);
+  }
+}
+
 @keyframes pulse-badge {
   0%, 100% {
     transform: scale(1);

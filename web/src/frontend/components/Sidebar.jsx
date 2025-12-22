@@ -2,6 +2,11 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './Sidebar.css';
 import { useSocket } from '../contexts/SocketContext';
+import { getUserInfo, clearToken, clearUserInfo, getCurrentDoctorInfo } from '../utils/api'
+import { useNavigate } from 'react-router-dom'
+import routers from '../utils/routers'
+
+
 
 export default function Sidebar() {
   const location = useLocation();
@@ -10,6 +15,15 @@ export default function Sidebar() {
   const isActive = (path) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
+
+  const navigate = useNavigate()
+  const handleLogout = () => {
+      if (window.confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+        clearToken()
+        clearUserInfo()
+        navigate(routers.Login)
+      }
+    }
 
   return (
     <aside className="sidebar">
@@ -42,13 +56,13 @@ export default function Sidebar() {
           <span className="label">Rooms (Coming soon)</span>
         </Link>
         
-        <Link 
-          to="/notes" 
-          className={`sidebar-item ${isActive('/notes') ? 'active' : ''}`}
+        <button 
+          onClick={handleLogout} 
+          className="sidebar-item logout-btn"
         >
-          <span className="icon">📝</span>
-          <span className="label">Notes (Coming soon)</span>
-        </Link>
+          <span className="icon">🚪</span>
+          <span className="label">Logout</span>
+        </button>
       </nav>
     </aside>
   );
