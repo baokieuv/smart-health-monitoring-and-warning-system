@@ -7,6 +7,7 @@ const AvatarUpload = ({ currentAvatar, onUploadSuccess }) => {
   const [cropData, setCropData] = useState({ x: 0, y: 0, size: 200 })
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [avatarKey, setAvatarKey] = useState(Date.now()) // For cache busting
   const fileInputRef = useRef(null)
   const imageRef = useRef(null)
   const canvasRef = useRef(null)
@@ -128,7 +129,7 @@ const AvatarUpload = ({ currentAvatar, onUploadSuccess }) => {
       formData.append('file', croppedBlob, 'avatar.jpg')
 
       const token = localStorage.getItem('access_token')
-      console.log('Token from localStorage:', token)
+      // console.log('Token from localStorage:', token)
       
       if (!token) {
         alert('Không tìm thấy token. Vui lòng đăng nhập lại.')
@@ -152,6 +153,7 @@ const AvatarUpload = ({ currentAvatar, onUploadSuccess }) => {
         alert('Upload avatar thành công!')
         setSelectedFile(null)
         setPreview(null)
+        setAvatarKey(Date.now()) // Update key to force image reload
         if (onUploadSuccess) {
           onUploadSuccess(data.url)
         }
@@ -166,24 +168,60 @@ const AvatarUpload = ({ currentAvatar, onUploadSuccess }) => {
     }
   }
 
+  const handleDownload = async () => {
+    if (!currentAvatar) {
+      alert('Vui lòng Upload avatar trước.')
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        alert('Vui lòng đăng nhập lại.')
+        return
+      }
+
+      // Call backend proxy endpoint to download with proper headers
+      const link = document.createElement('a')
+      link.href = `http://localhost:5000/api/v1/user/download-avatar?token=${token}`
+      link.download = `avatar_${Date.now()}.jpg`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error('Download error:', error)
+      alert('Lỗi khi tải xuống avatar: ' + error.message)
+    }
+  }
+
   return (
     <div className="avatar-upload-container">
       <div className="avatar-display">
         <div className="avatar-circle">
           {currentAvatar ? (
-            <img src={currentAvatar} alt="Avatar" />
+            <img src={`${currentAvatar}?v=${avatarKey}`} alt="Avatar" key={avatarKey} />
           ) : (
             <div className="avatar-placeholder">
               <span>👤</span>
             </div>
           )}
         </div>
-        <button 
-          className="btn-change-avatar"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          📷 Change Avatar
-        </button>
+        <div className="avatar-actions">
+          <button 
+            className="btn-change-avatar"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            📷 Change Avatar
+          </button>
+          {currentAvatar && (
+            <button 
+              className="btn-download-avatar"
+              onClick={handleDownload}
+            >
+              ⬇️ Download
+            </button>
+          )}
+        </div>
         <input
           ref={fileInputRef}
           type="file"

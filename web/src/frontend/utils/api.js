@@ -118,6 +118,17 @@ export const updatePatient = (patientId, payload) => unwrap(api.put(`/api/v1/doc
 
 export const deletePatient = (patientId) => unwrap(api.delete(`/api/v1/doctor/patients/${patientId}`))
 
+// Patient Device Management
+export const allocateDevice = (patientId) => 
+  unwrap(api.post(`/api/v1/doctor/patients/${patientId}/allocate-device`))
+
+export const recallDevice = (patientId) => 
+  unwrap(api.post(`/api/v1/doctor/patients/${patientId}/recall-device`))
+
+// Patient Health Info
+export const getPatientHealthInfo = (patientId) => 
+  unwrap(api.get(`/api/v1/doctor/patients/${patientId}/health`))
+
 // Optional endpoints
 export const getDoctorSpecializations = () =>
   unwrap(
@@ -176,4 +187,7 @@ export default {
   getPatientDetail,
   updatePatient,
   deletePatient,
+  allocateDevice,
+  recallDevice,
+  getPatientHealthInfo,
 }

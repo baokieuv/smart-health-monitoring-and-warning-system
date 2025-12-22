@@ -1,24 +1,119 @@
-import React, { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { getPatientDetail, updatePatient, getDoctorsList } from '../../utils/api'
-import './PatientDetail.css'
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getPatientDetail, updatePatient, getDoctorsList, allocateDevice, recallDevice, getPatientHealthInfo } from '../../utils/api';
+import './PatientDetail.css';
 
 export default function PatientDetail() {
-  const { id } = useParams()
-  const [patient, setPatient] = useState(null)
-  const [vitals, setVitals] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [doctors, setDoctors] = useState([])
+  const { id } = useParams();
+  const [patient, setPatient] = useState(null);
+  const [vitals, setVitals] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [doctors, setDoctors] = useState([]);
+  const [healthInfo, setHealthInfo] = useState(null);
+  const [loadingHealth, setLoadingHealth] = useState(false);
+  const [deviceLoading, setDeviceLoading] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
-      await Promise.all([loadPatient(), loadDoctors()])
+      await Promise.all([loadPatient(), loadDoctors()]);
+    };
+    loadData();
+  }, [id]);
+
+  // Auto-refresh health info every 15 seconds
+  useEffect(() => {
+    if (patient?.deviceId) {
+      // Clear old vitals when device changes
+      setVitals([]);
+      
+      // Load immediately
+      loadHealthInfo();
+      
+      // Then refresh every 10 seconds
+      const interval = setInterval(() => {
+        loadHealthInfo();
+      }, 10000); // 10 seconds
+
+      return () => clearInterval(interval);
+    } else {
+      // Clear vitals if no device
+      setVitals([]);
     }
-    loadData()
-  }, [id])
+  }, [patient?.deviceId]);
+
+  const loadHealthInfo = async () => {
+    if (!patient?.deviceId) return;
+    
+    setLoadingHealth(true);
+    try {
+      const res = await getPatientHealthInfo(id);
+      if (res?.status === 'success' && res?.health_info) {
+        setHealthInfo(res.health_info);
+        
+        // Add to vitals chart data
+        const newDataPoint = {
+          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          heartRate: res.health_info.heart_rate || null,
+          spo2: res.health_info.SpO2 || null,
+          temperature: res.health_info.temperature || null
+        };
+        
+        setVitals(prev => {
+          const updated = [...prev, newDataPoint];
+          // Keep only last 20 data points
+          return updated.slice(-20);
+        });
+      }
+    } catch (e) {
+      console.error('Load health info error:', e);
+    } finally {
+      setLoadingHealth(false);
+    }
+  };
+
+  const handleAllocateDevice = async () => {
+    if (!window.confirm('Bạn có chắc muốn cấp phát thiết bị cho bệnh nhân này?')) {
+      return;
+    }
+
+    setDeviceLoading(true);
+    try {
+      const res = await allocateDevice(id);
+      if (res?.status === 'success') {
+        alert(`Cấp phát thiết bị thành công! Device ID: ${res.device_id}`);
+        await loadPatient(); // Reload patient to get updated deviceId
+      }
+    } catch (e) {
+      console.error('Allocate device error:', e);
+      alert(e?.response?.data?.message || 'Không thể cấp phát thiết bị');
+    } finally {
+      setDeviceLoading(false);
+    }
+  };
+
+  const handleRecallDevice = async () => {
+    if (!window.confirm('Bạn có chắc muốn thu hồi thiết bị từ bệnh nhân này?')) {
+      return;
+    }
+
+    setDeviceLoading(true);
+    try {
+      const res = await recallDevice(id);
+      if (res?.status === 'success') {
+        alert('Thu hồi thiết bị thành công!');
+        setHealthInfo(null); // Clear health info
+        await loadPatient(); // Reload patient
+      }
+    } catch (e) {
+      console.error('Recall device error:', e);
+      alert(e?.response?.data?.message || 'Không thể thu hồi thiết bị');
+    } finally {
+      setDeviceLoading(false);
+    }
+  };
 
   const loadDoctors = async () => {
     try {
@@ -167,6 +262,108 @@ export default function PatientDetail() {
             <span className="value">{patient.deviceId || 'Chưa gán'}</span>
           </div>
         </div>
+
+        {/* Device Management Card */}
+        <div className="info-card">
+          <h3>🔧 Quản Lý Thiết Bị</h3>
+          {patient.deviceId ? (
+            <div>
+              <p style={{ marginBottom: '12px' }}>
+                <strong>Device hiện tại:</strong> {patient.deviceId}
+              </p>
+              <button 
+                className="btn-recall-device"
+                onClick={handleRecallDevice}
+                disabled={deviceLoading}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: deviceLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  opacity: deviceLoading ? 0.6 : 1
+                }}
+              >
+                {deviceLoading ? 'Đang xử lý...' : '🔴 Thu Hồi Thiết Bị'}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <p style={{ marginBottom: '12px', color: '#999' }}>
+                Bệnh nhân chưa được cấp phát thiết bị
+              </p>
+              <button 
+                className="btn-allocate-device"
+                onClick={handleAllocateDevice}
+                disabled={deviceLoading}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: deviceLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: '600',
+                  opacity: deviceLoading ? 0.6 : 1
+                }}
+              >
+                {deviceLoading ? 'Đang xử lý...' : '✅ Cấp Phát Thiết Bị'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Health Info Card - Only show if device is allocated */}
+        {patient.deviceId && (
+          <div className="info-card health-card">
+            <h3>🩺 Thông Tin Sức Khỏe</h3>
+            {loadingHealth ? (
+              <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>Đang tải...</p>
+            ) : healthInfo ? (
+              <div>
+              
+                <div className="vital-grid" style={{ display: 'grid', gap: '12px' }}>
+                  <div className="vital-box" style={{ background: '#fee', padding: '12px', borderRadius: '8px', borderLeft: '4px solid #dc3545' }}>
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>❤️ Nhịp Tim</div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#dc3545' }}>
+                      {healthInfo.heart_rate ? `${healthInfo.heart_rate} bpm` : 'N/A'}
+                    </div>
+                  </div>
+                  <div className="vital-box" style={{ background: '#e8f4fd', padding: '12px', borderRadius: '8px', borderLeft: '4px solid #17a2b8' }}>
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>🫁 SpO2</div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#17a2b8' }}>
+                      {healthInfo.SpO2 ? `${healthInfo.SpO2}%` : 'N/A'}
+                    </div>
+                  </div>
+                  <div className="vital-box" style={{ background: '#fff3e0', padding: '12px', borderRadius: '8px', borderLeft: '4px solid #ffc107' }}>
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>🌡️ Nhiệt Độ</div>
+                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#ffc107' }}>
+                      {healthInfo.temperature ? `${healthInfo.temperature}°C` : 'N/A'}
+                    </div>
+                  </div>
+                </div>
+                {healthInfo.alarm_status && (
+                  <div style={{ marginTop: '12px', padding: '12px', background: '#fee', borderRadius: '8px', color: '#dc3545', fontWeight: '600' }}>
+                    🚨 Alarm: {healthInfo.alarm_status}
+                  </div>
+                )}
+                {healthInfo.last_measurement && (
+                  <div style={{ marginTop: '12px', fontSize: '12px', color: '#999', textAlign: 'right' }}>
+                    Cập nhật lúc: {new Date(healthInfo.last_measurement).toLocaleString('vi-VN')}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
+                Chưa có dữ liệu sức khỏe
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}
@@ -195,7 +392,7 @@ export default function PatientDetail() {
                 <LineChart data={vitals} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="time" />
-                  <YAxis domain={[60, 100]} />
+                  <YAxis domain={[50, 120]} />
                   <Tooltip />
                   <Legend />
                   <Line 
@@ -204,8 +401,9 @@ export default function PatientDetail() {
                     stroke="#e74c3c" 
                     strokeWidth={2} 
                     name="Nhịp tim"
-                    dot={true}
+                    dot={{ r: 3 }}
                     isAnimationActive={false}
+                    connectNulls={true}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -217,7 +415,7 @@ export default function PatientDetail() {
                 <LineChart data={vitals} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="time" />
-                  <YAxis domain={[90, 100]} />
+                  <YAxis domain={[85, 100]} />
                   <Tooltip />
                   <Legend />
                   <Line 
@@ -226,8 +424,9 @@ export default function PatientDetail() {
                     stroke="#3498db" 
                     strokeWidth={2} 
                     name="SpO2"
-                    dot={true}
+                    dot={{ r: 3 }}
                     isAnimationActive={false}
+                    connectNulls={true}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -239,7 +438,7 @@ export default function PatientDetail() {
                 <LineChart data={vitals} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="time" />
-                  <YAxis domain={[35.5, 37.5]} />
+                  <YAxis domain={[35, 40]} />
                   <Tooltip />
                   <Legend />
                   <Line 
@@ -248,8 +447,9 @@ export default function PatientDetail() {
                     stroke="#2ecc71" 
                     strokeWidth={2} 
                     name="Nhiệt độ"
-                    dot={true}
+                    dot={{ r: 3 }}
                     isAnimationActive={false}
+                    connectNulls={true}
                   />
                 </LineChart>
               </ResponsiveContainer>

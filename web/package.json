@@ -20,6 +20,7 @@
     "mongodb": "^7.0.0",
     "mongoose": "^8.19.3",
     "multer": "^2.0.2",
+    "nodemailer": "^7.0.11",
     "nodemon": "^3.1.9",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -28,6 +29,8 @@
     "recharts": "^3.3.0",
     "sass": "^1.93.2",
     "sharp": "^0.34.5",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

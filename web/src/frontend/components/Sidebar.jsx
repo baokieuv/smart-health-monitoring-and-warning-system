@@ -1,13 +1,15 @@
-import React from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import './Sidebar.css'
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import './Sidebar.css';
+import { useSocket } from '../contexts/SocketContext';
 
 export default function Sidebar() {
-  const location = useLocation()
+  const location = useLocation();
+  const { unreadCount } = useSocket();
   
   const isActive = (path) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/')
-  }
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
 
   return (
     <aside className="sidebar">
@@ -28,6 +30,9 @@ export default function Sidebar() {
         >
           <span className="icon">🚨</span>
           <span className="label">Alerts</span>
+          {unreadCount > 0 && (
+            <span className="notification-badge">{unreadCount}</span>
+          )}
         </Link>
         <Link 
           to="/rooms" 
@@ -46,5 +51,5 @@ export default function Sidebar() {
         </Link>
       </nav>
     </aside>
-  )
+  );
 }

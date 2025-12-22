@@ -186,10 +186,7 @@ router.post(
     authorizeRoles('doctor'),
     [
         param('patient_id')
-            .isMongoId().withMessage('Invalid Patient ID'),
-        body('deviceId')
-            .notEmpty().withMessage('Device ID is required')
-            .isString().withMessage('Device ID must be a string')
+            .isMongoId().withMessage('Invalid Patient ID')
     ],
     validateRequest,
     patientController.allocateDevice

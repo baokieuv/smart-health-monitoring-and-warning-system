@@ -31,6 +31,7 @@
   text-decoration: none;
   transition: background 0.2s;
   border-left: 4px solid transparent;
+  position: relative;
 }
 
 .sidebar-item:hover {
@@ -52,4 +53,26 @@
 .sidebar-item .label {
   flex: 1;
   font-size: 15px;
+}
+
+/* Notification badge */
+.notification-badge {
+  background: #dc3545;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 20px;
+  text-align: center;
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
 }

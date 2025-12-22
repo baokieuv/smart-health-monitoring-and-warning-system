@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getPatientList } from '../utils/api'
+import { useSocket } from '../contexts/SocketContext'
 import './homePage.scss'
 
 const HomePage = () => {
   const navigate = useNavigate()
+  const { notifications } = useSocket()
   const [stats, setStats] = useState({
     patients: 0,
     alerts: 0,
@@ -14,6 +16,14 @@ const HomePage = () => {
   useEffect(() => {
     loadStats()
   }, [])
+
+  // Update alerts count from Socket notifications
+  useEffect(() => {
+    setStats(prev => ({
+      ...prev,
+      alerts: notifications.length
+    }))
+  }, [notifications])
 
   const loadStats = async () => {
     try {

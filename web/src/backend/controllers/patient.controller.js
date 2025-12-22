@@ -53,11 +53,14 @@ async function findAndCacheDeviceID(patient, token) {
                 const patientValue = patientCCCD ? String(patientCCCD.value) : null;
                 const doctorValue  = doctorCCCD ? String(doctorCCCD.value) : null;
 
-                const normalizedPatientValue = patientValue?.padStart(patient.cccd.length, '0');
-                const normalizeDoctorCCCD = doctorValue?.padStart(patient.cccd.length, '0');
+                // Normalize to 12 digits CCCD standard (pad with leading zeros)
+                const CCCD_LENGTH = 12;
+                const normalizedPatientValue = patientValue?.padStart(CCCD_LENGTH, '0');
+                const normalizeDoctorCCCD = doctorValue?.padStart(CCCD_LENGTH, '0');
 
-                console.log(normalizeDoctorCCCD);
-                console.log(normalizedPatientValue)
+                console.log('Device attributes - Patient CCCD:', normalizedPatientValue);
+                console.log('Device attributes - Doctor CCCD:', normalizeDoctorCCCD);
+                console.log('Searching for Patient CCCD:', patient.cccd)
 
                 const doctor = await Doctor.findOne({ cccd: normalizeDoctorCCCD });
                 
@@ -429,7 +432,37 @@ exports.getHealthInfo = async (req, res) => {
             });
         }
 
-        const token = tokenStore.findThingsBoardToken(req.user.id);
+        let token = tokenStore.findThingsBoardToken(req.user.id);
+        // console.log("Tokens found for ThingsBoard:", !!token);
+        
+        // If no token, try to login to ThingsBoard
+        if (!token) {
+            console.log("Attempting to login to ThingsBoard...");
+            try {
+                const resp = await fetch(`${THINGSBOARD_URL}/api/auth/login`, {
+                    method: "POST",
+                    body: JSON.stringify({ 
+                        username: "tenant@thingsboard.org", 
+                        password: "tenant" 
+                    }),
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (resp.ok) {
+                    const json = await resp.json();
+                    tokenStore.saveThingsBoardToken(req.user.id, json.token, Date.now() + 7 * 24 * 60 * 60 * 1000);
+                    token = json.token;
+                    console.log("ThingsBoard login successful");
+                } else {
+                    console.error("ThingsBoard login failed:", resp.status);
+                }
+            } catch (err) {
+                console.error("ThingsBoard connection failed:", err.message);
+            }
+        }
+        
         if (!token) {
             return res.status(503).json({
                 status: "error",
@@ -546,11 +579,42 @@ exports.allocateDevice = async(req, res) => {
             });
         }
 
-        const token = tokenStore.findThingsBoardToken(req.user.id);
+        // console.log("User id: ", req.user.id);
+        let token = tokenStore.findThingsBoardToken(req.user.id);
+        console.log("Tokens found for ThingsBoard:", !!token);
+        
+        // If no token, try to login to ThingsBoard
+        if (!token) {
+            console.log("Attempting to login to ThingsBoard...");
+            try {
+                const resp = await fetch(`${THINGSBOARD_URL}/api/auth/login`, {
+                    method: "POST",
+                    body: JSON.stringify({ 
+                        username: "tenant@thingsboard.org", 
+                        password: "tenant" 
+                    }),
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (resp.ok) {
+                    const json = await resp.json();
+                    tokenStore.saveThingsBoardToken(req.user.id, json.token, Date.now() + 7 * 24 * 60 * 60 * 1000);
+                    token = json.token;
+                    console.log("ThingsBoard login successful");
+                } else {
+                    console.error("ThingsBoard login failed:", resp.status);
+                }
+            } catch (err) {
+                console.error("ThingsBoard connection failed:", err.message);
+            }
+        }
+        
         if (!token) {
             return res.status(503).json({
                 status: "error",
-                message: "ThingsBoard connection not available."
+                message: "ThingsBoard connection not available. Please ensure ThingsBoard is running."
             });
         }
 

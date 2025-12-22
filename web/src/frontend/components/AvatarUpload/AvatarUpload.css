@@ -38,20 +38,43 @@
   font-size: 60px;
 }
 
-.btn-change-avatar {
+.avatar-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-change-avatar,
+.btn-download-avatar {
   padding: 10px 20px;
-  background: #007bff;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: all 0.2s;
+}
+
+.btn-change-avatar {
+  background: #007bff;
 }
 
 .btn-change-avatar:hover {
   background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-download-avatar {
+  background: #28a745;
+}
+
+.btn-download-avatar:hover {
+  background: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
 }
 
 .crop-modal {

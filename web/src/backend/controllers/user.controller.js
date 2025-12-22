@@ -103,3 +103,77 @@ exports.downloadImage = async (req, res) => {
 		});
     }
 };
+
+// GET /api/v1/user/download-avatar -> download user avatar file
+exports.downloadAvatar = async (req, res) => {
+    try{
+        // Get token from query string or header
+        let token = req.query.token;
+        if (!token) {
+            const authHeader = req.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                token = authHeader.substring(7);
+            }
+        }
+
+        if (!token) {
+            return res.status(401).json({
+                status: "error",
+                message: "Authentication required."
+            });
+        }
+
+        // Verify token manually
+        const jwt = require('jsonwebtoken');
+        const jwtSecret = process.env.JWT_ACCESS_SECRET || 'secret_access';
+        let decoded;
+        try {
+            decoded = jwt.verify(token, jwtSecret);
+        } catch (err) {
+            return res.status(401).json({
+                status: "error",
+                message: "Invalid or expired token."
+            });
+        }
+
+        const user = await User.findById(decoded.id);
+
+        if(!user){
+            return res.status(404).json({
+                status: "error",
+                message: "User not found."
+            });
+        }
+
+        if(!user.imageUrl){
+            return res.status(400).json({
+                status: "error",
+                message: "User doesn't have avatar."
+            });
+        }
+
+        // Fetch image from S3 URL
+        const https = require('https');
+        const filename = `avatar_${user.username}_${Date.now()}.jpg`;
+        
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'image/jpeg');
+
+        https.get(user.imageUrl, (imageStream) => {
+            imageStream.pipe(res);
+        }).on('error', (err) => {
+            console.error("Download avatar error:", err);
+            return res.status(500).json({
+                status: "error",
+                message: "Failed to download avatar."
+            });
+        });
+
+    }catch(err){
+		console.error("Download avatar error:", err);
+		return res.status(500).json({
+			status: "error",
+			message: "Unexpected error occurred.",
+		});
+    }
+};

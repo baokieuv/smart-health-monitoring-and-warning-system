@@ -14,6 +14,7 @@ import Sidebar from './frontend/components/Sidebar';
 import ProtectedRoute from './frontend/components/ProtectedRoute';
 import routers from './frontend/utils/routers';
 import { getToken, getUserRole } from './frontend/utils/api';
+import { SocketProvider } from './frontend/contexts/SocketContext';
 
 // Admin pages
 import LoginPage from './frontend/layouts/LoginPage';
@@ -76,50 +77,52 @@ const SimpleLayout = ({ children }) => (
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public Login Route */}  
-        <Route path={routers.Login} element={<LoginPage />} />
-        <Route path={routers.AdminLogin} element={<Navigate to={routers.Login} replace />} />
-        
-        {/* Family Access Routes - Public, no authentication needed */}
-        <Route path={routers.FamilyAccess} element={<FamilyAccessPage />} />
-        <Route path={routers.FamilyPatientDetailPath} element={<FamilyPatientDetail />} />
-        
-        {/* Home Route - Redirect based on login status */}
-        <Route path={routers.HomeRedirect} element={<HomeRedirect />} />
-        <Route path={routers.Home} element={<HomePage />} />
-        
-        {/* Doctor Routes - Protected for 'doctor' role */}
-        <Route element={<ProtectedRoute requiredRole="doctor" />}>
-          <Route path={routers.Patient} element={<MainLayout><PatientList /></MainLayout>} />
-          <Route path={routers.PatientDetail} element={<MainLayout><PatientDetail /></MainLayout>} />
-          <Route path={routers.RoomList} element={<MainLayout><RoomList /></MainLayout>} />
-          <Route path={routers.RoomDetail} element={<MainLayout><RoomDetail /></MainLayout>} />
-          <Route path={routers.Alerts} element={<MainLayout><Alerts /></MainLayout>} />
-          <Route path={routers.Notes} element={<MainLayout><Notes /></MainLayout>} />
-          <Route path={routers.ProfilePagePath} element={<SimpleLayout><ProfilePage /></SimpleLayout>} />
-        </Route>
-        
-        {/* Admin Routes - Protected for 'admin' role */}
-        <Route element={<ProtectedRoute requiredRole="admin" />}>
-          <Route path={routers.ProfilePagePath} element={<SimpleLayout><ProfilePage /></SimpleLayout>} />
-          <Route element={<AdminShell />}>
-            <Route path={routers.AdminInfo} element={<AdminInfo />} />
-            <Route path={routers.AdminDoctors} element={<DoctorList />} />
-            <Route path={routers.AdminDoctorCreate} element={<DoctorForm />} />
-            <Route path={routers.AdminDoctorDetailPath} element={<DoctorDetail />} />
-            <Route path={routers.AdminRooms} element={<AdminRoomList />} />
-            <Route path={routers.AdminRoomCreate} element={<AdminRoomForm />} />
-            <Route path={routers.AdminRoomDetailPath} element={<AdminRoomForm />} />
-            <Route path={routers.AdminDevices} element={<DeviceList />} />
+    <SocketProvider>
+      <Router>
+        <Routes>
+          {/* Public Login Route */}  
+          <Route path={routers.Login} element={<LoginPage />} />
+          <Route path={routers.AdminLogin} element={<Navigate to={routers.Login} replace />} />
+          
+          {/* Family Access Routes - Public, no authentication needed */}
+          <Route path={routers.FamilyAccess} element={<FamilyAccessPage />} />
+          <Route path={routers.FamilyPatientDetailPath} element={<FamilyPatientDetail />} />
+          
+          {/* Home Route - Redirect based on login status */}
+          <Route path={routers.HomeRedirect} element={<HomeRedirect />} />
+          <Route path={routers.Home} element={<HomePage />} />
+          
+          {/* Doctor Routes - Protected for 'doctor' role */}
+          <Route element={<ProtectedRoute requiredRole="doctor" />}>
+            <Route path={routers.Patient} element={<MainLayout><PatientList /></MainLayout>} />
+            <Route path={routers.PatientDetail} element={<MainLayout><PatientDetail /></MainLayout>} />
+            <Route path={routers.RoomList} element={<MainLayout><RoomList /></MainLayout>} />
+            <Route path={routers.RoomDetail} element={<MainLayout><RoomDetail /></MainLayout>} />
+            <Route path={routers.Alerts} element={<MainLayout><Alerts /></MainLayout>} />
+            <Route path={routers.Notes} element={<MainLayout><Notes /></MainLayout>} />
+            <Route path={routers.ProfilePagePath} element={<SimpleLayout><ProfilePage /></SimpleLayout>} />
           </Route>
-        </Route>
+          
+          {/* Admin Routes - Protected for 'admin' role */}
+          <Route element={<ProtectedRoute requiredRole="admin" />}>
+            <Route path={routers.ProfilePagePath} element={<SimpleLayout><ProfilePage /></SimpleLayout>} />
+            <Route element={<AdminShell />}>
+              <Route path={routers.AdminInfo} element={<AdminInfo />} />
+              <Route path={routers.AdminDoctors} element={<DoctorList />} />
+              <Route path={routers.AdminDoctorCreate} element={<DoctorForm />} />
+              <Route path={routers.AdminDoctorDetailPath} element={<DoctorDetail />} />
+              <Route path={routers.AdminRooms} element={<AdminRoomList />} />
+              <Route path={routers.AdminRoomCreate} element={<AdminRoomForm />} />
+              <Route path={routers.AdminRoomDetailPath} element={<AdminRoomForm />} />
+              <Route path={routers.AdminDevices} element={<DeviceList />} />
+            </Route>
+          </Route>
 
-        {/* 404 - Redirect to login if not authenticated */}
-        <Route path="*" element={<Navigate to={routers.Login} replace />} />
-      </Routes>
-    </Router>
+          {/* 404 - Redirect to login if not authenticated */}
+          <Route path="*" element={<Navigate to={routers.Login} replace />} />
+        </Routes>
+      </Router>
+    </SocketProvider>
   );
 }
 

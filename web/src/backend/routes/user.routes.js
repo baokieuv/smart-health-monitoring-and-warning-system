@@ -27,6 +27,12 @@ router.post(
     validateRequest,
     userController.uploadImage);
 
+// download user avatar as file
+router.get(
+    "/download-avatar",
+    validateRequest,
+    userController.downloadAvatar);
+
 // get current patient's health info
 router.get(
     "/download-image", 
