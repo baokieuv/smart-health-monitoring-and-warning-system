@@ -1,24 +1,25 @@
-const express = require("express");
+const express = require('express');
+const familyController = require('../controllers/family.controller');
 const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
 const { validateRequest } = require('../middlewares/validate.middleware');
-const familyController = require('../controllers/family.controller');
+const { ROLES } = require('../config/constants');
 
 const router = express.Router();
 
-// get current patient's details
 router.get(
-    "/info", 
+    '/info',
     authenticate,
-    authorizeRoles('patient'),
+    authorizeRoles(ROLES.PATIENT),
     validateRequest,
-    familyController.getPatientDetail);
+    familyController.getPatientInfo
+);
 
-// get current patient's health info
-router.get(
-    "/health", 
+router.get(             // NEED CHECK
+    '/health',
     authenticate,
-    authorizeRoles('patient'),
+    authorizeRoles(ROLES.PATIENT),
     validateRequest,
-    familyController.getPatientHealth);
+    familyController.getPatientHealth
+);
 
 module.exports = router;

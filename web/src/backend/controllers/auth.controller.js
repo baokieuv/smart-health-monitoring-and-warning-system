@@ -1,243 +1,62 @@
-const bcrypt = require('bcryptjs');
-const tokenStore = require('../utils/token-store');
-const { generateTokens, verifyRefreshToken } = require('../utils/token');
-const User = require('../models/user.model');
-const Patient = require('../models/patient.model');
-const { sanitizeInput } = require('../utils/validator');
+const authService = require('../services/auth.service');
+const ResponseUtil = require('../utils/response.util');
+const asyncHandler = require('../utils/asyncHandler.util');
+const validator = require('../utils/validator.util');
 
-const THINGSBOARD_URL = "http://localhost:8080";
+class AuthController {
+    login = asyncHandler(async (req, res) => {
+        const { username, password } = req.body;
+        
+        const result = await authService.login(username, password);
+        
+        ResponseUtil.success(res, {
+            user: result.user,
+            access_token: result.tokens.accessToken,
+            access_token_expires_at: result.tokens.accessTokenExpiresAt,
+            refresh_token: result.tokens.refreshToken,
+            refresh_token_expires_at: result.tokens.refreshTokenExpiresAt
+        }, 'Login successful');
+    });
 
-const buildUserResponse = (user) => ({
-	id: user._id,
-	username: user.username,
-	role: user.role
-});
+    refreshToken = asyncHandler(async (req, res) => {
+        const { refresh_token } = req.body;
+        
+        const result = await authService.refreshToken(refresh_token);
+        
+        ResponseUtil.success(res, {
+            user: result.user,
+            access_token: result.tokens.accessToken,
+            access_token_expires_at: result.tokens.accessTokenExpiresAt,
+            refresh_token: result.tokens.refreshToken,
+            refresh_token_expires_at: result.tokens.refreshTokenExpiresAt
+        }, 'Token refreshed successfully');
+    });
 
-// POST /api/v1/auth/login -> login
-exports.login = async (req, res) => {
-	try {
-		tokenStore.clearExpiredTokens();
-		const username = (req.body.username || "").toLowerCase();
-		const password = req.body.password || "";
+    logout = asyncHandler(async (req, res) => {
+        const { refresh_token } = req.body;
+        
+        await authService.logout(req.user.id, refresh_token);
+        
+        ResponseUtil.success(res, null, 'Logged out successfully');
+    });
 
-		if (!username || !password) {
-			return res.status(400).json({
-				status: "error",
-				message: "Username and password are required."
-			});
-		}
-
-		const normalizedUsername = username.toLowerCase().trim();
-		const user = await User.findOne({username: normalizedUsername});
-
-		if (!user) {
-			return res.status(404).json({
-				status: "error",
-				message: "User not found."
-			});
-		}
-
-		// Compare password using bcrypt
-		const isPasswordValid = await bcrypt.compare(password, user.password);
-		
-		if (!isPasswordValid) {
-			return res.status(401).json({
-				status: "error",
-				message: "Invalid credentials."
-			});
-		}
-
-		const tokens = generateTokens(user);
-		tokenStore.saveRefreshToken(tokens.refreshTokenId, user._id, tokens.refreshTokenExpiresAt);
-
-		// Try to connect to ThingsBoard
-		try {
-			const payload = user.role === "admin" 
-				? { username: "sysadmin@thingsboard.org", password: "sysadmin" }
-				: { username: "tenant@thingsboard.org", password: "tenant" };
-
-			const resp = await fetch(`${THINGSBOARD_URL}/api/auth/login`, {
-				method: "POST",
-				body: JSON.stringify(payload),
-				headers: {
-					"Content-Type": "application/json"
-				}
-			});
-
-			if(resp.ok){
-				const json = await resp.json();
-				tokenStore.saveThingsBoardToken(user._id.toString(), json.token, tokens.refreshTokenExpiresAt);
-				console.log("ThingsBoard login successful for user: ", user._id);
-			} else {
-				console.warn("ThingsBoard login failed with status: ", resp.status);
-			}
-		} catch (err) {
-			// ThingsBoard connection failed - this is OK, we can still login to our system
-			console.warn("ThingsBoard connection failed (service may not be running): ", err.message);
-			// throw err;
-		}
-
-		console.log("Login successful: ", user._id);
-		// Return success regardless of ThingsBoard connection status
-		return res.status(200).json({
-			status: "success",
-			message: "Login successful.",
-			data: {
-				user: buildUserResponse(user),
-				access_token: tokens.accessToken,
-				access_token_expires_at: tokens.accessTokenExpiresAt,
-				refresh_token: tokens.refreshToken,
-				refresh_token_expires_at: tokens.refreshTokenExpiresAt
-			}
-		});
-	} catch (err) {
-		console.error("Login error:", err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
-};
-
-// POST /api/v1/auth/refresh -> refresh token
-exports.refreshToken = async (req, res) => {
-	try {
-		tokenStore.clearExpiredTokens();
-		const incomingToken = req.body.refresh_token;
-		if (!incomingToken) {
-			return res.status(400).json({
-				status: "error",
-				message: "Refresh token is required."
-			});
-		}
-
-		const payload = verifyRefreshToken(incomingToken);
-		const storedToken = tokenStore.findRefreshToken(payload.tokenId);
-		if (!storedToken) {
-			return res.status(401).json({
-				status: "error",
-				message: "Refresh token is invalid or expired."
-			});
-		}
-
-		// Find user by ID (admin or doctor)
-		const user = await User.findById(payload.id);
-		if (!user) {
-			tokenStore.deleteRefreshToken(payload.tokenId);
-			return res.status(401).json({
-				status: "error",
-				message: "Account is no longer available."
-			});
-		}
-
-		tokenStore.deleteRefreshToken(payload.tokenId);
-		const tokens = generateTokens(user);
-		tokenStore.saveRefreshToken(tokens.refreshTokenId, user._id, tokens.refreshTokenExpiresAt);
-
-		console.log("Token refreshed successfully: ", user._id);
-		return res.status(200).json({
-			status: "success",
-			message: "Token refreshed successfully.",
-			data: {
-				user: buildUserResponse(user),
-				access_token: tokens.accessToken,
-				access_token_expires_at: tokens.accessTokenExpiresAt,
-				refresh_token: tokens.refreshToken,
-				refresh_token_expires_at: tokens.refreshTokenExpiresAt
-			}
-		});
-	} catch (err) {
-		console.error("Refresh token error:", err);
-		const status = err.name === "TokenExpiredError" || err.name === "JsonWebTokenError" ? 401 : 500;
-		return res.status(status).json({
-			status: "error",
-			message: status === 401 ? "Refresh token is invalid or expired." : "Unexpected error occurred."
-		});
-	}
-};
-
-// POST /api/v1/auth/logout -> logout
-exports.logout = (req, res) => {
-	try {
-		const { refresh_token: refreshToken } = req.body || {};
-		if (refreshToken) {
-			try {
-				const payload = verifyRefreshToken(refreshToken);
-				tokenStore.deleteRefreshToken(payload.tokenId);
-			} catch (err) {
-				console.warn("Failed to decode refresh token during logout:", err.message);
-			}
-		}
-
-		if (req.user && req.user.id) {
-			tokenStore.revokeTokensByUser(req.user.id);
-			tokenStore.deleteThingsBoardToken(req.user.id);
-		}
-
-		console.log("Logged out successfully: ", req.user.id);
-		return res.status(200).json({
-			status: "success",
-			message: "Logged out successfully."
-		});
-	} catch (err) {
-		console.error("Logout error:", err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
-};
-
-// POST /api/v1/auth/change-password
-exports.changePassword = async (req, res) => {
-	try{
-		const userData = {
-			username: sanitizeInput(req.body.username),
-			oldPassword: sanitizeInput(req.body.oldPassword),
-			newPassword: sanitizeInput(req.body.newPassword)
-		}
-
-		const user = await User.findOne({username: userData.username});
-
-		if(!user){
-			return res.status(404).json({
-				status: "error",
-				message: "User not found"
-			});
-		}
-
-		const isPasswordValid = await bcrypt.compare(userData.oldPassword, user.password);
-		
-		if (!isPasswordValid) {
-			return res.status(401).json({
-				status: "error",
-				message: "Invalid credentials."
-			});
-		}
-
-		const salt = await bcrypt.genSalt(10);
-		const hashedPassword = await bcrypt.hash(userData.newPassword, salt);
-
-		await User.updateOne(
-			{_id: user._id},
-			{ $set: { password: hashedPassword } }
-		);
-
-		console.log("Password updated successfully: ", user._id);
-		return res.status(200).json({
-			status: "success",
-			message: "Password updated successfully.",
-			data: {
-				id: user._id,
-				username: user.username
-			}
-		})
-
-	}catch(err){
-		console.error("Logout error:", err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
+    changePassword = asyncHandler(async (req, res) => {
+        const { username, oldPassword, newPassword } = req.body;
+        
+        const sanitizedData = {
+            username: validator.sanitizeInput(username),
+            oldPassword: validator.sanitizeInput(oldPassword),
+            newPassword: validator.sanitizeInput(newPassword)
+        };
+        
+        const result = await authService.changePassword(
+            sanitizedData.username,
+            sanitizedData.oldPassword,
+            sanitizedData.newPassword
+        );
+        
+        ResponseUtil.success(res, result, 'Password updated successfully');
+    });
 }
+
+module.exports = new AuthController();

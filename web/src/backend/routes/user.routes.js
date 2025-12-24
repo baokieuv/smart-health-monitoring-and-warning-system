@@ -1,43 +1,30 @@
-const express = require("express");
-const multer = require('multer');
-const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
-const { validateRequest } = require('../middlewares/validate.middleware');
+const express = require('express');
 const userController = require('../controllers/user.controller');
+const { authenticate } = require('../middlewares/auth.middleware');
+const { validateRequest } = require('../middlewares/validate.middleware');
+const upload = require('../middlewares/upload.middleware');
 
 const router = express.Router();
 
-const upload = multer({ 
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, 
-    fileFilter: (req, file, cb) => {
-        // Pre-validate file type
-        if (file.mimetype.startsWith('image/')) {
-            cb(null, true);
-        } else {
-            cb(new Error('Only image files are allowed'), false);
-        }
-    }
-});
-
-// get current patient's details
 router.post(
-    "/upload-image", 
+    '/upload-image',
     authenticate,
     upload.single('file'),
     validateRequest,
-    userController.uploadImage);
+    userController.uploadAvatar
+);
 
-// download user avatar as file
 router.get(
-    "/download-avatar",
-    validateRequest,
-    userController.downloadAvatar);
-
-// get current patient's health info
-router.get(
-    "/download-image", 
+    '/download-image',
     authenticate,
     validateRequest,
-    userController.downloadImage);
+    userController.getAvatarUrl
+);
+
+router.get(
+    '/download-avatar',
+    validateRequest,
+    userController.downloadAvatar
+);
 
 module.exports = router;

@@ -1,206 +1,108 @@
 const express = require('express');
-const { body, param, query } = require('express-validator');
+const patientController = require('../controllers/patient.controller');
+const patientValidators = require('../validators/patient.validator');
+const doctorValidators = require('../validators/doctor.validator');
 const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
 const { validateRequest } = require('../middlewares/validate.middleware');
-const patientController = require('../controllers/patient.controller');
-const { validateCCCD, validatePhone, validateDate } = require('../utils/validator');
+const { ROLES } = require('../config/constants');
 
 const router = express.Router();
 
-// get current doctor details API
+// Doctor info routes
 router.get(
     '/info',
     authenticate,
-    authorizeRoles('doctor'),
+    authorizeRoles(ROLES.DOCTOR),
     validateRequest,
-    patientController.getDetail
+    patientController.getDoctorInfo
 );
 
-// update current doctor details API
 router.put(
     '/info',
     authenticate,
-    authorizeRoles('doctor'),
-    [
-		body('full_name')
-			.optional()
-			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
-		body('birthday')
-			.optional()
-			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
-		body('address')
-			.optional()
-			.isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
-		body('phone')
-			.optional()
-			.custom(validatePhone).withMessage('Invalid phone format')
-	],
+    authorizeRoles(ROLES.DOCTOR),
+    doctorValidators.updateDoctorProfile,
     validateRequest,
-    patientController.updateDetail
+    patientController.updateDoctorInfo
 );
 
-// create a new patient API
+// Patient management routes
 router.post(
     '/patients',
     authenticate,
-    authorizeRoles('doctor'),
-    [
-        body('cccd')
-            .notEmpty().withMessage('CCCD is required')
-            .custom(validateCCCD).withMessage('Invalid CCCD format'),
-        body('full_name')
-            .notEmpty().withMessage('Full name is required')
-            .isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
-        body('birthday')
-            .notEmpty().withMessage('Birthday is required')
-            .custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
-        body('address')
-            .notEmpty().withMessage('Address is required')
-            .isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
-        body('phone')
-            .notEmpty().withMessage('Phone is required')
-            .custom(validatePhone).withMessage('Invalid phone format'),
-        body('room')
-            .notEmpty().withMessage('Room is required')
-            .isLength({ min: 1, max: 50 }).withMessage('Room must be between 1-50 characters'),
-        body('doctorId')
-            .notEmpty().withMessage('Doctor ID is required')
-            .isMongoId().withMessage('Invalid Doctor ID'),
-        body('deviceId')
-            .optional()
-            .isString().withMessage('Device ID must be a string')
-    ],
+    authorizeRoles(ROLES.DOCTOR),
+    patientValidators.createPatient,
     validateRequest,
     patientController.createPatient
 );
 
-// get doctors list for dropdown API
-router.get(
+router.get(                 // NEED CHECK
     '/doctors-list',
     authenticate,
-    authorizeRoles('doctor'),
+    authorizeRoles(ROLES.DOCTOR),
     validateRequest,
     patientController.getDoctorsList
 );
 
-// get patient list API
 router.get(
     '/patients',
     authenticate,
-    authorizeRoles('doctor'),
-    [
-        query('page')
-            .optional()
-            .isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-        query('limit')
-            .optional()
-            .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
-        query('search')
-            .optional()
-            .isString().withMessage('Search must be a string')
-    ],
+    authorizeRoles(ROLES.DOCTOR),
+    patientValidators.getPatients,
     validateRequest,
     patientController.getPatients
 );
 
-// get patient detail API
 router.get(
     '/patients/:patient_id',
     authenticate,
-    authorizeRoles('doctor'),
-    [
-        param('patient_id')
-            .isMongoId().withMessage('Invalid Patient ID')
-    ],
+    authorizeRoles(ROLES.DOCTOR),
+    patientValidators.getPatientById,
     validateRequest,
     patientController.getPatientDetail
 );
 
-// update patient API
 router.put(
     '/patients/:patient_id',
     authenticate,
-    authorizeRoles('doctor'),
-    [
-        param('patient_id')
-            .isMongoId().withMessage('Invalid Patient ID'),
-        body('cccd')
-            .optional()
-            .custom(validateCCCD).withMessage('Invalid CCCD format'),
-        body('full_name')
-            .optional()
-            .isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
-        body('birthday')
-            .optional()
-            .custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
-        body('address')
-            .optional()
-            .isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
-        body('phone')
-            .optional()
-            .custom(validatePhone).withMessage('Invalid phone format'),
-        body('room')
-            .optional()
-            .isLength({ min: 1, max: 50 }).withMessage('Room must be between 1-50 characters'),
-        body('doctorId')
-            .optional()
-            .isMongoId().withMessage('Invalid Doctor ID'),
-        body('deviceId')
-            .optional()
-            .isString().withMessage('Device ID must be a string')
-    ],
+    authorizeRoles(ROLES.DOCTOR),
+    patientValidators.updatePatient,
     validateRequest,
     patientController.updatePatient
 );
 
-// get patient health info API
-router.get( 
+router.get(
     '/patients/:patient_id/health',
     authenticate,
-    authorizeRoles('doctor'),
-    [
-        param('patient_id')
-            .isMongoId().withMessage('Invalid Patient ID')
-    ],
+    authorizeRoles(ROLES.DOCTOR),
+    patientValidators.patientHealthOperations,
     validateRequest,
     patientController.getHealthInfo
 );
 
-// delete patient API
 router.delete(
     '/patients/:patient_id',
     authenticate,
-    authorizeRoles('doctor'),
-    [
-        param('patient_id')
-            .isMongoId().withMessage('Invalid Patient ID')
-    ],
+    authorizeRoles(ROLES.DOCTOR),
+    patientValidators.getPatientById,
     validateRequest,
     patientController.deletePatient
 );
 
-// allocate device for patient API
-router.post(
+router.post(                    // NEED CHECK
     '/patients/:patient_id/allocate-device',
     authenticate,
-    authorizeRoles('doctor'),
-    [
-        param('patient_id')
-            .isMongoId().withMessage('Invalid Patient ID')
-    ],
+    authorizeRoles(ROLES.DOCTOR),
+    patientValidators.patientHealthOperations,
     validateRequest,
     patientController.allocateDevice
 );
 
-// recall device from patient API
-router.post(
+router.post(                    // NEED CHECK
     '/patients/:patient_id/recall-device',
     authenticate,
-    authorizeRoles('doctor'),
-    [
-        param('patient_id')
-            .isMongoId().withMessage('Invalid Patient ID')
-    ],
+    authorizeRoles(ROLES.DOCTOR),
+    patientValidators.patientHealthOperations,
     validateRequest,
     patientController.recallDevice
 );

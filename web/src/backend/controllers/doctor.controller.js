@@ -1,366 +1,128 @@
-const bcrypt = require('bcryptjs');
-const { sanitizeInput } = require('../utils/validator');
-const Doctor = require('../models/doctor.model');
-const User = require('../models/user.model');
-const Device = require('../models/device.model');
+const doctorService = require('../services/doctor.service');
+const deviceService = require('../services/device.service');
+const ResponseUtil = require('../utils/response.util');
+const asyncHandler = require('../utils/asyncHandler.util');
+const validator = require('../utils/validator.util');
+const { PAGINATION } = require('../config/constants');
 
-// POST /api/v1/admin/doctors -> create a new doctor
-exports.createDoctor = async (req, res) => {
-	try {
-		const doctorData = {
-			cccd: sanitizeInput(req.body.cccd),
-			full_name: sanitizeInput(req.body.full_name),
-			email: sanitizeInput(req.body.email),
-			birthday: req.body.birthday,
-			address: sanitizeInput(req.body.address),
-			phone: sanitizeInput(req.body.phone),
-			specialization: sanitizeInput(req.body.specialization)
-		};
+class DoctorController {
+    createDoctor = asyncHandler(async (req, res) => {
+        const doctorData = {
+            cccd: validator.sanitizeInput(req.body.cccd),
+            full_name: validator.sanitizeInput(req.body.full_name),
+            email: validator.sanitizeInput(req.body.email),
+            birthday: req.body.birthday,
+            address: validator.sanitizeInput(req.body.address),
+            phone: validator.sanitizeInput(req.body.phone),
+            specialization: validator.sanitizeInput(req.body.specialization)
+        };
 
-		const duplicateDoctor = await Doctor.findOne({cccd: doctorData.cccd});
+        const doctor = await doctorService.createDoctor(doctorData);
+        
+        ResponseUtil.created(res, { doctor }, 'Doctor created successfully');
+    });
 
-		if (duplicateDoctor) {
-			return res.status(409).json({
-				status: "error",
-				message: "Doctor with this CCCD already exists."
-			});
-		}
+    getDoctors = asyncHandler(async (req, res) => {
+        const { 
+            page = PAGINATION.DEFAULT_PAGE, 
+            limit = PAGINATION.DEFAULT_LIMIT, 
+            search = '', 
+            specialization = '' 
+        } = req.query;
 
-		// Check if user with this cccd already exists
-		const existingUser = await User.findOne({username: doctorData.cccd});
-		if (existingUser) {
-			return res.status(409).json({
-				status: "error",
-				message: "User with this CCCD already exists."
-			});
-		}
+        const result = await doctorService.getDoctors(
+            search,
+            specialization,
+            parseInt(page),
+            parseInt(limit)
+        );
 
-		// Hash password using CCCD as default password
-		const salt = await bcrypt.genSalt(10);
-		const pashedPassword = await bcrypt.hash(doctorData.cccd, salt);
+        ResponseUtil.paginate(
+            res,
+            result.data,
+            result.page,
+            result.limit,
+            result.total,
+            'Doctors retrieved successfully'
+        );
+    });
 
-		const user = await User.create({
-			username: doctorData.cccd,
-			password: pashedPassword,
-			role: "doctor",
-		});
+    getDoctorByUserId = asyncHandler(async (req, res) => {
+        const doctor = await doctorService.getDoctorByUserId(req.params.user_id);
+        
+        ResponseUtil.success(res, { doctor }, 'Doctor retrieved successfully');
+    });
 
-		const doctor = await Doctor.create({
-			...doctorData,
-			userId: user._id
-		});
+    getDoctorDetail = asyncHandler(async (req, res) => {
+        const doctor = await doctorService.getDoctorById(req.params.doctor_id);
+        
+        ResponseUtil.success(res, { doctor }, 'Doctor retrieved successfully');
+    });
 
-		console.log("Doctor created successfully: ", doctor._id);
-		return res.status(201).json({
-			status: "success",
-			message: "Doctor created successfully.",
-			doctor: doctor
-		});
-	} catch (err) {
-		console.error('Create doctor error:', err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
-};
+    updateDoctor = asyncHandler(async (req, res) => {
+        const updateFields = ['full_name', 'email', 'birthday', 'address', 'phone', 'specialization'];
+        const updateData = {};
 
-// GET /api/v1/admin/doctors -> get list doctors
-exports.getDoctors = async (req, res) => {
-	try {
-		const { page = 1, limit = 10, search = '', specialization = '' } = req.query;
-		let query = {};
+        updateFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updateData[field] = field === 'birthday' 
+                    ? req.body[field] 
+                    : validator.sanitizeInput(req.body[field]);
+            }
+        });
 
-		if (search) {
-			const searchRegex = new RegExp(sanitizeInput(search), 'i');
-			query.full_name = searchRegex;
-		}
+        const doctor = await doctorService.updateDoctor(req.params.doctor_id, updateData);
+        
+        ResponseUtil.success(res, { doctor }, 'Doctor information updated successfully');
+    });
 
-		if (specialization) {
-			const searchRegex = new RegExp(sanitizeInput(specialization), 'i');
-			query.specialization = searchRegex;
-		}
+    updateDoctorProfile = asyncHandler(async (req, res) => {
+        const updateFields = ['full_name', 'email', 'birthday', 'address', 'phone', 'specialization'];
+        const updateData = {};
 
-		const pageInt = parseInt(page);
-		const limitInt = parseInt(limit);
-		const skip = (pageInt - 1) * limitInt;
+        updateFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updateData[field] = field === 'birthday' 
+                    ? req.body[field] 
+                    : validator.sanitizeInput(req.body[field]);
+            }
+        });
 
-		const total = await Doctor.countDocuments(query);
-		const doctors = await Doctor.find(query)
-            .skip(skip)
-            .limit(limitInt)
-            .lean();
+        const doctor = await doctorService.updateDoctorProfile(
+            req.params.user_id,
+            updateData,
+            req.user.id
+        );
+        
+        ResponseUtil.success(res, { doctor }, 'Profile updated successfully');
+    });
 
-		const total_pages = Math.ceil(total / limitInt) || 1;
+    deleteDoctor = asyncHandler(async (req, res) => {
+        const deletedId = await doctorService.deleteDoctor(req.params.doctor_id);
+        
+        ResponseUtil.success(res, { deleted_doctor_id: deletedId }, 'Doctor deleted successfully');
+    });
 
-		console.log("Doctor retrieved successfully");
-		return res.status(200).json({
-			status: "success",
-			message: "Doctor retrieved successfully.",
-			data: {
-				total,
-				page: pageInt,
-				limit: limitInt,
-				total_pages,
-				doctors
-			}
-		});
-	} catch (err) {
-		console.error('Get doctors error:', err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
-};
+    getDevices = asyncHandler(async (req, res) => {
+        const { 
+            page = PAGINATION.DEFAULT_PAGE, 
+            limit = PAGINATION.DEFAULT_LIMIT 
+        } = req.query;
 
-// GET /api/v1/admin/user/{user_id} -> get doctor by userId
-exports.getDoctorByUserId = async (req, res) => {
-	try {
-		const doctor = await Doctor.findOne({ userId: req.params.user_id });
+        const result = await deviceService.getDevices(
+            parseInt(page),
+            parseInt(limit)
+        );
 
-		if (!doctor) {
-			return res.status(404).json({
-				status: "error",
-				message: "Doctor not found."
-			});
-		}
-
-		console.log("Doctor retrieved successfully by userId: ", doctor._id);
-		return res.status(200).json({
-			status: "success",
-			message: "Doctor retrieved successfully.",
-			doctor
-		});
-	} catch (err) {
-		console.error('Get doctor by userId error:', err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
-};
-
-// PUT /api/v1/admin/user/{user_id}/profile -> update doctor profile by userId (doctor only)
-exports.updateDoctorProfile = async (req, res) => {
-	try {
-		const doctor = await Doctor.findOne({ userId: req.params.user_id });
-
-		if (!doctor) {
-			return res.status(404).json({
-				status: "error",
-				message: "Doctor not found."
-			});
-		}
-
-		// Verify the logged-in user is updating their own profile
-		if (req.user.id !== req.params.user_id) {
-			return res.status(403).json({
-				status: "error",
-				message: "You can only update your own profile."
-			});
-		}
-
-		const updateFields = ['full_name', 'email', 'birthday', 'address', 'phone', 'specialization'];
-		const updateData = {};
-
-		updateFields.forEach(field => {
-			if (req.body[field] !== undefined) {
-				if (field === 'birthday') {
-					updateData[field] = req.body[field];
-				} else {
-					updateData[field] = sanitizeInput(req.body[field]);
-				}
-			}
-		});
-
-		const result = await Doctor.findByIdAndUpdate(
-			doctor._id,
-			{ $set: updateData },
-			{ new: true, runValidators: true }
-		);
-
-		console.log("Doctor profile updated successfully: ", doctor._id);
-		return res.status(200).json({
-			status: "success",
-			message: "Profile updated successfully.",
-			doctor: result
-		});
-	} catch (err) {
-		console.error('Update doctor profile error:', err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
-};
-
-// GET /api/v1/admin/doctors/{doctor_id} -> get doctor's details
-exports.getDoctorDetail = async (req, res) => {
-	try {
-		const doctor = await Doctor.findById(req.params.doctor_id);
-
-		if (!doctor) {
-			return res.status(404).json({
-				status: "error",
-				message: "Doctor not found."
-			});
-		}
-
-		console.log("Doctor retrieved successfully: ", doctor._id);
-		return res.status(200).json({
-			status: "success",
-			message: "Doctor retrieved successfully.",
-			doctor
-		});
-	} catch (err) {
-		console.error('Get doctor detail error:', err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
-};
-
-// PUT /api/v1/admin/doctors/{doctor_id} -> update doctor's detail
-exports.updateDoctor = async (req, res) => {
-	try {
-		const doctor = await Doctor.findById(req.params.doctor_id);
-
-		if(!doctor){
-			return res.status(404).json({
-				status: "error",
-				message: "Doctor not found."
-			});
-		}
-
-		const updateFields = ['full_name', 'email', 'birthday', 'address', 'phone', 'specialization'];
-		const updateData = {};
-
-		updateFields.forEach(field => {
-			if (req.body[field] !== undefined) {
-				if (field === 'birthday') {
-					updateData[field] = req.body[field];
-				} else {
-					updateData[field] = sanitizeInput(req.body[field]);
-				}
-			}
-		});
-
-		const result = await Doctor.findByIdAndUpdate(
-			doctor._id,
-			{ $set: updateData },
-			{ new: true, runValidators: true }
-		);
-
-		console.log("Doctor information updated successfully: ", doctor._id);
-		return res.status(200).json({
-			status: "success",
-			message: "Doctor information updated successfully.",
-			doctor: result
-		});
-	} catch (err) {
-		console.error('Update doctor error:', err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
-};
-
-// DELETE /api/v1/admin/doctors/{doctor_id} -> delete a doctor
-exports.deleteDoctor = async (req, res) => {
-	try {
-		const doctor = await Doctor.findById(req.params.doctor_id);
-
-		if (!doctor) {
-			return res.status(404).json({
-				status: "error",
-				message: "Doctor not found."
-			});
-		}
-
-		// Xóa danh sách device của doctor
-		await Device.deleteMany({ doctorId: doctor._id });
-
-		await User.deleteOne({ doctorId: doctor._id });
-		await Doctor.deleteOne({ _id: doctor._id });
-		
-		console.log("Doctor deleted successfully: ", doctor._id);
-		return res.status(200).json({
-			status: "success",
-			message: "Doctor deleted successfully.",
-			deleted_doctor_id: doctor._id
-		});
-	} catch (err) {
-		console.error('Delete doctor error:', err);
-		return res.status(500).json({
-			status: "error",
-			message: "Unexpected error occurred."
-		});
-	}
-};
-
-// GET /api/v1/admin/devices -> get list devices
-exports.getListDevice = async (req, res) => {
-	try{
-		const { page = 1, limit = 10 } = req.query;
-
-		const pageInt = parseInt(page);
-		const limitInt = parseInt(limit);
-		const skip = (pageInt - 1) * limitInt;
-
-		const total = await Device.countDocuments();
-		const total_pages = Math.ceil(total / limitInt) || 1;
-
-		const devices = await Device.find()
-			.populate({
-				path: 'doctorId',
-				select: '_id full_name cccd phone specialization'
-			})
-			.populate({
-				path: 'patientId',
-				select: '_id full_name cccd phone room'
-			})
-			.skip(skip).limit(limitInt).lean();
-
-		const formattedDevices = devices.map(device => ({
-			device_id: device._id,
-			device_name: device.name,
-			thingsboard_device_id: device.deviceId,
-			doctor: device.doctorId  ? {
-				id: device.doctorId._id,
-				name: device.doctorId.full_name,
-				cccd: device.doctorId.cccd,
-				phone: device.doctorId.phone,
-				specialization: device.doctorId.specialization
-			} : null,
-			patient: device.patientId ? {
-				id: device.patientId._id,
-				name: device.patientId.full_name,
-				cccd: device.patientId.cccd,
-				phone: device.patientId.phone,
-				room: device.patientId.room
-			} : null,
-		}));
-
-		console.log("Devices retrieved successfully");
-		return res.status(200).json({
-				status: "success",
-				message: "Devices retrieved successfully.",
-				data: {
-					total,
-					page: pageInt,
-					limit: limitInt,
-					total_pages,
-					devices: formattedDevices
-				}
-			});
-	}catch(err){
-		console.error('Get list device error:', err);
-		return res.status(500).json({
-				status: "error",
-				message: "Unexpected error occurred."
-			});
-	}
+        ResponseUtil.paginate(
+            res,
+            result.data,
+            result.page,
+            result.limit,
+            result.total,
+            'Devices retrieved successfully'
+        );
+    });
 }
+
+module.exports = new DoctorController();

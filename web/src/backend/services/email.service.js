@@ -1,12 +1,10 @@
 const nodemailer = require('nodemailer');
+const logger = require('../utils/logger.util');
+const { ALARM_SEVERITY } = require('../config/constants');
 
-/**
- * Send alarm email notification to doctor
- */
-async function sendAlarmEmail(doctor, patient, alarmData) {
-    try {
-        // Create transporter
-        const transporter = nodemailer.createTransport({
+class EmailService {
+    constructor() {
+        this.transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
             port: parseInt(process.env.SMTP_PORT || '587'),
             secure: false,
@@ -15,21 +13,20 @@ async function sendAlarmEmail(doctor, patient, alarmData) {
                 pass: process.env.SMTP_PASS
             }
         });
+    }
 
-        // Determine severity color
+    async sendAlarmEmail(doctor, patient, alarmData) {
         const severityColors = {
-            CRITICAL: '#dc3545',
-            WARNING: '#ffc107',
-            INFO: '#17a2b8'
+            [ALARM_SEVERITY.CRITICAL]: '#dc3545',
+            [ALARM_SEVERITY.WARNING]: '#ffc107',
+            [ALARM_SEVERITY.INFO]: '#17a2b8'
         };
         const severityColor = severityColors[alarmData.severity] || '#6c757d';
 
-        // Format data for email
         const heartRate = alarmData.data?.heart_rate || 'N/A';
         const spo2 = alarmData.data?.SpO2 || 'N/A';
         const temperature = alarmData.data?.temperature || 'N/A';
 
-        // HTML email template
         const htmlContent = `
             <!DOCTYPE html>
             <html>
@@ -75,35 +72,33 @@ async function sendAlarmEmail(doctor, patient, alarmData) {
                     </div>
                     <div class="footer">
                         <p>Health Monitoring System - IoT Platform</p>
-                        <p>This is an automated notification from system (caovanbao21304@gmail.com). Please check the patient immediately.</p>
+                        <p>This is an automated notification. Please check the patient immediately.</p>
                     </div>
                 </div>
             </body>
             </html>
         `;
 
-        // Plain text version
         const textContent = `
-            ALARM NOTIFICATION - ${alarmData.severity}
-            
-            Alarm Type: ${alarmData.alarmType}
-            
-            Patient: ${patient.full_name}
-            CCCD: ${patient.cccd}
-            Room: ${patient.room || 'N/A'}
-            
-            Vital Signs:
-            - Heart Rate: ${heartRate} bpm
-            - SpO2: ${spo2}%
-            - Temperature: ${temperature}°C
-            
-            Time: ${new Date().toLocaleString('vi-VN')}
-            Device ID: ${alarmData.deviceId}
-            
-            Please check the patient immediately.
+ALARM NOTIFICATION - ${alarmData.severity}
+
+Alarm Type: ${alarmData.alarmType}
+
+Patient: ${patient.full_name}
+CCCD: ${patient.cccd}
+Room: ${patient.room || 'N/A'}
+
+Vital Signs:
+- Heart Rate: ${heartRate} bpm
+- SpO2: ${spo2}%
+- Temperature: ${temperature}°C
+
+Time: ${new Date().toLocaleString('vi-VN')}
+Device ID: ${alarmData.deviceId}
+
+Please check the patient immediately.
         `;
 
-        // Send email
         const mailOptions = {
             from: `"Health Monitor System" <${process.env.SMTP_USER}>`,
             to: doctor.email,
@@ -112,20 +107,20 @@ async function sendAlarmEmail(doctor, patient, alarmData) {
             html: htmlContent
         };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log(`Email sent to ${doctor.email}:`, info.messageId);
-        
-        return {
-            success: true,
-            messageId: info.messageId,
-            recipient: doctor.email
-        };
-    } catch (error) {
-        console.error('Email sending failed:', error);
-        throw error;
+        try {
+            const info = await this.transporter.sendMail(mailOptions);
+            logger.info(`Email sent to ${doctor.email}: ${info.messageId}`);
+            
+            return {
+                success: true,
+                messageId: info.messageId,
+                recipient: doctor.email
+            };
+        } catch (error) {
+            logger.error('Email sending failed:', error);
+            throw error;
+        }
     }
 }
 
-module.exports = {
-    sendAlarmEmail
-};
+module.exports = new EmailService();

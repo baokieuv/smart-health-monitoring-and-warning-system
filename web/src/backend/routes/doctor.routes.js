@@ -1,185 +1,84 @@
 const express = require('express');
-const { body, param, query } = require('express-validator');
+const doctorController = require('../controllers/doctor.controller');
+const doctorValidators = require('../validators/doctor.validator');
 const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
 const { validateRequest } = require('../middlewares/validate.middleware');
-const doctorController = require('../controllers/doctor.controller');
-const { validateCCCD, validatePhone, validateDate } = require('../utils/validator');
+const { ROLES } = require('../config/constants');
 
 const router = express.Router();
 
-// create doctor API
+// Admin routes
 router.post(
-	'/doctors',
-	authenticate,
-	authorizeRoles('admin'),
-	[
-		body('cccd')
-			.notEmpty().withMessage('CCCD is required')
-			.custom(validateCCCD).withMessage('Invalid CCCD format'),
-		body('full_name')
-			.notEmpty().withMessage('Full name is required')
-			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
-		body('email')
-			.notEmpty().withMessage('Email is required')
-			.isEmail().withMessage('Invalid email format'),
-		body('birthday')
-			.notEmpty().withMessage('Birthday is required')
-			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
-		body('address')
-			.notEmpty().withMessage('Address is required')
-			.isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
-		body('phone')
-			.notEmpty().withMessage('Phone is required')
-			.custom(validatePhone).withMessage('Invalid phone format'),
-		body('specialization')
-			.notEmpty().withMessage('Specialization is required')
-			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters')
-	],
-	validateRequest,
-	doctorController.createDoctor
+    '/doctors',
+    authenticate,
+    authorizeRoles(ROLES.ADMIN),
+    doctorValidators.createDoctor,
+    validateRequest,
+    doctorController.createDoctor
 );
 
-// get doctor list API
 router.get(
-	'/doctors',
-	authenticate,
-	authorizeRoles('admin'),
-	[
-		query('page')
-			.optional()
-			.isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-		query('limit')
-			.optional()
-			.isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
-		query('search')
-			.optional()
-			.isString().withMessage('Search must be a string'),
-		query('specialization')
-			.optional()
-			.isString().withMessage('Specialization must be a string')
-	],
-	validateRequest,
-	doctorController.getDoctors
+    '/doctors',
+    authenticate,
+    authorizeRoles(ROLES.ADMIN),
+    doctorValidators.getDoctors,
+    validateRequest,
+    doctorController.getDoctors
 );
 
-// get doctor by user_id API (for profile page)
 router.get(
-	'/user/:user_id',
-	authenticate,
-	[
-		param('user_id')
-			.isMongoId().withMessage('Invalid User ID')
-	],
-	validateRequest,
-	doctorController.getDoctorByUserId
+    '/doctors/:doctor_id',
+    authenticate,
+    authorizeRoles(ROLES.ADMIN),
+    doctorValidators.getDoctorById,
+    validateRequest,
+    doctorController.getDoctorDetail
 );
 
-// update doctor profile by user_id (doctor can update own profile)
 router.put(
-	'/user/:user_id/profile',
-	authenticate,
-	authorizeRoles('doctor'),
-	[
-		param('user_id')
-			.isMongoId().withMessage('Invalid User ID'),
-		body('full_name')
-			.optional()
-			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
-		body('email')
-			.optional()
-			.isEmail().withMessage('Invalid email format'),
-		body('birthday')
-			.optional()
-			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
-		body('address')
-			.optional()
-			.isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
-		body('phone')
-			.optional()
-			.custom(validatePhone).withMessage('Invalid phone format'),
-		body('specialization')
-			.optional()
-			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters')
-	],
-	validateRequest,
-	doctorController.updateDoctorProfile
+    '/doctors/:doctor_id',
+    authenticate,
+    authorizeRoles(ROLES.ADMIN),
+    doctorValidators.updateDoctor,
+    validateRequest,
+    doctorController.updateDoctor
 );
 
-// get doctor detail API
-router.get(
-	'/doctors/:doctor_id',
-	authenticate,
-	authorizeRoles('admin'),
-	[
-		param('doctor_id')
-			.isMongoId().withMessage('Invalid Doctor ID')
-	],
-	validateRequest,
-	doctorController.getDoctorDetail
-);
-
-// update doctor API (admin only from admin panel)
-router.put(
-	'/doctors/:doctor_id',
-	authenticate,
-	authorizeRoles('admin'),
-	[
-		param('doctor_id')
-			.isMongoId().withMessage('Invalid Doctor ID'),
-		body('full_name')
-			.optional()
-			.isLength({ min: 2, max: 100 }).withMessage('Full name must be between 2-100 characters'),
-		body('email')
-			.optional()
-			.isEmail().withMessage('Invalid email format'),
-		body('birthday')
-			.optional()
-			.custom(validateDate).withMessage('Invalid date format (YYYY-MM-DD)'),
-		body('address')
-			.optional()
-			.isLength({ min: 5, max: 200 }).withMessage('Address must be between 5-200 characters'),
-		body('phone')
-			.optional()
-			.custom(validatePhone).withMessage('Invalid phone format'),
-		body('specialization')
-			.optional()
-			.isLength({ min: 2, max: 100 }).withMessage('Specialization must be between 2-100 characters'),
-		body('device_id')
-			.optional()
-			.isString().withMessage('Device ID must be a string')
-	],
-	validateRequest,
-	doctorController.updateDoctor
-);
-
-// delete doctor API
 router.delete(
-	'/doctors/:doctor_id',
-	authenticate,
-	authorizeRoles('admin'),
-	[
-		param('doctor_id')
-			.isMongoId().withMessage('Doctor ID must be a positive integer')
-	],
-	validateRequest,
-	doctorController.deleteDoctor
+    '/doctors/:doctor_id',
+    authenticate,
+    authorizeRoles(ROLES.ADMIN),
+    doctorValidators.getDoctorById,
+    validateRequest,
+    doctorController.deleteDoctor
 );
 
-// get devices API
+// =============== NEED CHECK =============================
+
 router.get(
-	'/devices',
-	authenticate,
-	authorizeRoles('admin'),
-	[
-		query('page')
-			.optional()
-			.isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-		query('limit')
-			.optional()
-			.isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
-	],
-	validateRequest,
-	doctorController.getListDevice
+    '/devices',
+    authenticate,
+    authorizeRoles(ROLES.ADMIN),
+    validateRequest,
+    doctorController.getDevices
+);
+
+// Doctor profile routes
+router.get(
+    '/user/:user_id',
+    authenticate,
+    doctorValidators.getDoctorByUserId,
+    validateRequest,
+    doctorController.getDoctorByUserId
+);
+
+router.put(
+    '/user/:user_id/profile',
+    authenticate,
+    authorizeRoles(ROLES.DOCTOR),
+    doctorValidators.updateDoctorProfile,
+    validateRequest,
+    doctorController.updateDoctorProfile
 );
 
 module.exports = router;

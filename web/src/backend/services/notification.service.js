@@ -1,22 +1,19 @@
-const Patient = require('../models/patient.model');
-const Doctor = require('../models/doctor.model');
-const User = require('../models/user.model');
-const { sendAlarmEmail } = require('./email.service');
-const { emitAlarmToDoctor } = require('../socket');
+const patientRepository = require('../repositories/patient.repository');
+const doctorRepository = require('../repositories/doctor.repository');
+const emailService = require('./email.service');
+const { emitAlarmToDoctor } = require('../config/socket.config');
+const logger = require('../utils/logger.util');
 
-/**
- * Process alarm from ThingsBoard and send notifications (Email + Socket.io)
- */
-async function processAlarm(alarmPayload) {
-    try {
-        console.log('Processing alarm:', alarmPayload);
-
+class NotificationService {
+    async processAlarm(alarmPayload) {
         const { deviceId, alarmType, severity, data } = alarmPayload;
 
+        logger.info('Processing alarm:', alarmPayload);
+
         // Find patient by deviceId
-        const patient = await Patient.findOne({ deviceId });
+        const patient = await patientRepository.findByDeviceId(deviceId);
         if (!patient) {
-            console.error('Patient not found for device:', deviceId);
+            logger.error('Patient not found for device:', deviceId);
             return {
                 success: false,
                 message: 'Patient not found'
@@ -24,18 +21,16 @@ async function processAlarm(alarmPayload) {
         }
 
         // Find doctor
-        const doctor = await Doctor.findOne({ userId: patient.doctorId });
+        const doctor = await doctorRepository.findByUserId(patient.doctorId);
         if (!doctor) {
-            console.error('Doctor not found for patient:', patient._id);
+            logger.error('Doctor not found for patient:', patient._id);
             return {
                 success: false,
                 message: 'Doctor not found'
             };
         }
 
-        console.log(`Sending alarm notification to doctor: ${doctor.full_name} (${doctor.email})`);
-        console.log(`Doctor userId: ${doctor.userId}, Patient: ${patient.full_name}`);
-        console.log(`Will emit to room: doctor:${doctor.userId.toString()}`);
+        logger.info(`Sending alarm to doctor: ${doctor.full_name} (${doctor.email})`);
 
         // Prepare notification data
         const notificationData = {
@@ -57,17 +52,17 @@ async function processAlarm(alarmPayload) {
         // Send Socket.io realtime notification
         try {
             emitAlarmToDoctor(doctor.userId.toString(), notificationData);
-            console.log('Socket.io notification sent successfully');
+            logger.info('Socket.io notification sent successfully');
         } catch (socketError) {
-            console.error('Failed to send socket notification:', socketError);
+            logger.error('Failed to send socket notification:', socketError);
         }
 
         // Send email notification
         try {
-            await sendAlarmEmail(doctor, patient, alarmPayload);
-            console.log('Email sent successfully to', doctor.email);
+            await emailService.sendAlarmEmail(doctor, patient, alarmPayload);
+            logger.info('Email sent successfully to', doctor.email);
         } catch (emailError) {
-            console.error('Failed to send email:', emailError);
+            logger.error('Failed to send email:', emailError);
         }
 
         return {
@@ -76,12 +71,7 @@ async function processAlarm(alarmPayload) {
             patient: patient.full_name,
             doctor: doctor.full_name
         };
-    } catch (error) {
-        console.error('Process alarm error:', error);
-        throw error;
     }
 }
 
-module.exports = {
-    processAlarm
-};
+module.exports = new NotificationService();
