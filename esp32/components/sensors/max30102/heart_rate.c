@@ -1,6 +1,7 @@
 #include "heart_rate.h"
 #include "max30102_api.h"
 #include "esp_log.h"
+#include "alarm_manager.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -145,6 +146,7 @@ static void heart_rate_task(void *param) {
             callback(data);
         }
 
+    
         vTaskDelay(pdMS_TO_TICKS(HEART_READ_DELAY_MS));
     }
 }

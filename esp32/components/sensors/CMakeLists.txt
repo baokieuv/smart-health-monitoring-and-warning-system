@@ -17,4 +17,5 @@ idf_component_register(
         onewire_bus
         ds18b20
         common
+        alarm
 )

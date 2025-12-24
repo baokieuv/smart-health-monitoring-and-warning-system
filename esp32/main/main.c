@@ -89,6 +89,12 @@ static void mqtt_send_task(void *param) {
     ESP_LOGI(TAG, "MQTT send task started");
 
     while (1) {
+        // Check health parameters and update alarm status
+        alarm_check_health_data(
+            s_sensor_data.heart_rate, 
+            s_sensor_data.spo2, 
+            s_sensor_data.temperature
+        );
         // Wait for MQTT connection
         EventBits_t bits = xEventGroupWaitBits(
             g_event_group, 
@@ -98,13 +104,6 @@ static void mqtt_send_task(void *param) {
         );
 
         if (bits & MQTT_CONNECTED_BIT) {
-            // Check health parameters and update alarm status
-            alarm_check_health_data(
-                s_sensor_data.heart_rate, 
-                s_sensor_data.spo2, 
-                s_sensor_data.temperature
-            );
-            
             // Get alarm status string
             char alarm_str[128] = {0};
             alarm_get_string(alarm_str);
@@ -489,7 +488,7 @@ static esp_err_t system_init(void) {
     g_mpu_queue = xQueueCreate(QUEUE_LEN, sizeof(mpu6050_data_t));
 
     // Initialize MPU6050 sensor
-    ESP_ERROR_CHECK(mpu6050_init(I2C_PORT));
+    // ESP_ERROR_CHECK(mpu6050_init(I2C_PORT));
 
     // Initialize alarm manager
     ESP_ERROR_CHECK(alarm_manager_init());
@@ -537,8 +536,9 @@ static void start_sensor_tasks(void) {
     // Start display and MPU6050 tasks
     xTaskCreate(oled_display_task, "oled_task", 4096, (void *)s_oled_queue, 3, NULL);
     xTaskCreate(oled_update_task, "oled_update", 2048, NULL, 3, NULL);
-    xTaskCreate(mpu6050_task, "mpu6050_task", 4096, NULL, 5, NULL);
+    // xTaskCreate(mpu6050_task, "mpu6050_task", 4096, NULL, 5, NULL);
     xTaskCreate(handle_mpu6050_data, "fall_detect", 4096, NULL, 4, NULL);
+    xTaskCreate(mqtt_send_task, "mqtt_send", 4096, NULL, 5, NULL);
 }
 
 /**
@@ -590,7 +590,7 @@ static esp_err_t start_normal_mode(void) {
         // Initialize MQTT
         esp_err_t err = mqtt_client_init(token);
         if (err == ESP_OK) {
-            xTaskCreate(mqtt_send_task, "mqtt_send", 4096, NULL, 5, NULL);
+            // xTaskCreate(mqtt_send_task, "mqtt_send", 4096, NULL, 5, NULL);
             mqtt_start_ota_scheduler();
         } else {
             ESP_LOGW(TAG, "MQTT init failed");

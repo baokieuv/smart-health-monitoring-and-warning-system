@@ -2,6 +2,7 @@
 #include "onewire_bus.h"
 #include "ds18b20.h"
 #include "esp_log.h"
+#include "alarm_manager.h"
 #include "freertos/task.h"
 
 static const char *TAG = "TEMPERATURE";
