@@ -111,7 +111,7 @@ export default function LoginPage() {
           <div style={{ marginBottom: 4 }}><strong>Tài khoản:</strong></div>
           <div>👤 Admin: <code>admin</code> / <code>admin123</code></div>
           <div>👨‍⚕️ Bác sĩ 1: <code>000000000000</code> / <code>000000000000</code></div>
-          <div>👨‍⚕️ Bác sĩ 2: <code>doctor02</code> / <code>1234</code></div>
+          <div>👨‍⚕️ Bác sĩ 2: <code>doctor02</code> / <code>123456</code></div>
         </div>
         {error && (
           <div style={{ color: '#e5484d', marginBottom: 12, fontSize: 13, textAlign: 'center' }}>

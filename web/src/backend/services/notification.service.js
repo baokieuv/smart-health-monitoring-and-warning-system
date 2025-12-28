@@ -35,6 +35,7 @@ async function processAlarm(alarmPayload) {
 
         console.log(`Sending alarm notification to doctor: ${doctor.full_name} (${doctor.email})`);
         console.log(`Doctor userId: ${doctor.userId}, Patient: ${patient.full_name}`);
+        console.log(`Doctor userId type: ${typeof doctor.userId}, value: "${doctor.userId.toString()}"`);
         console.log(`Will emit to room: doctor:${doctor.userId.toString()}`);
 
         // Prepare notification data

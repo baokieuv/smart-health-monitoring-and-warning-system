@@ -17,62 +17,87 @@ export const SocketProvider = ({ children }) => {
     const [isConnected, setIsConnected] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const currentUserIdRef = useRef(null);
+    const [socketTrigger, setSocketTrigger] = useState(0); // Trigger to recreate socket
 
-    // Monitor user changes (check every 1 second)
+    // Initialize currentUserId on mount
+    useEffect(() => {
+        const userInfo = getUserInfo();
+        if (userInfo?.id) {
+            currentUserIdRef.current = userInfo.id;
+            setSocketTrigger(1); // Initial trigger
+        }
+    }, []);
+
+    // Monitor user changes (check every 2 seconds)
     useEffect(() => {
         const checkUserChange = setInterval(() => {
             const userInfo = getUserInfo();
             const userId = userInfo?.id;
+            const prevUserId = currentUserIdRef.current;
             
-            if (currentUserIdRef.current && userId !== currentUserIdRef.current) {
-                console.log('🔄 User changed detected, clearing old notifications');
+            // User changed
+            if (prevUserId && userId && userId !== prevUserId) {
+                console.log('🔄 User changed from', prevUserId, 'to', userId);
                 setNotifications([]);
                 currentUserIdRef.current = userId;
                 
                 // Disconnect old socket
                 if (socket) {
+                    console.log('Disconnecting old socket...');
                     socket.disconnect();
                     setSocket(null);
+                    setIsConnected(false);
                 }
-            } else if (!userId && currentUserIdRef.current) {
-                // User logged out
-                console.log('👋 User logged out, clearing notifications');
+                
+                // Trigger socket recreation after a short delay
+                setTimeout(() => {
+                    console.log('Triggering socket recreation...');
+                    setSocketTrigger(prev => prev + 1);
+                }, 100);
+            } 
+            // User logged out
+            else if (!userId && prevUserId) {
+                console.log('👋 User logged out');
                 setNotifications([]);
                 currentUserIdRef.current = null;
                 if (socket) {
                     socket.disconnect();
                     setSocket(null);
+                    setIsConnected(false);
                 }
             }
-        }, 1000);
+            // User logged in (first time)
+            else if (userId && !prevUserId) {
+                console.log('👋 User logged in:', userId);
+                currentUserIdRef.current = userId;
+                setSocketTrigger(prev => prev + 1);
+            }
+        }, 2000);
 
         return () => clearInterval(checkUserChange);
     }, [socket]);
 
     useEffect(() => {
-        const token = getToken();
+        let token = getToken();
         const userInfo = getUserInfo();
         const userId = userInfo?.id;
         
-        // Update current user ID on mount
-        if (!currentUserIdRef.current) {
-            currentUserIdRef.current = userId;
-        }
-        
-        if (!token) {
-            console.log('No token found, skipping socket connection');
+        if (!token || !userId) {
+            console.log('No token or userId found, skipping socket connection');
             return;
         }
 
-        // Initialize socket connection
+        // Initialize socket connection with token refresh logic
         const newSocket = io(process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000', {
-            auth: {
-                token: token
+            auth: (cb) => {
+                // Get fresh token on each auth attempt
+                const freshToken = getToken();
+                cb({ token: freshToken });
             },
             path: '/socket.io',
             transports: ['polling', 'websocket'],
             reconnection: true,
-            reconnectionDelay: 1000,
+            reconnectionDelay: 800,
             reconnectionAttempts: 5,
             timeout: 20000,
             forceNew: true,
@@ -109,14 +134,27 @@ export const SocketProvider = ({ children }) => {
         });
 
         // Error handling
-        newSocket.on('connect_error', (error) => {
-                console.error('❌ Socket connection error:', error.message);
+        newSocket.on('connect_error', async (error) => {
+            console.error('❌ Socket connection error:', error.message);
             console.error('Error details:', error);
             setIsConnected(false);
             
             // If authentication error, try to refresh token
             if (error.message && error.message.includes('Authentication')) {
-                console.log('🔄 Token might be expired, please re-login');
+                console.log('🔄 Token expired, attempting to refresh...');
+                try {
+                    const { refreshAccessToken, setToken } = await import('../utils/api');
+                    const response = await refreshAccessToken();
+                    if (response.access_token) {
+                        setToken(response.access_token);
+                        console.log('✅ Token refreshed, reconnecting socket...');
+                        // Socket will auto-reconnect with new token
+                    }
+                } catch (err) {
+                    console.error('❌ Token refresh failed:', err);
+                    console.log('Please re-login');
+                    // Optionally redirect to login
+                }
             }
         });
 
@@ -132,7 +170,7 @@ export const SocketProvider = ({ children }) => {
                 newSocket.disconnect();
             }
         };
-    }, []);
+    }, [socketTrigger]); // Re-run when socketTrigger changes
 
     // Play alert sound
     const playAlertSound = () => {

@@ -107,7 +107,7 @@ router.get(
 router.get(
     '/patients/:patient_id',
     authenticate,
-    authorizeRoles('doctor'),
+    authorizeRoles('doctor', 'patient'),
     [
         param('patient_id')
             .isMongoId().withMessage('Invalid Patient ID')
@@ -157,7 +157,7 @@ router.put(
 router.get( 
     '/patients/:patient_id/health',
     authenticate,
-    authorizeRoles('doctor'),
+    authorizeRoles('doctor', 'patient'),
     [
         param('patient_id')
             .isMongoId().withMessage('Invalid Patient ID')

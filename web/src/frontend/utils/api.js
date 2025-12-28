@@ -81,6 +81,13 @@ export const refreshAccessToken = () => {
   return unwrap(api.post('/api/v1/auth/refresh', { refresh_token: refreshToken }))
 }
 
+export const changePassword = (payload) =>
+  unwrap(api.post('/api/v1/auth/change-password', payload))
+
+// Family Access
+export const familyAuthenticate = (payload) =>
+  unwrap(axios.post(`${BASE_URL}/api/v1/family/access/auth`, payload))
+
 // Admin - Doctors
 export const createDoctor = (payload) =>
   unwrap(api.post('/api/v1/admin/doctors/', payload))

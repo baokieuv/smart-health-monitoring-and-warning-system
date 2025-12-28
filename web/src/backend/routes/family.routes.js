@@ -1,24 +1,19 @@
 const express = require("express");
+const { body } = require('express-validator');
 const { authenticate, authorizeRoles } = require('../middlewares/auth.middleware');
 const { validateRequest } = require('../middlewares/validate.middleware');
 const familyController = require('../controllers/family.controller');
 
 const router = express.Router();
 
-// get current patient's details
-router.get(
-    "/info", 
-    authenticate,
-    authorizeRoles('patient'),
+router.post(
+    '/access/auth',
+    [
+        body('cccd').notEmpty().isLength({ min: 12, max: 12 }).withMessage('CCCD must be 12 digits'),
+        body('secretCode').notEmpty().isLength({ min: 10, max: 10 }).withMessage('Secret code must be 10 digits')
+    ],
     validateRequest,
-    familyController.getPatientDetail);
-
-// get current patient's health info
-router.get(
-    "/health", 
-    authenticate,
-    authorizeRoles('patient'),
-    validateRequest,
-    familyController.getPatientHealth);
+    familyController.authenticateFamilyAccess
+);
 
 module.exports = router;

@@ -50,7 +50,7 @@ export default function Alerts() {
   return (
     <div className="alerts-container">
       <div className="alerts-header">
-        <h2> Cảnh Báo Sức Khỏe</h2>
+        <h2> Alert List</h2>
         <div className="alerts-actions">
           <button 
             className="btn-clear-all"

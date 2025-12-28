@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { familyAuthenticate } from '../../utils/api'
 import routers from '../../utils/routers'
 import './FamilyAccessPage.scss'
 
@@ -10,23 +11,6 @@ export default function FamilyAccessPage() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
-  // Demo data - trong thực tế sẽ gọi API
-  const DEMO_FAMILY_ACCESS = [
-    {
-      cccd: '001234567890',
-      secretCode: '123456',
-      patientId: '1',
-      patientName: 'Nguyễn Văn A',
-      relationship: 'Con trai'
-    },
-    {
-      cccd: '001234567891',
-      secretCode: '654321',
-      patientId: '2',
-      patientName: 'Trần Thị B',
-      relationship: 'Vợ'
-    },
-  ]
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -46,36 +30,31 @@ export default function FamilyAccessPage() {
       return
     }
 
-    if (secretCode.length !== 6) {
+    if (secretCode.length !== 10) {
       setLoading(false)
-      setError('Mã bí mật phải có 6 chữ số')
+      setError('Mã bí mật phải là số điện thoại 10 số')
       return
     }
 
-    // Demo: Check credentials
-    setTimeout(() => {
-      const access = DEMO_FAMILY_ACCESS.find(
-        (item) => item.cccd === cccd && item.secretCode === secretCode
-      )
-
-      if (access) {
-        // Lưu thông tin truy cập tạm thời (không cần token)
-        sessionStorage.setItem('familyAccess', JSON.stringify({
-          cccd: access.cccd,
-          patientId: access.patientId,
-          patientName: access.patientName,
-          relationship: access.relationship,
-          accessTime: new Date().toISOString()
-        }))
+    try {
+      const response = await familyAuthenticate({ cccd, secretCode })
+      
+      if (response.status === 'success') {
+        // Lưu JWT tokens (giống như đăng nhập bình thường) - USE CORRECT KEYS
+        localStorage.setItem('access_token', response.data.accessToken)
+        localStorage.setItem('refresh_token', response.data.refreshToken)
+        localStorage.setItem('user_info', JSON.stringify(response.data.user))
         
         setLoading(false)
-        // Chuyển đến trang thông tin bệnh nhân
-        navigate(routers.FamilyPatientDetail(access.patientId))
-      } else {
-        setLoading(false)
-        setError('CCCD hoặc mã bí mật không đúng')
+        // Chuyển đến trang PatientDetail
+        navigate(`/patients/${response.data.patientId}`)
       }
-    }, 800)
+    } catch (err) {
+      console.error('Authentication error:', err)
+      setLoading(false)
+      const errorMsg = err?.response?.data?.message || 'CCCD hoặc mã bí mật không đúng'
+      setError(errorMsg)
+    }
   }
 
   const handleBackToLogin = () => {
@@ -108,7 +87,7 @@ export default function FamilyAccessPage() {
               maxLength={12}
               className="form-input"
             />
-            <small className="input-hint">VD: 001234567890</small>
+            <small className="input-hint">VD: 038423841921</small>
           </div>
 
           <div className="form-group">
@@ -121,14 +100,14 @@ export default function FamilyAccessPage() {
               type="password"
               value={secretCode}
               onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+                const value = e.target.value.replace(/\D/g, '').slice(0, 10)
                 setSecretCode(value)
               }}
-              placeholder="Nhập mã 6 chữ số được cung cấp bởi bệnh viện"
-              maxLength={6}
+              placeholder="Nhập số điện thoại bệnh nhân (10 chữ số)"
+              maxLength={10}
               className="form-input"
             />
-            <small className="input-hint">VD: 123456</small>
+            <small className="input-hint">VD: 0438472182</small>
           </div>
 
           {error && (
@@ -156,14 +135,13 @@ export default function FamilyAccessPage() {
         </form>
 
         <div className="security-note">
-          <div className="note-icon">🔐</div>
-          <div className="note-content">
+          {/* <div className="note-icon">🔐</div> */}
+          {/* <div className="note-content">
             <strong>Lưu ý bảo mật:</strong>
             <ul>
               <li>Không chia sẻ mã bí mật với người khác</li>
-              <li>Liên hệ bệnh viện nếu quên mã hoặc cần hỗ trợ</li>
             </ul>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

@@ -25,6 +25,10 @@ export default function ProtectedRoute({ requiredRole }) {
     if (userRole === 'doctor') {
       return <Navigate to={routers.Home} replace />
     }
+    // Patient cố vào route không được phép -> redirect về login
+    if (userRole === 'patient') {
+      return <Navigate to={routers.Login} replace />
+    }
     // Fallback: redirect về login
     return <Navigate to={routers.Login} replace />
   }

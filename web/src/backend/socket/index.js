@@ -62,10 +62,15 @@ function initSocket(server) {
 
         console.log(`✅ Socket connected: User ${userId} (${userRole})`);
 
-        // Join user-specific room
-        const userRoom = `${userRole}:${userId}`;
+        // Join user-specific room - ensure userId is string
+        const userIdString = String(userId);
+        const userRoom = `${userRole}:${userIdString}`;
         socket.join(userRoom);
-        console.log(`User ${userId} joined room: ${userRoom}`);
+        console.log(`👤 User ${userIdString} joined room: ${userRoom}`);
+        
+        // Debug: Verify room membership
+        const rooms = Array.from(socket.rooms);
+        console.log(`📍 Socket is in rooms:`, rooms);
 
         // Handle client acknowledgment
         socket.on('acknowledge-alarm', (data) => {
@@ -114,6 +119,16 @@ function emitAlarmToDoctor(doctorUserId, alarmData) {
     }
 
     const room = `doctor:${doctorUserId}`;
+    
+    // Debug: Check số clients trong room
+    const socketsInRoom = io.sockets.adapter.rooms.get(room);
+    const clientCount = socketsInRoom ? socketsInRoom.size : 0;
+    console.log(`📊 Room "${room}" has ${clientCount} connected clients`);
+    
+    if (clientCount === 0) {
+        console.warn(`⚠️ No clients in room "${room}" - notification will not be received!`);
+    }
+    
     io.to(room).emit('alarm-notification', alarmData);
     console.log(`📢 Alarm notification sent to room: ${room}`);
 }

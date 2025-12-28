@@ -15,6 +15,10 @@ export default function PatientDetail() {
   const [healthInfo, setHealthInfo] = useState(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
   const [deviceLoading, setDeviceLoading] = useState(false);
+  
+  // Check if user is patient (family member)
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isPatientRole = user.role === 'patient';
 
   useEffect(() => {
     const loadData = async () => {
@@ -215,7 +219,9 @@ export default function PatientDetail() {
       <div className="detail-header">
         <Link to="/patients" className="btn-back">← Return to List</Link>
         <h2>Patient Information</h2>
-        <button className="btn-edit" onClick={() => setShowEditModal(true)}>✏️ Edit</button>
+        {!isPatientRole && (
+          <button className="btn-edit" onClick={() => setShowEditModal(true)}>✏️ Edit</button>
+        )}
       </div>
 
       {error && <div style={{ padding: '16px', color: '#e5484d', background: '#fef2f2', borderRadius: '6px', marginBottom: '16px' }}>{error}</div>}
@@ -263,59 +269,61 @@ export default function PatientDetail() {
           </div>
         </div>
 
-        {/* Device Management Card */}
-        <div className="info-card">
-          <h3>🔧 Quản Lý Thiết Bị</h3>
-          {patient.deviceId ? (
-            <div>
-              <p style={{ marginBottom: '12px' }}>
-                <strong>Device hiện tại:</strong> {patient.deviceId}
-              </p>
-              <button 
-                className="btn-recall-device"
-                onClick={handleRecallDevice}
-                disabled={deviceLoading}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: deviceLoading ? 'not-allowed' : 'pointer',
-                  fontWeight: '600',
-                  opacity: deviceLoading ? 0.6 : 1
-                }}
-              >
-                {deviceLoading ? 'Đang xử lý...' : '🔴 Thu Hồi Thiết Bị'}
-              </button>
-            </div>
-          ) : (
-            <div>
-              <p style={{ marginBottom: '12px', color: '#999' }}>
-                Bệnh nhân chưa được cấp phát thiết bị
-              </p>
-              <button 
-                className="btn-allocate-device"
-                onClick={handleAllocateDevice}
-                disabled={deviceLoading}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: deviceLoading ? 'not-allowed' : 'pointer',
-                  fontWeight: '600',
-                  opacity: deviceLoading ? 0.6 : 1
-                }}
-              >
-                {deviceLoading ? 'Đang xử lý...' : '✅ Cấp Phát Thiết Bị'}
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Device Management Card - Only show for doctors */}
+        {!isPatientRole && (
+          <div className="info-card">
+            <h3>🔧 Quản Lý Thiết Bị</h3>
+            {patient.deviceId ? (
+              <div>
+                <p style={{ marginBottom: '12px' }}>
+                  <strong>Device hiện tại:</strong> {patient.deviceId}
+                </p>
+                <button 
+                  className="btn-recall-device"
+                  onClick={handleRecallDevice}
+                  disabled={deviceLoading}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: deviceLoading ? 'not-allowed' : 'pointer',
+                    fontWeight: '600',
+                    opacity: deviceLoading ? 0.6 : 1
+                  }}
+                >
+                  {deviceLoading ? 'Đang xử lý...' : '🔴 Thu Hồi Thiết Bị'}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p style={{ marginBottom: '12px', color: '#999' }}>
+                  Bệnh nhân chưa được cấp phát thiết bị
+                </p>
+                <button 
+                  className="btn-allocate-device"
+                  onClick={handleAllocateDevice}
+                  disabled={deviceLoading}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#28a745',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: deviceLoading ? 'not-allowed' : 'pointer',
+                    fontWeight: '600',
+                    opacity: deviceLoading ? 0.6 : 1
+                  }}
+                >
+                  {deviceLoading ? 'Đang xử lý...' : '✅ Cấp Phát Thiết Bị'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Health Info Card - Only show if device is allocated */}
         {patient.deviceId && (
