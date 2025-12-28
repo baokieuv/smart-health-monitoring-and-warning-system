@@ -53,18 +53,32 @@ export default function PatientDetail() {
       if (res?.status === 'success' && res?.data?.healthInfo) {
         setHealthInfo(res.data.healthInfo);
         
+        const timestamp = new Date(res.data.healthInfo.last_measurement).getTime();
+
+        const timeLabel = new Date(timestamp).toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+
         // Add to vitals chart data
         const newDataPoint = {
-          time: res.data.healthInfo.last_measurement.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          ts: timestamp,       
+          time: timeLabel, 
           heartRate: res.data.healthInfo.heart_rate || null,
           spo2: res.data.healthInfo.SpO2 || null,
           temperature: res.data.healthInfo.temperature || null
         };
         
+
+
         setVitals(prev => {
+          if (prev.length > 0 && prev[prev.length - 1].ts === newDataPoint.ts) {
+            return prev;
+          }
           const updated = [...prev, newDataPoint];
-          // Keep only last 20 data points
-          return updated.slice(-20);
+          // Keep only last 15 data points
+          return updated.slice(-15);
         });
       }
     } catch (e) {

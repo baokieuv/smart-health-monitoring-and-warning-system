@@ -123,11 +123,15 @@ class ThingsBoardService {
 
     parseTelemetryData(telemetryData) {
         const healthInfo = {};
+        console.log(telemetryData);
+        healthInfo.timestamp = 0;
 
         for (const [key, values] of Object.entries(telemetryData)) {
             const latest = Array.isArray(values) && values.length > 0
                 ? values[values.length - 1].value
                 : null;
+
+            healthInfo.timestamp = values[values.length - 1].ts;
             healthInfo[key] = latest;
         }
 
@@ -135,7 +139,7 @@ class ThingsBoardService {
             heart_rate: healthInfo.heart_rate ? parseFloat(healthInfo.heart_rate) : null,
             SpO2: healthInfo.SpO2 ? parseFloat(healthInfo.SpO2) : null,
             temperature: healthInfo.temperature ? parseFloat(healthInfo.temperature) : null,
-            last_measurement: new Date().toISOString(),
+            last_measurement: new Date(healthInfo.timestamp),
             alarm_status: healthInfo.alarm || null
         };
     }
