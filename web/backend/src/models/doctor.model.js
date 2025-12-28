@@ -21,8 +21,7 @@ const doctorSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    lowercase: true,
-    trim: true
+    lowercase: true
   },
   birthday: {
     type: Date,

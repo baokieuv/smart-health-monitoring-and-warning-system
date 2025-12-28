@@ -46,54 +46,68 @@ class PatientService {
         const result = await patientRepository.searchPatients(searchTerm, page, limit);
 
         // Populate doctor information
-        const patientsWithDoctors = await Promise.all(
-            result.data.map(async (patient) => {
-                if (patient.doctorId) {
-                    const doctor = await doctorRepository.findByUserId(patient.doctorId);
-                    if (doctor) {
-                        return {
-                            ...patient,
-                            doctor: {
-                                full_name: doctor.full_name,
-                                specialization: doctor.specialization
-                            }
-                        };
-                    }
-                }
-                return patient;
-            })
-        );
+        // const patientsWithDoctors = await Promise.all(
+        //     result.data.map(async (patient) => {
+        //         if (patient.doctorId) {
+        //             const doctor = await doctorRepository.findByUserId(patient.doctorId);
+        //             if (doctor) {
+        //                 return {
+        //                     ...patient,
+        //                     doctor: {
+        //                         full_name: doctor.full_name,
+        //                         specialization: doctor.specialization
+        //                     }
+        //                 };
+        //             }
+        //         }
+        //         return patient;
+        //     })
+        // );
 
         return {
-            ...result,
-            data: patientsWithDoctors
+            ...result
+            // data: patientsWithDoctors
         };
     }
 
-    async getPatientById(patientId) {
+    async getPatientById(patientId, doctorId) {
         const patient = await patientRepository.findById(patientId);
         if (!patient) {
             throw new NotFoundError('Patient not found');
+        }
+
+        console.log(doctorId);
+        console.log(patient.doctorId);
+        if(patient.doctorId.toString() !== doctorId){
+            throw new BadRequestError('Dont have permission for this patient.');
         }
 
         logger.info(`Patient retrieved successfully: ${patientId}`);
         return patient;
     }
 
-    async getPatientByUserId(userId) {
+    async getPatientByUserId(userId, doctorId) {
         const patient = await patientRepository.findByUserId(userId);
         if (!patient) {
             throw new NotFoundError('Patient not found');
+        }
+
+        if(patient.doctorId.toString() !== doctorId){
+            throw new BadRequestError('Dont have permission for this patient.');
         }
 
         logger.info(`Patient retrieved by userId: ${userId}`);
         return patient;
     }
 
-    async updatePatient(patientId, updateData) {
+    async updatePatient(patientId, updateData, doctorId) {
         const patient = await patientRepository.findById(patientId);
         if (!patient) {
             throw new NotFoundError('Patient not found');
+        }
+
+        if(patient.doctorId.toString() !== doctorId){
+            throw new BadRequestError('Dont have permission for this patient.');
         }
 
         const updatedPatient = await patientRepository.updateById(patientId, updateData);
@@ -105,6 +119,10 @@ class PatientService {
         const patient = await patientRepository.findById(patientId);
         if (!patient) {
             throw new NotFoundError('Patient not found');
+        }
+
+        if(patient.doctorId.toString() !== userId){
+            throw new BadRequestError('Dont have permission for this patient.');
         }
 
         // Delete device from ThingsBoard if exists
@@ -136,6 +154,10 @@ class PatientService {
             throw new NotFoundError('Patient not found');
         }
 
+        if(patient.doctorId.toString() !== userId){
+            throw new BadRequestError('Dont have permission for this patient.');
+        }
+
         if (!patient.deviceId) {
             throw new BadRequestError('Patient is not allocated device');
         }
@@ -163,6 +185,10 @@ class PatientService {
         const patient = await patientRepository.findById(patientId);
         if (!patient) {
             throw new NotFoundError('Patient not found');
+        }
+
+        if(patient.doctorId.toString() !== userId){
+            throw new BadRequestError('Dont have permission for this patient.');
         }
 
         if (patient.deviceId) {
@@ -214,6 +240,10 @@ class PatientService {
         const patient = await patientRepository.findById(patientId);
         if (!patient) {
             throw new NotFoundError('Patient not found');
+        }
+
+        if(patient.doctorId.toString() !== userId){
+            throw new BadRequestError('Dont have permission for this patient.');
         }
 
         if (!patient.deviceId) {

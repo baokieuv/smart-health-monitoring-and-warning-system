@@ -22,13 +22,24 @@ class PatientRepository extends BaseRepository {
         return this.exists({ cccd });
     }
 
-    async searchPatients(searchTerm, page, limit) {
-        const filter = searchTerm 
-            ? { full_name: new RegExp(searchTerm, 'i') }
-            : {};
+    async searchPatients({ doctorId, search }, page, limit) {
+        const filter = { doctorId };
+        if(search) {
+            filter.full_name = {
+                $regex: search,
+                $options: 'i'
+            }
+        }
+        // const filter = searchTerm 
+        //     ? { full_name: new RegExp(searchTerm, 'i') }
+        //     : {};
 
         return this.paginate(filter, page, limit, {
-            sort: { createdAt: -1 }
+            sort: { createdAt: -1 },
+            populate: {
+                path: 'doctorId',
+                select: 'full_name specialization'
+            }
         });
     }
 

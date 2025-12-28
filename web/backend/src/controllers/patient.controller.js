@@ -55,16 +55,18 @@ class PatientController {
         ResponseUtil.success(res, { doctors }, 'Doctors list retrieved successfully');
     });
 
-    // ======== chưa lọc patient cho bác sĩ ================ 
     getPatients = asyncHandler(async (req, res) => {
         const { 
             page = PAGINATION.DEFAULT_PAGE, 
             limit = PAGINATION.DEFAULT_LIMIT, 
-            search = '' 
+            search = ''
         } = req.query;
 
         const result = await patientService.getPatients(
-            search,
+            {
+                doctorId: req.user.id,
+                search
+            },
             parseInt(page),
             parseInt(limit)
         );
@@ -80,7 +82,8 @@ class PatientController {
     });
 
     getPatientDetail = asyncHandler(async (req, res) => {
-        const patient = await patientService.getPatientById(req.params.patient_id);
+        console.log(req.user);
+        const patient = await patientService.getPatientById(req.params.patient_id, req.user.id);
         
         ResponseUtil.success(res, { patient }, 'Patient retrieved successfully');
     });
@@ -99,13 +102,13 @@ class PatientController {
             }
         });
 
-        const patient = await patientService.updatePatient(req.params.patient_id, updateData);
+        const patient = await patientService.updatePatient(req.params.patient_id, updateData, req.user.id);
         
         ResponseUtil.success(res, { patient }, 'Patient information updated successfully');
     });
 
     getHealthInfo = asyncHandler(async (req, res) => {
-        const result = await patientService.getHealthInfo(req.params.patient_id, req.user.id);
+        const result = await patientService.getHealthInfo(req.params.patient_id, req.user.id, req.user.id);
         
         ResponseUtil.success(res, result, 'Patient health info retrieved successfully');
     });
