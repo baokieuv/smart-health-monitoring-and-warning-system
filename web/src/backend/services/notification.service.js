@@ -4,6 +4,12 @@ const User = require('../models/user.model');
 const { sendAlarmEmail } = require('./email.service');
 const { emitAlarmToDoctor } = require('../socket');
 
+
+// Key: `${doctor.userId}_${deviceId}`, Value: timestamp
+const lastEmailSentMap = new Map();
+
+const MIN_EMAIL_INTERVAL = 60 * 1000;
+
 /**
  * Process alarm from ThingsBoard and send notifications (Email + Socket.io)
  */
@@ -38,6 +44,19 @@ async function processAlarm(alarmPayload) {
         console.log(`Doctor userId type: ${typeof doctor.userId}, value: "${doctor.userId.toString()}"`);
         console.log(`Will emit to room: doctor:${doctor.userId.toString()}`);
 
+        
+        const emailKey = `${doctor.userId}_${deviceId}`;
+        const currentTime = Date.now();
+        const lastEmailTime = lastEmailSentMap.get(emailKey);
+        const shouldSendNoti = !lastEmailTime || (currentTime - lastEmailTime) >= MIN_EMAIL_INTERVAL;
+
+        if (shouldSendNoti) {
+            console.log('Email can be sent (last sent:', lastEmailTime ? new Date(lastEmailTime).toISOString() : 'never', ')');
+        } else {
+            const timeRemaining = Math.ceil((MIN_EMAIL_INTERVAL - (currentTime - lastEmailTime)) / 1000);
+            console.log(`Email rate limit: ${timeRemaining} seconds remaining until next email can be sent`);
+        }
+
         // Prepare notification data
         const notificationData = {
             id: `alarm_${Date.now()}`,
@@ -57,26 +76,45 @@ async function processAlarm(alarmPayload) {
 
         // Send Socket.io realtime notification
         try {
-            emitAlarmToDoctor(doctor.userId.toString(), notificationData);
-            console.log('Socket.io notification sent successfully');
+            if (shouldSendNoti) {
+                emitAlarmToDoctor(doctor.userId.toString(), notificationData);
+                console.log('Socket.io notification sent successfully');
+            } else {
+                console.log('Socket.io notification skipped due to rate limiting');
+            }
         } catch (socketError) {
             console.error('Failed to send socket notification:', socketError);
         }
 
         // Send email notification
         try {
-            await sendAlarmEmail(doctor, patient, alarmPayload);
-            console.log('Email sent successfully to', doctor.email);
+            if (shouldSendNoti) {
+                await sendAlarmEmail(doctor, patient, alarmPayload);
+                lastEmailSentMap.set(emailKey, currentTime);
+                console.log('Email sent successfully to', doctor.email);
+            } else {
+                console.log('Email skipped due to rate limiting');
+            }
         } catch (emailError) {
             console.error('Failed to send email:', emailError);
         }
-
-        return {
-            success: true,
-            message: 'Notification sent successfully',
-            patient: patient.full_name,
-            doctor: doctor.full_name
-        };
+        
+        if (shouldSendNoti) {
+            return {
+                success: true,
+                message: 'Notification sent successfully',
+                patient: patient.full_name,
+                doctor: doctor.full_name,
+                // emailSent: shouldSendNoti
+            }
+        } else {
+            return {
+                success: false,
+                message: 'Notification skipped due to rate limiting',
+                patient: patient.full_name,
+                doctor: doctor.full_name,
+            }
+        }
     } catch (error) {
         console.error('Process alarm error:', error);
         throw error;

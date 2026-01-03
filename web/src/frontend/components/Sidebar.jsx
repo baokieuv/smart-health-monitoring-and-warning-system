@@ -48,13 +48,13 @@ export default function Sidebar() {
             <span className="notification-badge">{unreadCount}</span>
           )}
         </Link>
-        <Link 
+        {/* <Link 
           to="/rooms" 
           className={`sidebar-item ${isActive('/rooms') ? 'active' : ''}`}
         >
           <span className="icon">🏥</span>
           <span className="label">Rooms (Coming soon)</span>
-        </Link>
+        </Link> */}
         
         <button 
           onClick={handleLogout} 
