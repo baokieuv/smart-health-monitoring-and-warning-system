@@ -25,8 +25,8 @@ async function sendAlarmEmail(doctor, patient, alarmData) {
         const severityColor = severityColors[alarmData.severity] || '#6c757d';
 
         // Format data for email
-        const heartRate = alarmData.data?.heart_rate || 'N/A';
-        const spo2 = alarmData.data?.SpO2 || 'N/A';
+        const heart_rate = alarmData.data?.heartRate || 'N/A';
+        const SpO2 = alarmData.data?.spo2 || 'N/A';
         const temperature = alarmData.data?.temperature || 'N/A';
 
         // HTML email template
@@ -59,11 +59,11 @@ async function sendAlarmEmail(doctor, patient, alarmData) {
                         <h3>Vital Signs</h3>
                         <div class="metric">
                             <div class="metric-label">Heart Rate</div>
-                            <div class="metric-value">${heartRate} bpm</div>
+                            <div class="metric-value">${heart_rate} bpm</div>
                         </div>
                         <div class="metric">
                             <div class="metric-label">SpO2</div>
-                            <div class="metric-value">${spo2}%</div>
+                            <div class="metric-value">${SpO2}%</div>
                         </div>
                         <div class="metric">
                             <div class="metric-label">Temperature</div>
@@ -93,8 +93,8 @@ async function sendAlarmEmail(doctor, patient, alarmData) {
             Room: ${patient.room || 'N/A'}
             
             Vital Signs:
-            - Heart Rate: ${heartRate} bpm
-            - SpO2: ${spo2}%
+            - Heart Rate: ${heart_rate} bpm
+            - SpO2: ${SpO2}%
             - Temperature: ${temperature}°C
             
             Time: ${new Date().toLocaleString('vi-VN')}

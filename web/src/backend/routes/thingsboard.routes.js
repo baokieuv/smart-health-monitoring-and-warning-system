@@ -47,9 +47,16 @@ router.post('/test-alarm', async (req, res) => {
 
         const alarmPayload = {
             deviceId: req.body.deviceId,
-            alarmType: req.body.alarmType || 'TEST_ALARM',
-            severity: req.body.severity || 'INFO',
-            data: req.body.data || {}
+            alarmType: req.body.alarmType || 'heart_rate_high',
+            severity: req.body.severity || 'CRITICAL',
+            data: req.body.data || {
+                heartRate: 110,
+                spo2: 95,
+                temperature: 37.5
+            },
+            timestamp: req.body.timestamp || new Date().toISOString().replace('T', ' ').substring(0, 19),
+            level: req.body.level || 'info',
+            message: req.body.message || 'Test alarm'
         };
 
         const result = await processAlarm(alarmPayload);
@@ -57,13 +64,15 @@ router.post('/test-alarm', async (req, res) => {
         return res.status(200).json({
             status: 'success',
             message: 'Test alarm processed',
-            result
+            result,
+            payload: alarmPayload
         });
     } catch (error) {
         console.error('Test alarm error:', error);
         return res.status(500).json({
             status: 'error',
-            message: 'Failed to process test alarm'
+            message: 'Failed to process test alarm',
+            error: error.message
         });
     }
 });
