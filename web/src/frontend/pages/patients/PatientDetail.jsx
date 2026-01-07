@@ -54,14 +54,16 @@ export default function PatientDetail() {
     setLoadingHealth(true);
     try {
       const res = await getPatientHealthInfo(id);
+      console.log('Health info response:', res);
       if (res?.status === 'success' && res?.health_info) {
+        console.log('Health info data:', res.health_info);
         setHealthInfo(res.health_info);
         
         // Add to vitals chart data
         const newDataPoint = {
           time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           heartRate: res.health_info.heart_rate || null,
-          spo2: res.health_info.SpO2 || null,
+          spo2: res.health_info.spo2 || null,
           temperature: res.health_info.temperature || null
         };
         
@@ -338,25 +340,25 @@ export default function PatientDetail() {
                   <div className="vital-box" style={{ background: '#fee', padding: '12px', borderRadius: '8px', borderLeft: '4px solid #dc3545' }}>
                     <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>❤️ Nhịp Tim</div>
                     <div style={{ fontSize: '24px', fontWeight: '700', color: '#dc3545' }}>
-                      {healthInfo.heart_rate ? `${healthInfo.heart_rate} bpm` : 'N/A'}
+                      {healthInfo.heart_rate != null ? `${healthInfo.heart_rate} bpm` : 'N/A'}
                     </div>
                   </div>
                   <div className="vital-box" style={{ background: '#e8f4fd', padding: '12px', borderRadius: '8px', borderLeft: '4px solid #17a2b8' }}>
                     <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>🫁 SpO2</div>
                     <div style={{ fontSize: '24px', fontWeight: '700', color: '#17a2b8' }}>
-                      {healthInfo.SpO2 ? `${healthInfo.SpO2}%` : 'N/A'}
+                      {healthInfo.spo2 != null ? `${healthInfo.spo2}%` : 'N/A'}
                     </div>
                   </div>
                   <div className="vital-box" style={{ background: '#fff3e0', padding: '12px', borderRadius: '8px', borderLeft: '4px solid #ffc107' }}>
                     <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>🌡️ Nhiệt Độ</div>
                     <div style={{ fontSize: '24px', fontWeight: '700', color: '#ffc107' }}>
-                      {healthInfo.temperature ? `${healthInfo.temperature}°C` : 'N/A'}
+                      {healthInfo.temperature != null ? `${healthInfo.temperature}°C` : 'N/A'}
                     </div>
                   </div>
                 </div>
-                {healthInfo.alarm_status && (
+                {healthInfo.alarm_str && (
                   <div style={{ marginTop: '12px', padding: '12px', background: '#fee', borderRadius: '8px', color: '#dc3545', fontWeight: '600' }}>
-                    🚨 Alarm: {healthInfo.alarm_status}
+                    🚨 Alarm: {healthInfo.alarm_str}
                   </div>
                 )}
                 {healthInfo.last_measurement && (

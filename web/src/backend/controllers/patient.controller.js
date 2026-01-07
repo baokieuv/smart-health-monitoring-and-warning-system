@@ -471,7 +471,7 @@ exports.getHealthInfo = async (req, res) => {
         }
 
         // get attributes from ThingsBoard
-        const response = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${patient.deviceId}/values/timeseries?keys=heart_rate,SpO2,temperature,alarm`, {
+        const response = await fetch(`${THINGSBOARD_URL}/api/plugins/telemetry/DEVICE/${patient.deviceId}/values/timeseries?keys=heart_rate,spo2,temperature,alarm_str`, {
             method: "GET",
             headers: {
                 'X-Authorization': `Bearer ${token}`
@@ -492,13 +492,14 @@ exports.getHealthInfo = async (req, res) => {
                 return [key, latest];
             })
         );
+        console.log('Fetched health info from ThingsBoard:', healthInfo);
 
         const payload = {
             heart_rate: healthInfo.heart_rate ? parseFloat(healthInfo.heart_rate) : null,
-            SpO2: healthInfo.SpO2 ? parseFloat(healthInfo.SpO2) : null,
+            spo2: healthInfo.spo2 ? parseFloat(healthInfo.spo2) : null,
             temperature: healthInfo.temperature ? parseFloat(healthInfo.temperature) : null,
             last_measurement: new Date().toISOString(),
-            alarm_status: healthInfo.alarm || null,
+            alarm_str: healthInfo.alarm_str || null,
         };
 
         // console.log("Get patient health successfully: ", patient._id);
