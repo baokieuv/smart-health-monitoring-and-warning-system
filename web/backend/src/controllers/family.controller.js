@@ -15,6 +15,12 @@ class FamilyController {
         
         ResponseUtil.success(res, result, 'Patient health info retrieved successfully');
     });
+
+    authenticateFamilyAccess = asyncHandler(async (req, res) => {
+        const result = await patientService.authenticateFamilyAccess(req.body.cccd, req.body.secretCode);
+
+        ResponseUtil.success(res, { result }, 'Login successfully');
+    });
 }
 
 module.exports = new FamilyController();

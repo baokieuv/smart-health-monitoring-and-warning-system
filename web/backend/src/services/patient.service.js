@@ -6,11 +6,13 @@ const deviceRepository = require('../repositories/device.repository');
 const thingsBoardService = require('./thingsboard.service');
 const tokenStore = require('../utils/tokenStore.util');
 const logger = require('../utils/logger.util');
+const TokenUtil = require('../utils/token.util');
 const { 
     ConflictError, 
     NotFoundError, 
     BadRequestError,
-    ServiceUnavailableError
+    ServiceUnavailableError,
+    UnauthorizedError
 } = require('../errors');
 const { ROLES, PASSWORD_SALT_ROUNDS, CCCD_LENGTH } = require('../config/constants');
 
@@ -78,6 +80,7 @@ class PatientService {
 
         console.log(doctorId);
         console.log(patient.doctorId);
+        if(patientId == doctorId) return patient;
         if(patient.doctorId.toString() !== doctorId){
             throw new BadRequestError('Dont have permission for this patient.');
         }
@@ -154,8 +157,10 @@ class PatientService {
             throw new NotFoundError('Patient not found');
         }
 
-        if(patient.doctorId.toString() !== userId){
-            throw new BadRequestError('Dont have permission for this patient.');
+        if(patientId !== userId){
+            if(patient.doctorId.toString() !== userId){
+                throw new BadRequestError('Dont have permission for this patient.');
+            }
         }
 
         if (!patient.deviceId) {
@@ -267,6 +272,101 @@ class PatientService {
 
         logger.info(`Device recalled successfully: ${patientId}`);
         return deviceId;
+    }
+
+    async authenticateFamilyAccess(cccd, secretCode) {
+        try{
+            // Find patient by CCCD
+            const patient = await patientRepository.findByCCCD(cccd)
+            if (!patient) {
+                throw new NotFoundError('Patient not found');
+            }
+
+            // Verify secret code (phone number)
+            const normalizedSecretCode = secretCode.replace(/^0/, '');
+            const normalizedPatientPhone = patient.phone.replace(/^0/, '');
+
+            if (normalizedSecretCode !== normalizedPatientPhone) {
+                throw new UnauthorizedError('Invalid credentials');
+            }
+
+            const pseudoUser = {
+                _id: patient._id,
+                username: patient.cccd,
+                role: ROLES.PATIENT
+            };
+
+            // Generate JWT tokens (same as login)
+            const tokens = TokenUtil.generateTokens(pseudoUser);
+            tokenStore.saveRefreshToken(tokens.refreshTokenId, patient._id, tokens.refreshTokenExpiresAt);
+
+            // try{
+                
+            //     const resp = await fetch(`${THINGSBOARD_URL}/api/auth/login`, {
+            //         method: "POST",
+            //         body: JSON.stringify({ username: "tenant@thingsboard.org", password: "tenant" }),
+            //         headers: { "Content-Type": "application/json" }
+            //     });
+
+            //     if(resp.ok){
+            //         const json = await resp.json();
+            //         tokenStore.saveThingsBoardToken(patient._id.toString(), json.token, tokens.refreshTokenExpiresAt);
+            //         console.log("ThingsBoard login successful for patient: ", patient._id);
+            //     }
+            // }catch(err){
+            //     logger.warn("ThingsBoard connection failed: ", err.message);
+            // }
+
+            try{
+                const tbCredentials = { type: 'tenant' }
+
+                const tbToken = await thingsBoardService.login(tbCredentials);
+                tokenStore.saveThingsBoardToken(
+                    patient._id.toString(),
+                    tbToken,
+                    tokens.refreshTokenExpiresAt
+                );
+                logger.info(`ThingsBoard login successful for user: ${patient._id}`);
+            }catch (err){
+                logger.warn(`ThingsBoard connection failed: ${err.message}`);
+            }
+
+            const res = {
+                user: {
+                        id: patient._id,
+                        username: patient.cccd,
+                        role: 'patient'
+                },
+                patientId: patient._id,
+                patientName: patient.full_name,
+                accessToken: tokens.accessToken,
+                refreshToken: tokens.refreshToken
+            }
+
+            return res;
+            // return res.status(200).json({
+            //     status: 'success',
+            //     message: 'Xác thực thành công',
+            //     data: {
+            //         user: {
+            //             id: patient._id,
+            //             username: patient.cccd,
+            //             role: 'patient'
+            //         },
+            //         patientId: patient._id,
+            //         patientName: patient.full_name,
+            //         accessToken: tokens.accessToken,
+            //         refreshToken: tokens.refreshToken
+            //     }
+            // });
+        }catch(err){
+            console.error('Family auth error:', err);
+            // return res.status(500).json({
+            //     status: 'error',
+            //     message: 'Lỗi hệ thống'
+            // });
+            throw new ServiceUnavailableError('Internal error.');
+        }
     }
 }
 

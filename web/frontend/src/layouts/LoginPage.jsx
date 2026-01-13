@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { setToken, setRefreshToken, setUserInfo, login } from '../../../frontend/src/utils/api'
-import routers from '../../../frontend/src/utils/routers'
+import { setToken, setRefreshToken, setUserInfo, login } from '../utils/api'
+import routers from '../utils/routers'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -111,7 +111,7 @@ export default function LoginPage() {
           <div style={{ marginBottom: 4 }}><strong>Tài khoản:</strong></div>
           <div>👤 Admin: <code>admin</code> / <code>admin123</code></div>
           <div>👨‍⚕️ Bác sĩ 1: <code>000000000000</code> / <code>000000000000</code></div>
-          <div>👨‍⚕️ Bác sĩ 2: <code>doctor02</code> / <code>1234</code></div>
+          <div>👨‍⚕️ Bác sĩ 2: <code>doctor02</code> / <code>123456</code></div>
         </div>
         {error && (
           <div style={{ color: '#e5484d', marginBottom: 12, fontSize: 13, textAlign: 'center' }}>

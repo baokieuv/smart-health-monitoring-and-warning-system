@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { api } from '../../../../../frontend/src/utils/api'
+import { api } from '../../../utils/api'
 import './DeviceList.scss'
 
 const DeviceList = () => {
@@ -21,21 +21,20 @@ const DeviceList = () => {
     try {
       setLoading(true)
       setError(null)
-      // ======================== NEED TOKEN ==========================
       const response = await api.get('/api/v1/admin/devices', {
         params: { page: 1, limit: 100 }
       })
       
       console.log('Devices response:', response.data)
-      const devicesData = response.data?.data?.items || []
-      setDevices(devicesData)
+      const deviceData = response.data?.data?.items || []
+      setDevices(deviceData)
       
       // Calculate stats - device is in use if it has both doctor and patient
-      const connected = devicesData.filter(d => d.doctor && d.patient).length
+      const connected = deviceData.filter(d => d.doctor && d.patient).length
       setStats({
-        total: devicesData.length,
+        total: deviceData.length,
         inUse: connected,
-        available: devicesData.length - connected
+        available: deviceData.length - connected
       })
     } catch (err) {
       console.error('Error fetching devices:', err)

@@ -29,7 +29,7 @@ import DeviceList from './pages/admin/devices/DeviceList';
 
 // Family access pages
 import FamilyAccessPage from './pages/familyAccess/FamilyAccessPage';
-import FamilyPatientDetail from './pages/familyAccess/FamilyPatientDetail';
+// import FamilyPatientDetail from './pages/familyAccess/FamilyPatientDetail';
 
 // const Protected = () => {
 //   const token = getToken()
@@ -86,16 +86,21 @@ function App() {
           
           {/* Family Access Routes - Public, no authentication needed */}
           <Route path={routers.FamilyAccess} element={<FamilyAccessPage />} />
-          <Route path={routers.FamilyPatientDetailPath} element={<FamilyPatientDetail />} />
+          {/* <Route path={routers.FamilyPatientDetailPath} element={<FamilyPatientDetail />} /> */}
           
           {/* Home Route - Redirect based on login status */}
           <Route path={routers.HomeRedirect} element={<HomeRedirect />} />
           <Route path={routers.Home} element={<HomePage />} />
           
+          {/* Patient Detail - Accessible by both doctor and patient (read-only for patient) */}
+          <Route element={<ProtectedRoute />}>
+            <Route path={routers.PatientDetail} element={<MainLayout><PatientDetail /></MainLayout>} />
+          </Route>
+
           {/* Doctor Routes - Protected for 'doctor' role */}
           <Route element={<ProtectedRoute requiredRole="doctor" />}>
             <Route path={routers.Patient} element={<MainLayout><PatientList /></MainLayout>} />
-            <Route path={routers.PatientDetail} element={<MainLayout><PatientDetail /></MainLayout>} />
+            {/* <Route path={routers.PatientDetail} element={<MainLayout><PatientDetail /></MainLayout>} /> */}
             <Route path={routers.RoomList} element={<MainLayout><RoomList /></MainLayout>} />
             <Route path={routers.RoomDetail} element={<MainLayout><RoomDetail /></MainLayout>} />
             <Route path={routers.Alerts} element={<MainLayout><Alerts /></MainLayout>} />

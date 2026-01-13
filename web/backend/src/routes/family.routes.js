@@ -22,4 +22,12 @@ router.get(
     familyController.getPatientHealth
 );
 
+router.post(
+    '/access/auth',
+    // authenticate,
+    // authorizeRoles(ROLES.PATIENT),
+    validateRequest,
+    familyController.authenticateFamilyAccess
+);
+
 module.exports = router;

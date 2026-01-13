@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getUserInfo, clearToken, clearUserInfo, getCurrentDoctorInfo } from '../../../../frontend/src/utils/api'
-import routers from '../../../../frontend/src/utils/routers'
+import { getUserInfo, clearToken, clearUserInfo, getCurrentDoctorInfo } from '../../utils/api'
+import routers from '../../utils/routers'
 import './header.css'
 
 const Header = () => {

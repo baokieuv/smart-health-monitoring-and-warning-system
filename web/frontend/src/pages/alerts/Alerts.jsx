@@ -16,6 +16,26 @@ export default function Alerts() {
 
   const filteredNotifications = getFilteredNotifications();
 
+  // Get last alert timestamp
+  const getLastAlertTime = () => {
+    if (notifications.length === 0) return null;
+    
+    // Find the most recent notification
+    const latestNotification = notifications.reduce((latest, current) => {
+      return new Date(current.timestamp) > new Date(latest.timestamp) ? current : latest;
+    }, notifications[0]);
+    
+    const date = new Date(latestNotification.timestamp);
+    return date.toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
   // Get severity badge
   const getSeverityBadge = (severity) => {
     const badges = {
@@ -50,17 +70,24 @@ export default function Alerts() {
   return (
     <div className="alerts-container">
       <div className="alerts-header">
-        <h2> Cảnh Báo Sức Khỏe</h2>
+        <h2> Alert List</h2>
         <div className="alerts-actions">
           <button 
             className="btn-clear-all"
             onClick={clearNotifications}
             disabled={notifications.length === 0}
           >
-            Xóa tất cả
+            Delete All Alerts
           </button>
         </div>
       </div>
+
+      {/* Last alert timestamp */}
+      {notifications.length > 0 && (
+        <div className="last-alert-time">
+          Last alerts sent: <span className="timestamp">{getLastAlertTime()}</span>
+        </div>
+      )}
 
       {/* Filter tabs */}
       <div className="filter-tabs">

@@ -39,7 +39,7 @@ router.post(
 router.get(                 // NEED CHECK
     '/doctors-list',
     authenticate,
-    authorizeRoles(ROLES.DOCTOR),
+    authorizeRoles(ROLES.DOCTOR, ROLES.PATIENT),
     validateRequest,
     patientController.getDoctorsList
 );
@@ -56,7 +56,7 @@ router.get(
 router.get(
     '/patients/:patient_id',
     authenticate,
-    authorizeRoles(ROLES.DOCTOR),
+    authorizeRoles(ROLES.DOCTOR, ROLES.PATIENT),
     patientValidators.getPatientById,
     validateRequest,
     patientController.getPatientDetail
@@ -74,7 +74,7 @@ router.put(
 router.get(
     '/patients/:patient_id/health',
     authenticate,
-    authorizeRoles(ROLES.DOCTOR),
+    authorizeRoles(ROLES.DOCTOR, ROLES.PATIENT),
     patientValidators.patientHealthOperations,
     validateRequest,
     patientController.getHealthInfo

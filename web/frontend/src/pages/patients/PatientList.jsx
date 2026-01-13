@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { getPatientList, createPatient, getDoctorsList, deletePatient } from '../../../../frontend/src/utils/api'
+import { Link, useNavigate } from 'react-router-dom'
+import { getPatientList, createPatient, getDoctorsList, deletePatient, allocateDevice, recallDevice } from '../../utils/api'
 // import routers from '../../utils/routers'
 import './PatientList.css'
 
 export default function PatientList() {
+  const navigate = useNavigate()
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -13,6 +14,7 @@ export default function PatientList() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [rooms, setRooms] = useState([])
   const [doctors, setDoctors] = useState([])
+  const [deviceLoading, setDeviceLoading] = useState({})
 
   useEffect(() => {
     loadPatients()
@@ -27,7 +29,7 @@ export default function PatientList() {
       const res = await getPatientList({ page, limit: 10 })
       console.log('Patient list response:', res)
       console.log('Patients array:', res?.data?.items)
-      console.log('Total patients:', res?.data?.pagination.total)
+      console.log('Total patients:', res?.data?.pagination?.total)
       
       if (res?.status === 'success' && res?.data) {
         const patientsList = res.data.items || []
@@ -118,10 +120,54 @@ export default function PatientList() {
     }
   }
 
+  const handleAllocateDevice = async (patientId, patientName) => {
+    const confirmed = window.confirm(`Bạn có chắc muốn cấp phát thiết bị cho bệnh nhân "${patientName}"?`)
+    if (!confirmed) return
+
+    setDeviceLoading(prev => ({ ...prev, [patientId]: true }))
+    try {
+      const res = await allocateDevice(patientId)
+      if (res?.status === 'success') {
+        alert(`Cấp phát thiết bị thành công! Device ID: ${res.device_id}`)
+        loadPatients()
+      }
+    } catch (e) {
+      console.error('Allocate device error:', e)
+      const msg = e?.response?.data?.message || 'Không thể cấp phát thiết bị'
+      alert(msg)
+    } finally {
+      setDeviceLoading(prev => ({ ...prev, [patientId]: false }))
+    }
+  }
+
+  const handleRecallDevice = async (patientId, patientName) => {
+    const confirmed = window.confirm(`Bạn có chắc muốn thu hồi thiết bị từ bệnh nhân "${patientName}"?`)
+    if (!confirmed) return
+
+    setDeviceLoading(prev => ({ ...prev, [patientId]: true }))
+    try {
+      const res = await recallDevice(patientId)
+      if (res?.status === 'success') {
+        alert('Thu hồi thiết bị thành công!')
+        loadPatients()
+      }
+    } catch (e) {
+      console.error('Recall device error:', e)
+      const msg = e?.response?.data?.message || 'Không thể thu hồi thiết bị'
+      alert(msg)
+    } finally {
+      setDeviceLoading(prev => ({ ...prev, [patientId]: false }))
+    }
+  }
+
+  const handleRowClick = (patientId) => {
+    navigate(`/patients/${patientId}`)
+  }
+
   return (
     <div className="patient-list-container">
       <div className="patient-list-header">
-        <h2>📋 Patients List</h2>
+        <h2>Patients List</h2>
         <div className="header-actions">
           <button className="btn-add" onClick={() => setShowAddModal(true)}>+ Add Patient</button>
           <div style={{ color: '#666', fontSize: '14px' }}>
@@ -150,11 +196,15 @@ export default function PatientList() {
             {patients.map((patient, index) => {
               const age = calculateAge(patient.birthday)
               return (
-                <tr key={patient._id}>
+                <tr 
+                  key={patient._id} 
+                  onClick={() => handleRowClick(patient._id)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <td>{(page - 1) * 10 + index + 1}</td>
                   <td><strong>{patient.full_name}</strong></td>
                   <td>{patient.cccd}</td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     <Link to={`/rooms/${patient.room}`} className="room-link">
                       {patient.room}
                     </Link>
@@ -170,14 +220,52 @@ export default function PatientList() {
                     )}
                   </td>
                   <td style={{ fontFamily: 'monospace', fontSize: '13px' }}>{patient.deviceId || '-'}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                      <Link 
-                        to={`/patients/${patient._id}`} 
-                        className="btn-view"
-                      >
-                        👁️ View
-                      </Link>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      {patient.deviceId ? (
+                        <button
+                          onClick={() => handleRecallDevice(patient._id, patient.full_name)}
+                          className="btn-recall"
+                          disabled={deviceLoading[patient._id]}
+                          title="Thu hồi thiết bị"
+                          style={{
+                            padding: '5px 10px',
+                            background: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: deviceLoading[patient._id] ? 'not-allowed' : 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            opacity: deviceLoading[patient._id] ? 0.6 : 1,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {deviceLoading[patient._id] ? '⏳' : '🔴'} Recall
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAllocateDevice(patient._id, patient.full_name)}
+                          className="btn-allocate"
+                          disabled={deviceLoading[patient._id]}
+                          title="Cấp phát thiết bị"
+                          style={{
+                            padding: '5px 10px',
+                            background: '#28a745',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: deviceLoading[patient._id] ? 'not-allowed' : 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            opacity: deviceLoading[patient._id] ? 0.6 : 1,
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {deviceLoading[patient._id] ? '⏳' : '✅'} Allocate
+                        </button>
+                      )}
+                      
                       <button
                         onClick={() => handleDeletePatient(patient._id, patient.full_name)}
                         className="btn-delete"

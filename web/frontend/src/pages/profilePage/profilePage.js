@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getDoctorProfile, updateDoctorProfile, updateDoctor, getUserInfo, getUserRole} from '../../../../frontend/src/utils/api'
-import routers from '../../../../frontend/src/utils/routers'
+import { getDoctorProfile, updateDoctorProfile, updateDoctor, getUserInfo, getUserRole, changePassword } from '../../utils/api'
+import routers from '../../utils/routers'
 import AvatarUpload from '../../components/AvatarUpload/AvatarUpload'
 import './profilePage.scss'
 
@@ -33,8 +33,8 @@ const ProfilePage = () => {
         setError(null)
         // First, get doctor by userId to find the doctor_id
         const response = await getDoctorProfile(userId)
-        setDoctor(response.data.doctor)
-        setFormData(response.data.doctor)
+        setDoctor(response?.data?.doctor)
+        setFormData(response?.data?.doctor)
         
         // Load avatar if user is viewing own profile
         if (isOwnProfile) {
@@ -127,8 +127,8 @@ const ProfilePage = () => {
         response = await updateDoctorProfile(userId, updatePayload)
       }
       
-      setDoctor(response.data.doctor)
-      setFormData(response.data.doctor)
+      setDoctor(response.doctor)
+      setFormData(response.doctor)
       setIsEditing(false)
       alert('Cập nhật thông tin thành công!')
     } catch (err) {
@@ -137,7 +137,7 @@ const ProfilePage = () => {
     }
   }
 
-  const handlePasswordUpdate = () => {
+  const handlePasswordUpdate = async () => {
     if (passwordData.new_password !== passwordData.confirmPassword) {
       alert('Mật khẩu mới không khớp!')
       return
@@ -147,19 +147,25 @@ const ProfilePage = () => {
       return
     }
     
-    // TODO: Implement change password API later
-    console.log('Change password will be implemented later', {
-      doctorId: doctor._id,
-      current_password: passwordData.current_password,
-      new_password: passwordData.new_password
-    })
-    alert('Coming soon!')
-    setShowPasswordChange(false)
-    setPasswordData({
-      current_password: '',
-      new_password: '',
-      confirmPassword: ''
-    })
+    try {
+      await changePassword({
+        username: currentUser.username,
+        oldPassword: passwordData.current_password,
+        newPassword: passwordData.new_password
+      })
+      
+      alert('Đổi mật khẩu thành công!')
+      setShowPasswordChange(false)
+      setPasswordData({
+        current_password: '',
+        new_password: '',
+        confirmPassword: ''
+      })
+    } catch (err) {
+      console.error('Error changing password:', err)
+      const errorMsg = err?.response?.data?.message || 'Lỗi khi đổi mật khẩu. Vui lòng kiểm tra mật khẩu hiện tại.'
+      alert(errorMsg)
+    }
   }
 
   const handleCancel = () => {

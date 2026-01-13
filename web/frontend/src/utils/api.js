@@ -21,7 +21,12 @@ export const setRefreshToken = (token) => {
 
 export const getUserInfo = () => {
   const userInfo = localStorage.getItem(USER_INFO_KEY)
-  return userInfo ? JSON.parse(userInfo) : null
+  if (!userInfo || userInfo === "undefined") {
+    return null
+  }
+  if(userInfo) return JSON.parse(userInfo);
+  return null;
+  // return userInfo ? JSON.parse(userInfo) : null
 }
 export const setUserInfo = (userInfo) => {
   if (userInfo) localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo))
@@ -80,6 +85,13 @@ export const refreshAccessToken = () => {
   const refreshToken = getRefreshToken()
   return unwrap(api.post('/api/v1/auth/refresh', { refresh_token: refreshToken }))
 }
+
+export const changePassword = (payload) =>
+  unwrap(api.post('/api/v1/auth/change-password', payload))
+
+// Family Access
+export const familyAuthenticate = (payload) =>
+  unwrap(axios.post(`${BASE_URL}/api/v1/family/access/auth`, payload))
 
 // Admin - Doctors
 export const createDoctor = (payload) =>

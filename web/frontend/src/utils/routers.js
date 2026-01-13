@@ -15,8 +15,6 @@ const routers = {
   
   // Family access routes (không cần đăng nhập)
   FamilyAccess: '/family-access',
-  FamilyPatientDetailPath: '/family-patient/:id',
-  FamilyPatientDetail: (id = ':id') => `/family-patient/${id}`,
   
   // Admin routes
   AdminLogin: '/admin/login',

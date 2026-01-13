@@ -181,7 +181,6 @@ const AvatarUpload = ({ currentAvatar, onUploadSuccess }) => {
         return
       }
 
-      // ============================= NEED CHECK ====================================
       // Call backend proxy endpoint to download with proper headers
       const link = document.createElement('a')
       link.href = `http://localhost:5000/api/v1/user/download-avatar?token=${token}`
