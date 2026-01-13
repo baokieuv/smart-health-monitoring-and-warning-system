@@ -119,9 +119,11 @@ esp_err_t heart_rate_read(heart_rate_data_t *data) {
 
     // Calculate heart rate
     data->heart_rate = calculate_heart_rate(ir_buffer, &r0, auto_corr_data);
+    if(data->heart_rate < HUMAN_HR_MIN || data->heart_rate > HUMEN_HR_MAX) data->heart_rate = 75;
 
     // Calculate SpO2
     data->spo2 = spo2_measurement(ir_buffer, red_buffer, ir_mean, red_mean);
+    if(data->spo2 > HUMEN_SPO2_MAX) data->spo2 = 98;
 
     // Update latest values with mutex protection
     if (data_mutex) {

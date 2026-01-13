@@ -302,7 +302,7 @@ esp_err_t mqtt_publish_telemetry(int heart_rate, double spo2,
     // Build JSON payload
     char payload[256];
     int len = snprintf(payload, sizeof(payload),
-        "{\"heartRate\":%d,\"SpO2\":%.2f,\"temperature\":%.2f,\"alarm\":\"%s\"}",
+        "{\"heart_rate\":%d,\"spo2\":%.2f,\"temperature\":%.2f,\"alarm_str\":\"%s\"}",
         heart_rate, spo2, temperature, alarm_status ? alarm_status : "normal");
 
     if (len < 0 || len >= sizeof(payload)) {

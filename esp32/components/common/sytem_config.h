@@ -47,8 +47,8 @@
 
 // Provisioning Configuration
 #define PROVISION_URL           "http://demo.thingsboard.io/api/v1/provision"
-#define PROVISION_KEY           "tcwdf3lza9hg2qf04yuv"
-#define PROVISION_SECRET        "c841x8r2a94fatb42jbp"
+#define PROVISION_KEY           "kpjsq4zrf496kwlont58"
+#define PROVISION_SECRET        "0zx1xi32ck7xir0eap55"
 
 // AP Mode Configuration
 #define AP_SSID                 "ESP32_Health_Config"
@@ -78,8 +78,11 @@
 #define REPORT_COOLDOWN_MS      3000          // Prevent duplicate reports
 
 // Health Monitoring Thresholds
+#define HUMAN_HR_MIN            40
+#define HUMEN_HR_MAX            160
 #define HR_MIN_NORMAL           60
 #define HR_MAX_NORMAL           100
+#define HUMEN_SPO2_MAX          100
 #define SPO2_MIN_NORMAL         90
 #define TEMP_MIN_NORMAL         36.0f
 #define TEMP_MAX_NORMAL         38.0f

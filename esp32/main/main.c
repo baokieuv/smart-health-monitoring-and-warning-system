@@ -296,15 +296,18 @@ static void mpu6050_task(void *param) {
         
         if (mpu6050_is_ready()) {
             esp_err_t err = mpu6050_read_all(&data);
-            
             if (err == ESP_OK) {
                 // Try to send to queue
-                if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
+                if(g_mpu_queue == NULL){
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    ESP_LOGI(TAG, "queue null");
+                }
+                if (xQueueSend(g_mpu_queue, &data, pdMS_TO_TICKS(1000)) != pdPASS) {
                     // Queue full - drop oldest sample
                     mpu6050_data_t trash;
-                    xQueueReceive(g_mpu_queue, &trash, 0);
+                    xQueueReceive(g_mpu_queue, &trash, pdMS_TO_TICKS(1000));
                     
-                    if (xQueueSend(g_mpu_queue, &data, 0) != pdPASS) {
+                    if (xQueueSend(g_mpu_queue, &data, pdMS_TO_TICKS(1000)) != pdPASS) {
                         ESP_LOGW(TAG, "Queue full, dropped newest sample");
                     }
                 }
@@ -356,7 +359,8 @@ static void handle_mpu6050_data(void *param) {
 
     while (1) {
         // Wait for sensor data
-        if (xQueueReceive(g_mpu_queue, &data, portMAX_DELAY) != pdPASS) {
+        if (xQueueReceive(g_mpu_queue, &data, pdMS_TO_TICKS(1000)) != pdPASS) {
+            ESP_LOGI(TAG, "ko co du lieu");
             continue;
         }
 
@@ -483,12 +487,33 @@ static esp_err_t system_init(void) {
     ESP_ERROR_CHECK(oled_display_init(u8g2_esp32_i2c_byte_cb, 
                                       u8g2_esp32_gpio_and_delay_cb));
     
+    // i2c_config_t conf = {
+    //     .mode = I2C_MODE_MASTER,
+    //     .sda_io_num = I2C_SDA_PIN,
+    //     .scl_io_num = I2C_SCL_PIN,
+    //     .sda_pullup_en = GPIO_PULLUP_ENABLE,
+    //     .scl_pullup_en = GPIO_PULLUP_ENABLE,
+    //     .master.clk_speed = 400000, // 400kHz (có thể dùng 100000)
+    //     .clk_flags = 0
+    // };
+
+    // esp_err_t err = i2c_param_config(I2C_PORT, &conf);
+    // if (err != ESP_OK) return err;
+
+    // i2c_driver_install(
+    //     I2C_PORT,
+    //     conf.mode,
+    //     0,      // rx buffer (master không cần)
+    //     0,      // tx buffer
+    //     0
+    // );
+
     // Create FreeRTOS queues
     s_oled_queue = xQueueCreate(16, sizeof(display_data_t));
     g_mpu_queue = xQueueCreate(QUEUE_LEN, sizeof(mpu6050_data_t));
 
     // Initialize MPU6050 sensor
-    // ESP_ERROR_CHECK(mpu6050_init(I2C_PORT));
+    ESP_ERROR_CHECK(mpu6050_init(I2C_PORT));
 
     // Initialize alarm manager
     ESP_ERROR_CHECK(alarm_manager_init());
@@ -536,8 +561,8 @@ static void start_sensor_tasks(void) {
     // Start display and MPU6050 tasks
     xTaskCreate(oled_display_task, "oled_task", 4096, (void *)s_oled_queue, 3, NULL);
     xTaskCreate(oled_update_task, "oled_update", 2048, NULL, 3, NULL);
-    // xTaskCreate(mpu6050_task, "mpu6050_task", 4096, NULL, 5, NULL);
-    xTaskCreate(handle_mpu6050_data, "fall_detect", 4096, NULL, 4, NULL);
+    xTaskCreate(mpu6050_task, "mpu6050_task", 4096, NULL, 5, NULL);
+    xTaskCreate(handle_mpu6050_data, "fall_detect", 4096, NULL, 3, NULL);
     xTaskCreate(mqtt_send_task, "mqtt_send", 4096, NULL, 5, NULL);
 }
 
